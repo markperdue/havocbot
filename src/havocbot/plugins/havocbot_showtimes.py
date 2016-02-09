@@ -10,35 +10,40 @@ logger.setLevel(logging.DEBUG)
 
 
 class ShowtimesPlugin(HavocBotPlugin):
-    def __init__(self):
-        logger.log(0, "__init__ triggered")
-        pass
+
+    @property
+    def plugin_description(self):
+        return "display showtimes for a search query at the SF Metreon"
+
+    @property
+    def plugin_short_name(self):
+        return "showtimes"
+
+    @property
+    def plugin_usages(self):
+        return (
+            ("showtimes for <movie name>", "get me showtimes for star wars", "look up showtimes for a movie"),
+        )
+
+    @property
+    def plugin_triggers(self):
+        return (
+            (".*showtimes for\s*(.*)", self.start),
+        )
 
     def init(self, havocbot):
-        logger.log(0, "init triggered")
         self.havocbot = havocbot
-        self.triggers = {
-            ".*showtimes for\s*(.*)": self.start
-        }
-        self.help = {
-            "description": "display showtimes for a search query at the SF Metreon",
-            "usage": (
-                ("showtimes for <movie name>", "get me showtimes for star wars", "look up showtimes for a movie"),
-            )
-        }
 
         # This will register the above triggers with havocbot
-        self.havocbot.register_triggers(self.triggers)
+        self.havocbot.register_triggers(self.plugin_triggers)
 
     def shutdown(self):
-        logger.log(0, "shutdown triggered")
-        pass
+        self.havocbot.unregister_triggers(self.plugin_triggers)
+        self.havocbot = None
 
     def start(self, callback, message, **kwargs):
         # "get me weather in 94010 and 94110"
         # "find me the warmest weather between 94010 and 94110"
-
-        logger.debug("start - message is '%s'" % (message))
 
         # Capture the movie name
         capture = kwargs.get('capture_groups', None)
@@ -50,6 +55,7 @@ class ShowtimesPlugin(HavocBotPlugin):
                 callback.send_message(channel=message.channel, message=showtimes_object.return_showtimes())
             else:
                 callback.send_message(channel=message.channel, message="No showtime data found")
+
 
 # Make this plugin available to HavocBot
 havocbot_handler = ShowtimesPlugin()

@@ -8,35 +8,27 @@ from slackclient import SlackClient
 import time
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 PROCESS_ONE_WORD_TRIGGERS_IF_ONLY_CONTENT_IN_MESSAGE = True
 
 
 class Slack(Client):
+
+    @property
+    def integration_name(self):
+        return "slack"
+
     def __init__(self, havocbot):
-        logger.log(0, "__init__ triggered")
-
-        #  Call super() to pick up any customizations
-        super(self.__class__, self).__init__(havocbot)
-
         # Capture a reference to havocbot
         self.havocbot = havocbot
 
-        self.name = 'slack'
         self.token = None
         self.username = None
         self.user_id = None
 
-        # Do any custom __init__() work here
-
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
-        logger.log(0, "configure triggered")
-
-        #  Call super() to pick up any customizations
-        super(self.__class__, self).configure(settings)
-
         requirements_met = False
 
         for item in settings:
@@ -55,16 +47,10 @@ class Slack(Client):
             return False
 
     def connect(self):
-        logger.log(0, "connect triggered")
-
-        #  Call super() to pick up any customizations
-        super(self.__class__, self).connect()
-
         if not self.token:
             logger.error("A Slack api token must be configured. Get one at https://slack.com/integrations")
             return False
 
-        # logger.debug("Connecting to Slack...")
         self.client = SlackClient(self.token)
 
         if self.client.rtm_connect():
@@ -73,25 +59,12 @@ class Slack(Client):
             return False
 
     def disconnect(self):
-        logger.log(0, "disconnect triggered")
-
-        #  Call super() to pick up any customizations
-        super(self.__class__, self).disconnect()
-
         self.client = None
 
     def shutdown(self):
-        logger.log(0, "shutdown triggered")
-
-        #  Call super() to pick up any customizations
-        super(self.__class__, self).shutdown()
+        pass
 
     def process(self):
-        logger.log(0, "process triggered")
-
-        #  Call super() to pick up any customizations
-        super(self.__class__, self).process()
-
         # Set some values from the login_data response
         self.username = self.client.server.login_data["self"]["name"]
         self.user_id = self.client.server.login_data["self"]["id"]
@@ -109,7 +82,10 @@ class Slack(Client):
                             if 'user' in event and event['user'] != self.user_id:
                                 message_object = create_message_object_from_json(event)
 
-                                self.handle_message(message_object=message_object)
+                                try:
+                                    self.handle_message(message_object=message_object)
+                                except Exception as e:
+                                    logger.error(e)
                         elif event['type'] == 'user_typing':
                             logger.debug("user_typing received - '%s'" % (event))
                         elif event['type'] == 'hello':
@@ -132,45 +108,43 @@ class Slack(Client):
                 break
 
     def handle_message(self, **kwargs):
-        logger.log(0, "handle_message triggered")
-
-        #  Call super() to pick up any customizations
-        super(self.__class__, self).handle_message(**kwargs)
-
         if kwargs is not None:
             if 'message_object' in kwargs and kwargs.get('message_object') is not None:
                 message_object = kwargs.get('message_object')
 
             if message_object.type_ == 'message':
-                for trigger, triggered_function in self.havocbot.triggers.items():
+                for (trigger, triggered_function) in self.havocbot.triggers:
+                    logger.debug("trigger is '%s', triggered_function is '%s'" % (trigger, str(triggered_function)))
+
                     # Add exact regex match if user defined
                     if len(trigger.split()) == 1 and PROCESS_ONE_WORD_TRIGGERS_IF_ONLY_CONTENT_IN_MESSAGE is True:
                         if not trigger.startswith('^') and not trigger.endswith('$'):
-                            # logger.debug("Converting trigger to a line exact match requirement")
+                            logger.debug("Converting trigger to a line exact match requirement")
                             trigger = "^" + trigger + "$"
 
-                    # logger.debug("trigger is '%s'" % (trigger))
                     # Use trigger as regex pattern and then search the message for a match
                     regex = re.compile(trigger)
 
                     match = regex.search(message_object.text)
                     if match is not None:
-                        # logger.debug("Y MATCH FOR TRIGGER '%s' WITH %s'" % (trigger, match))
+                        logger.debug("Y MATCH FOR TRIGGER '%s' WITH %s'" % (trigger, match))
+
+                        logger.info("Received event for trigger '%s'" % (trigger))
+
                         # Pass the message to the function associated with the trigger
-                        triggered_function(self, message_object, capture_groups=match.groups())
+                        try:
+                            triggered_function(self, message_object, capture_groups=match.groups())
+                        except Exception as e:
+                            logger.error(e)
+
                         break
                     else:
-                        # logger.debug("N MATCH FOR TRIGGER '%s' WITH %s'" % (trigger, match))
+                        logger.debug("N MATCH FOR TRIGGER '%s' WITH %s'" % (trigger, match))
                         pass
             else:
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.type_))
 
     def send_message(self, **kwargs):
-        logger.log(0, "send_message triggered")
-
-        #  Call super() to pick up any customizations
-        super(self.__class__, self).send_message(**kwargs)
-
         if kwargs is not None:
             if 'message' in kwargs and kwargs.get('message') is not None:
                 message = kwargs.get('message')
@@ -187,11 +161,6 @@ class Slack(Client):
                     logger.error("Unable to send message. %s" % (e))
 
     def send_messages_from_list(self, **kwargs):
-        logger.log(0, "send_message triggered")
-
-        #  Call super() to pick up any customizations
-        # super(self.__class__, self).send_message_from_list(**kwargs)
-
         if kwargs is not None:
             if 'message' in kwargs and kwargs.get('message') is not None:
                 message = kwargs.get('message')
@@ -200,7 +169,7 @@ class Slack(Client):
 
             if channel and message:
                 joined_message = "\n".join(message)
-                # logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))
+                logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))
                 try:
                     self.client.rtm_send_message(channel, joined_message)
                 except AttributeError:
@@ -223,16 +192,14 @@ class Slack(Client):
             return user
         else:
             return None
-            # raise RuntimeError("No user found for user_id '%s'" % (user_id))
 
 
 class SlackMessage(Message):
     def __init__(self, text, user, channel, type_, team, reply_to, ts):
-        logger.log(0, "__init__ triggered")
-
-        #  Call super() to pick up any customizations with the default initializers
-        super(self.__class__, self).__init__(text, user, channel, type_)
-
+        self.text = text
+        self.user = user
+        self.channel = channel
+        self.type_ = type_
         self.team = team
         self.reply_to = reply_to
         self.ts = ts
@@ -243,11 +210,6 @@ class SlackMessage(Message):
 
 class SlackUser(User):
     def __init__(self, id, name, real_name, tz):
-        logger.log(0, "__init__ triggered")
-
-        #  Call super() to pick up any customizations
-        super(self.__class__, self).__init__(real_name, name)
-
         self.id = id
         self.name = real_name
         self.username = name
@@ -267,20 +229,17 @@ def create_message_object_from_json(json):
     ts = json['ts'] if 'ts' in json else None
 
     message = SlackMessage(text, user, channel, type_, team, reply_to, ts)
-    logger.debug(message)
 
     return message
 
 
 # Returns a newly created user from a json source
 def create_user_object_from_json(json):
-    logger.debug(json)
     if 'real_name' in json['user'] and len(json['user']['real_name']) > 0:
         real_name = json['user']['real_name']
     else:
         real_name = None
 
     user = SlackUser(json['user']['id'], json['user']['name'], real_name, json['user']['tz'])
-    logger.debug(user)
 
     return user

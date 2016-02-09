@@ -9,30 +9,37 @@ logger.setLevel(logging.DEBUG)
 
 
 class WeatherPlugin(HavocBotPlugin):
-    def __init__(self):
-        logger.log(0, "__init__ triggered")
-        pass
+
+    @property
+    def plugin_description(self):
+        return "fetch weather information for zip codes"
+
+    @property
+    def plugin_short_name(self):
+        return "weather"
+
+    @property
+    def plugin_usages(self):
+        return (
+            ("weather <zip code>", "what is the weather in 94110", "display the current weather for one or more zip codes"),
+            ("warmest weather <zip code> <zip code> [<zip code>]", "does 92104 or 10005 have the warmest weather", "find the warmest zip code from a list"),
+        )
+
+    @property
+    def plugin_triggers(self):
+        return (
+            (".*\d{5}.*weather|weather.*\d{5}", self.start),
+        )
 
     def init(self, havocbot):
-        logger.log(0, "init triggered")
         self.havocbot = havocbot
-        self.triggers = {
-            ".*\d{5}.*weather|weather.*\d{5}": self.start
-        }
-        self.help = {
-            "description": "fetch weather information for zip codes",
-            "usage": (
-                ("weather <zip code>", "what is the weather in 94110", "display the current weather for one or more zip codes"),
-                ("warmest weather <zip code> <zip code> [<zip code>]", "does 92104 or 10005 have the warmest weather", "find the warmest zip code from a list"),
-            )
-        }
 
         # This will register the above triggers with havocbot
-        self.havocbot.register_triggers(self.triggers)
+        self.havocbot.register_triggers(self.plugin_triggers)
 
     def shutdown(self):
-        logger.log(0, "shutdown triggered")
-        pass
+        self.havocbot.unregister_triggers(self.plugin_triggers)
+        self.havocbot = None
 
     def start(self, callback, message, **kwargs):
         words = message.text.split()
@@ -49,7 +56,6 @@ class WeatherPlugin(HavocBotPlugin):
             logger.debug("start - words are %s" % words)
             # Branch if the user wants the warmest weather
             if any(x in ['warmest', 'hottest'] for x in words):
-                logger.debug("start - got a match")
                 weather_list = weather.return_temperatures_list(zip_codes)
                 warmest_weather = weather.return_warmest_weather_object_from_list(weather_list)
                 if message.channel:
@@ -79,6 +85,7 @@ class WeatherPlugin(HavocBotPlugin):
     #                     self.havocbot.send_message(message.channel, weather_object.return_weather())
     #             else:
     #                 self.havocbot.send_message(message.channel, "No weather data found")
+
 
 # Make this plugin available to HavocBot
 havocbot_handler = WeatherPlugin()

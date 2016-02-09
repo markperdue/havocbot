@@ -8,34 +8,42 @@ logger.setLevel(logging.DEBUG)
 
 
 class RestartPlugin(HavocBotPlugin):
-    def __init__(self):
-        logger.log(0, "__init__ triggered")
-        pass
+
+    @property
+    def plugin_description(self):
+        return "Restart the bot"
+
+    @property
+    def plugin_short_name(self):
+        return "restart"
+
+    @property
+    def plugin_usages(self):
+        return (
+            ("!restart", None, "shut it down!"),
+        )
+
+    @property
+    def plugin_triggers(self):
+        return (
+            ("!restart", self.start),
+        )
 
     def init(self, havocbot):
-        logger.log(0, "init triggered")
         self.havocbot = havocbot
-        self.triggers = {
-            "!restart": self.start
-        }
-        self.help = {
-            "description": "Restart the bot",
-            "usage": (
-                ("!restart", None, "shut it down!"),
-            )
-        }
 
         # This will register the above triggers with havocbot
-        self.havocbot.register_triggers(self.triggers)
+        self.havocbot.register_triggers(self.plugin_triggers)
 
     def shutdown(self):
-        logger.log(0, "shutdown triggered")
-        pass
+        self.havocbot.unregister_triggers(self.plugin_triggers)
+        self.havocbot = None
 
     def start(self, callback, message, **kwargs):
         if message.channel:
             callback.send_message(channel=message.channel, message="Restarting the bot. Hang tight")
         self.havocbot.restart()
+
 
 # Make this plugin available to HavocBot
 havocbot_handler = RestartPlugin()

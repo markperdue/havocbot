@@ -8,33 +8,41 @@ logger.setLevel(logging.DEBUG)
 
 
 class ListPlugin(HavocBotPlugin):
-    def __init__(self):
-        logger.log(0, "__init__ triggered")
-        pass
+
+    @property
+    def plugin_description(self):
+        return "list available commands"
+
+    @property
+    def plugin_short_name(self):
+        return "list"
+
+    @property
+    def plugin_usages(self):
+        return (
+            ("!list", None, "list available commands"),
+        )
+
+    @property
+    def plugin_triggers(self):
+        return (
+            ("!list", self.start),
+        )
 
     def init(self, havocbot):
-        logger.log(0, "init triggered")
         self.havocbot = havocbot
-        self.triggers = {
-            "!list": self.start
-        }
-        self.help = {
-            "description": "list available commands",
-            "usage": (
-                ("!list", None, "list available commands"),
-            )
-        }
 
         # This will register the above triggers with havocbot
-        self.havocbot.register_triggers(self.triggers)
+        self.havocbot.register_triggers(self.plugin_triggers)
 
     def shutdown(self):
-        logger.log(0, "shutdown triggered")
-        pass
+        self.havocbot.unregister_triggers(self.plugin_triggers)
+        self.havocbot = None
 
     def start(self, callback, message, **kwargs):
         if message.channel:
-            callback.send_message(channel=message.channel, message="Available Commands: '" + "', '".join(self.havocbot.triggers.keys()) + "'")
+            callback.send_message(channel=message.channel, message="Available Commands: '" + "', '".join([(i[0]) for i in self.havocbot.triggers]) + "'")
+
 
 # Make this plugin available to HavocBot
 havocbot_handler = ListPlugin()

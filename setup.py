@@ -10,10 +10,10 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='havocbot',
-    version='0.1.0.dev3',
+    version='0.1.1.dev0',
     description='an extensible chat bot that works across any number of chat programs',
     long_description=long_description,
-    url='https://bitbucket.org/markaperdue/havocbot',
+    url='https://github.com/markperdue/havocbot',
     author='Mark Perdue',
     author_email='markaperdue@gmail.com',
     license='MIT',
@@ -24,8 +24,8 @@ setup(
         'Intended Audience :: End Users/Desktop',
         'Topic :: Communications :: Chat',
         'Natural Language :: English',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.0',
     ],
     keywords=['chat', 'slack', 'jabber', 'xmpp', 'hipchat'],
     packages=find_packages('src', exclude=['havocbot.plugins', 'havocbot.plugins.*']),
