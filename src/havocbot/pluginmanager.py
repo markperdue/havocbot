@@ -106,16 +106,19 @@ def load_plugins_of_type(havocbot, plugin_type):
     elif plugin_type == "custom":
         for listing in havocbot.plugin_dirs:
             folder = os.path.abspath(listing)
-            for f in os.listdir(folder):
-                fpath = os.path.join(folder, f)
+            if os.path.isdir(folder):
+                for f in os.listdir(folder):
+                    fpath = os.path.join(folder, f)
 
-                # Remove file extension
-                body, ext = os.path.splitext(f)
+                    # Remove file extension
+                    body, ext = os.path.splitext(f)
 
-                plugin = load_plugin(havocbot, body, fpath)
-                if plugin and isinstance(plugin.handler, HavocBotPlugin):
-                    logger.info("%s custom plugin loaded" % (body))
-                    plugins.append(plugin)
+                    plugin = load_plugin(havocbot, body, fpath)
+                    if plugin and isinstance(plugin.handler, HavocBotPlugin):
+                        logger.info("%s custom plugin loaded" % (body))
+                        plugins.append(plugin)
+            else:
+                logger.error("Plugin directory '%s' was listed in the settings file but does not exist" % (listing))
 
     return plugins
 

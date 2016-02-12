@@ -19,15 +19,15 @@ class ReloadPlugin(HavocBotPlugin):
 
     @property
     def plugin_usages(self):
-        return (
+        return [
             ("!reload", None, "shutdown and start all the plugins"),
-        )
+        ]
 
     @property
     def plugin_triggers(self):
-        return (
+        return [
             ("!reload", self.start),
-        )
+        ]
 
     def init(self, havocbot):
         self.havocbot = havocbot

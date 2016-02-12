@@ -19,15 +19,15 @@ class ListPlugin(HavocBotPlugin):
 
     @property
     def plugin_usages(self):
-        return (
+        return [
             ("!list", None, "list available commands"),
-        )
+        ]
 
     @property
     def plugin_triggers(self):
-        return (
+        return [
             ("!list", self.start),
-        )
+        ]
 
     def init(self, havocbot):
         self.havocbot = havocbot

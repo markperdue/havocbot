@@ -1,5 +1,7 @@
+import errno
 import logging
 import logging.handlers
+import os
 import sys
 
 # Python2/3 compat
@@ -22,69 +24,82 @@ def get_bot():
     return _havocbot
 
 
-def configure_logging(settings_tuple_list):
+def create_dir_if_not_exists(path):
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+
+
+def configure_logging(settings_dict):
     log_file = None
     log_format = None
     log_level = None
 
-    if settings_tuple_list is not None:
-        for (bot, settings_tuple) in settings_tuple_list:
-            if bot == 'havocbot':
-                for (key, value) in settings_tuple:
-                    # Switch on the key
-                    if key == 'log_file':
-                        log_file = value.strip()
-                    elif key == 'log_format':
-                        log_format = value.strip()
-                    elif key == 'log_level':
-                        log_level = value.strip()
+    if settings_dict is not None and 'havocbot' in settings_dict:
+        for (key, value) in settings_dict['havocbot']:
+            if key == 'log_file':
+                log_file = value.strip()
+            if key == 'log_format':
+                log_format = value.strip()
+            if key == 'log_level':
+                log_level = value.strip()
 
     if log_file is not None and log_format is not None and log_level is not None:
+        log_file_parent_string = os.path.abspath(os.path.join(log_file, os.pardir))
+        create_dir_if_not_exists(log_file_parent_string)
+
         logging.basicConfig(level=log_level.upper(), stream=sys.stdout, format=log_format)
         formatter = logging.Formatter(log_format)
         hdlr = logging.handlers.RotatingFileHandler(log_file, encoding="utf-8", maxBytes=1024 * 1024, backupCount=10)
         hdlr.setFormatter(formatter)
         logger.addHandler(hdlr)
+    else:
+        print("There was a problem configuring the logging system")
 
 
 def main(settings="settings.ini"):
-    try:
-        parser = SafeConfigParser()
-        parser.read(settings)
-    except Exception:
-        sys.exit("Could not load settings file: %s" % settings)
+    parser = SafeConfigParser()
+    parser.read(settings)
 
-    settings_tuple_list = []
-    integrations_tuple_list = []
+    settings_dict = {}
+    clients_dict = {}
 
     # Covert the settings.ini settings into a dictionary for later processing
     if parser.has_section('havocbot'):
         # Create a bundle of havocbot settings
-        settings_tuple_list = [('havocbot', parser.items('havocbot'))]
+        settings_dict['havocbot'] = parser.items('havocbot')
 
-        if parser.has_option('havocbot', 'integrations_enabled'):
-            integrations_string = parser.get('havocbot', 'integrations_enabled')
-            integrations_list = integrations_string.strip().split(",")
+        if parser.has_option('havocbot', 'clients_enabled'):
+            clients_string = parser.get('havocbot', 'clients_enabled')
+            clients_list = clients_string.strip().split(",")
 
             # Create a bundle of settings to pass the client integration for processing
             # Bundle format is a list of tuples in the format [('integration name'), [('property1', 'value1'), ('property2', 'value12)], ...]
-            for integration in integrations_list:
-                if parser.has_section(integration):
-                    integrations_tuple_list.append((integration, parser.items(integration)))
+            for client in clients_list:
+                if parser.has_section(client):
+                    clients_dict[client] = parser.items(client)
     else:
         sys.exit("Could not find havocbot settings in settings.ini")
 
     # Configure logging
-    configure_logging(settings_tuple_list)
+    configure_logging(settings_dict)
 
     # Get an instance of the bot if it does not exist
     havocbot = get_bot()
 
     # Pass a dictionary of settings to the bot
-    havocbot.configure(havocbot_settings=settings_tuple_list, integrations_settings=integrations_tuple_list)
+    havocbot.set_settings(havocbot_settings=settings_dict, clients_settings=clients_dict)
 
     # Start it. Off we go
     havocbot.start()
 
+
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except (KeyboardInterrupt, SystemExit):
+        print("Shutdown triggered")
+        _havocbot.shutdown()
+        sys.exit(0)

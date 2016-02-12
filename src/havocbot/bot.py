@@ -1,7 +1,9 @@
+import copy
 from havocbot import pluginmanager
 import inspect
 import logging
 import sys
+import time
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -9,66 +11,75 @@ logger.setLevel(logging.DEBUG)
 
 class HavocBot:
     def __init__(self):
-        self.clients = ()
+        self.clients = []
         self.plugin_dirs = []
         self.plugins_core = []
         self.plugins_custom = []
-        self.triggers = ()
+        self.triggers = []
+        self.settings = {}
         self.is_configured = False
 
-    def configure(self, **kwargs):
-        self.configure_bot(kwargs.get('havocbot_settings', None))
-        self.configure_integrations(kwargs.get('integrations_settings', None))
+    def set_settings(self, **kwargs):
+        self.settings['havocbot'] = kwargs.get('havocbot_settings', None)
+        self.settings['clients'] = kwargs.get('clients_settings', None)
+
+        self.configure()
+
+    def configure(self):
+        self.configure_bot(self.settings['havocbot'])
+        self.configure_clients(self.settings['clients'])
 
         self.load_plugins()
 
         # The bot is now configured
         self.is_configured = True
 
-    def configure_bot(self, settings_tuple_list):
+    def configure_bot(self, settings_dict):
         """ Configures the bot prior to starting up.
 
-        Takes in a list containing a tuple and another list containing key-value
-        pair tuples.
+        Takes in a dictionary with keys relating to the bot name with the value
+        containg a standard SafeConfigParser.items() tuple list
 
         example:
-        [('havocbot'), [('plugins_dir', 'plugins'), ('property2', 'value12)], ...]
+        {'havocbot': [('plugins_dir', 'plugins'), ('property2', 'value12)], ...}
         """
-        for (bot, settings_tuple) in settings_tuple_list:
-            for (key, value) in settings_tuple:
-                # Switch on the key
+        if settings_dict is not None and 'havocbot' in settings_dict:
+            for (key, value) in settings_dict['havocbot']:
                 if key == 'plugin_dirs':
                     self.plugin_dirs = value.strip().split(",")
 
-    def configure_integrations(self, integrations_tuple_list):
+    def configure_clients(self, clients_dict):
         """ Configures a client integration prior to starting up.
 
-        Takes in a list containing a tuple containing a client integratation
-        name and another list containing key-value pair tuples. The integration
-        names are iterated over and a instance of the integration is
-        instantiated if possible. The tuple bundle is then passed to the configure()
+        Takes in a dictionary with keys relating to the client name with the values
+        containg a standard SafeConfigParser.items() tuple list. The client
+        names are iterated over and a instance of the client integration is
+        instantiated if possible. The tuple list is then passed to the configure()
         method inside the client integration for processing
 
         example:
-        [('slask'), [('plugins_dir', 'plugins'), ('property2', 'value12)], ...]
+        {'slask': [('plugins_dir', 'plugins'), ('property2', 'value12)], ...}
         """
 
-        # Placeholder for integration instances that will be coverted to a tuple of integration instances
+        # Placeholder for client integration instances that will be override the self.clients value
         clientList = []
 
-        for (integration_name, integrations_tuple) in integrations_tuple_list:
-            plugin = self.import_and_return_integration(integration_name)
-            if plugin is not None:
-                new_integration = plugin(self)
+        if clients_dict is not None:
+            # for client_name, client_settings_tuple_list in clients_dict.iteritems():  # Python 3 incompatible
+            for client_name, client_settings_tuple_list in clients_dict.items():
+                client_temp = self.import_and_return_client(client_name)
+                if client_temp is not None:
+                    # Instantiates the temp client and passes it the running HavocBot instance
+                    client = client_temp(self)
 
-                if new_integration.configure(integrations_tuple):
-                    clientList.append(new_integration)
+                    if client.configure(client_settings_tuple_list):
+                        clientList.append(client)
 
-        # Convert the list into a tuple for immutability
-        self.clients = tuple(clientList)
+        # Override the client list with the new temp list
+        self.clients = clientList
 
     # Takes in a name of a module and tries to import it
-    def import_and_return_integration(self, name, module=None):
+    def import_and_return_client(self, name, module=None):
         mod = self.import_module(name, module=None)
 
         # Inspect the module and iterate over all the members looking for entries that are classes that inherit from client.Client
@@ -80,24 +91,24 @@ class HavocBot:
                 if parent is not None:
                     if parent.__name__ == 'Client':
                         # logger.debug("Name: %s, Object: %s, Base Classes: %s" % (name, obj, base_classes))
-                        integration_instantiator = name
+                        client_instantiator = name
 
-                        if integration_instantiator is not None and hasattr(mod, integration_instantiator):
-                            integration = getattr(mod, integration_instantiator)
-                            return integration
+                        if client_instantiator is not None and hasattr(mod, client_instantiator):
+                            client = getattr(mod, client_instantiator)
+                            return client
 
         return None
 
     def import_module(self, name, module=None):
         try:
             if module is None:
-                module = "havocbot.integrations.%s" % (name)
+                module = "havocbot.clients.%s" % (name)
                 __import__(module)
                 mod = sys.modules[module]
 
                 return mod
         except ImportError:
-            logger.error("Unable to import the %s integration file" % (name))
+            logger.error("Unable to import the %s client integration file" % (name))
 
             return None
 
@@ -116,50 +127,66 @@ class HavocBot:
             for client in self.clients:
                 logger.info("Connecting to %s" % (client.integration_name))
 
-                # Have the client connect to the integration's services
+                # Have the client connect to the client's services
                 if client.connect():
                     logger.info("%s client is connected" % (client.integration_name))
 
-                    # Start the integration's processing
+                    # Begin client processing
                     client.process()
                 else:
                     logger.error("Unable to connect to the client %s" % (client.integration_name))
         else:
-            logger.critical("No valid chat integrations found. Make sure the settings.ini file has an entry for integrations_enabled and the integration's settings are configured")
+            logger.critical("No valid client integrations found. Make sure the settings.ini file has an entry for clients_enabled and that the settings for the client are configured")
 
-    def register_triggers(self, trigger_tuples):
-        if trigger_tuples:
+    def register_triggers(self, trigger_tuple_list):
+        if trigger_tuple_list:
             # Make a shallow copy of the currently known triggers
-            working_copy_triggers = self.triggers
-            working_copy_triggers += trigger_tuples
+            working_copy_triggers = copy.copy(self.triggers)
+            working_copy_triggers += trigger_tuple_list
 
-            # logger.debug("There %s now %d known %s" % ("are" if len(working_copy_triggers) > 1 else "is", len(working_copy_triggers), "triggers" if len(working_copy_triggers) > 1 else "trigger"))
+            triggers_length = len(trigger_tuple_list)
+            triggers_phrase = "trigger" if len(trigger_tuple_list) == 1 else "triggers"
+            existing_triggers_length = len(self.triggers)
+            existing_triggers_phrase = "trigger" if len(self.triggers) == 1 else "triggers"
+
+            logger.debug("Loading %s new %s. %s %s previously loaded" % (triggers_length, triggers_phrase, existing_triggers_length, existing_triggers_phrase))
             self.triggers = working_copy_triggers
 
-    def unregister_triggers(self, trigger_tuples):
-        if trigger_tuples:
+    def unregister_triggers(self, trigger_tuple_list):
+        if trigger_tuple_list:
             # Make a shallow copy of the currently known triggers
-            # TODO fix this
-            working_copy_triggers = self.triggers
-            working_copy_triggers -= trigger_tuples
+            working_copy_triggers = copy.copy(self.triggers)
+            working_copy_triggers = [x for x in working_copy_triggers not in trigger_tuple_list]
 
-            # logger.debug("There %s now %d known %s" % ("are" if len(working_copy_triggers) > 1 else "is", len(working_copy_triggers), "triggers" if len(working_copy_triggers) > 1 else "trigger"))
+            triggers_length = len(trigger_tuple_list)
+            triggers_phrase = "trigger" if len(trigger_tuple_list) == 1 else "triggers"
+            existing_triggers_length = len(self.triggers)
+            existing_triggers_phrase = "trigger" if len(self.triggers) == 1 else "triggers"
+
+            logger.debug("Removing %s existing %s. %s %s previously loaded" % (triggers_length, triggers_phrase, existing_triggers_length, existing_triggers_phrase))
             self.triggers = working_copy_triggers
 
     def reload_plugins(self):
         self.plugins_core = pluginmanager.load_plugins_core(self)
         self.plugins_custom = pluginmanager.load_plugins_custom(self)
 
-    def stop(self):
+    def shutdown(self):
+        self.disconnect()
+        sys.exit(0)
+
+    def disconnect(self):
         for client in self.clients:
-            logger.debug("disconnecting %s" % (client.integration_name))
+            logger.debug("Disconnecting client %s" % (client.integration_name))
             client.disconnect()
 
+        self.clients = []
         self.plugins_core = []
         self.plugins_custom = []
-        self.triggers = ()
+        self.triggers = []
+        self.is_configured = False
 
     def restart(self):
-        self.stop()
-        self.load_plugins()
+        self.disconnect()
+        time.sleep(5)
+        self.configure()
         self.start()
