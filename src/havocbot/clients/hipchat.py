@@ -3,10 +3,11 @@ from havocbot.message import Message
 from havocbot.user import User
 import logging
 import re
+import signal
 import sleekxmpp
+import threading
 
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
 
 PROCESS_ONE_WORD_TRIGGERS_IF_ONLY_CONTENT_IN_MESSAGE = True
 
@@ -57,25 +58,34 @@ class HipChat(Client):
 
         self.client = HipMUCBot(self, self.havocbot, self.username, self.password, self.room_name + "@" + self.server, self.nickname)
 
+        # self.client.use_signals(signals=['SIGHUP', 'SIGTERM', 'SIGINT'])
+
         self.client.register_plugin('xep_0030')  # Service Discovery
         self.client.register_plugin('xep_0045')  # Multi-User Chat
         self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # XMPP Ping set for a keepalive ping every 60 seconds
 
         if self.client.connect():
+            logger.info("I am.. %s! (%s)" % (self.nickname, self.username))
             return True
         else:
             return False
 
     def disconnect(self):
-        self.client = None
-
-    def shutdown(self):
-        pass
+        if self.client is not None:
+            self.client.disconnect()
+            for thread in self.all_threads:
+                logger.debug("Stopping thread %s" % (thread))
+                thread.running = False
+                thread.stop()
 
     def process(self):
-        logger.info("I am.. %s! (%s)" % (self.nickname, self.username))
+        self.all_threads = []
 
-        self.client.process(block=False)
+        signal.signal(signal.SIGINT, self.havocbot.signal_handler)
+        a_thread = HipChatThread(self.client)
+        a_thread.daemon = True
+        self.all_threads.append(a_thread)
+        a_thread.start()
 
     def handle_message(self, **kwargs):
         if kwargs is not None:
@@ -202,3 +212,16 @@ def create_user_object_from_json(name, jabber_id):
     logger.debug(user)
 
     return user
+
+
+class HipChatThread(threading.Thread):
+    def __init__(self, client):
+        threading.Thread.__init__(self)
+        self.client = client
+
+    def run(self):
+        logger.debug("Running a background thread for %s" % (self.__class__.__name__))
+        self.client.process(block=True)
+
+    def stop(self):
+        self.client.set_stop()

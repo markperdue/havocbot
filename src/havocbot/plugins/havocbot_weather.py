@@ -5,7 +5,6 @@ from plugins import weather
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class WeatherPlugin(HavocBotPlugin):

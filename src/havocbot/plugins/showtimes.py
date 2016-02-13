@@ -4,7 +4,7 @@ import logging
 import requests
 import time
 
-API_KEY_AMC = ""  # Enter WeatherUnderground API key here
+API_KEY_AMC = ""  # Enter AMC API key here
 API_KEY_HEADER = "X-AMC-Vendor-Key"
 AMC_METREON_16 = "2325"
 
@@ -231,7 +231,6 @@ def create_showtimes(theatre_id, date, movie_name):
         return showtimes
     else:
         logger.error("Data not valid")
-        print("Data not valid")
 
         return None
 
@@ -242,14 +241,12 @@ def get_showtime():
     showtime.get_state()
     showtime.get_title()
 
-    # print(showtime)
-
     if showtime.is_valid():
         showtimes = create_showtimes(AMC_METREON_16, "09-21-2015", showtime.title)
 
         showtimes.print_showtimes()
     else:
-        print("showtime request looks bad")
+        logger.error("showtime request looks bad")
 
 
 def return_json_from_file(filepath):
@@ -260,7 +257,6 @@ def return_json_from_file(filepath):
             data = json.load(myfile)
     except IOError:
         logger.error("Unable to find file")
-        print("Unable to find file")
 
     if data:
         return data

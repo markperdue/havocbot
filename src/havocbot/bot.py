@@ -6,7 +6,6 @@ import sys
 import time
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class HavocBot:
@@ -135,6 +134,10 @@ class HavocBot:
                     client.process()
                 else:
                     logger.error("Unable to connect to the client %s" % (client.integration_name))
+
+            # Keep the main thread alive
+            while True:
+                time.sleep(1)
         else:
             logger.critical("No valid client integrations found. Make sure the settings.ini file has an entry for clients_enabled and that the settings for the client are configured")
 
@@ -170,14 +173,12 @@ class HavocBot:
         self.plugins_core = pluginmanager.load_plugins_core(self)
         self.plugins_custom = pluginmanager.load_plugins_custom(self)
 
-    def shutdown(self):
-        self.disconnect()
+    def exit(self):
+        self.shutdown()
         sys.exit(0)
 
-    def disconnect(self):
-        for client in self.clients:
-            logger.debug("Disconnecting client %s" % (client.integration_name))
-            client.disconnect()
+    def shutdown(self):
+        self.disconnect()
 
         self.clients = []
         self.plugins_core = []
@@ -185,8 +186,17 @@ class HavocBot:
         self.triggers = []
         self.is_configured = False
 
+    def disconnect(self):
+        for client in self.clients:
+            logger.info("Disconnecting client %s" % (client.integration_name))
+            client.disconnect()
+
     def restart(self):
-        self.disconnect()
-        time.sleep(5)
+        self.shutdown()
+        time.sleep(3)
         self.configure()
         self.start()
+
+    def signal_handler(self, signal, frame):
+        logger.info("Received an interrupt. Starting shutdown")
+        self.exit()

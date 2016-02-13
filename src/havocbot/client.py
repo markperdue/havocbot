@@ -53,18 +53,6 @@ class Client(object):
         """
         pass
 
-    # @abstractmethod
-    # def shutdown(self):
-    #     """ Shutdown the integration client.
-
-    #     This will likely trigger a call to disconnect and should perform
-    #     any work neccessary to prep the bot to relaunch the integration
-
-    #     Args:
-    #         self (Client): the HavocBotPlugin subclass
-    #     """
-    #     pass
-
     @abstractmethod
     def process(self):
         """ Processeses incoming and outgoing events while connected to

@@ -3,12 +3,11 @@ from havocbot.message import Message
 from havocbot.user import User
 import logging
 import re
+import signal
 import sleekxmpp
 import threading
-import time
 
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
 
 PROCESS_ONE_WORD_TRIGGERS_IF_ONLY_CONTENT_IN_MESSAGE = True
 
@@ -59,11 +58,11 @@ class XMPP(Client):
 
         self.client = MUCBot(self, self.havocbot, self.username, self.password, self.room_name + "@" + self.server, self.nickname)
 
+        # self.client.use_signals(signals=['SIGHUP', 'SIGTERM', 'SIGINT'])
+
         self.client.register_plugin('xep_0030')  # Service Discovery
         self.client.register_plugin('xep_0045')  # Multi-User Chat
         self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # XMPP Ping set for a keepalive ping every 60 seconds
-
-        self.client.use_signals(signals=['SIGHUP', 'SIGTERM', 'SIGINT'])
 
         if self.client.connect():
             logger.info("I am.. %s! (%s)" % (self.nickname, self.username))
@@ -79,26 +78,14 @@ class XMPP(Client):
                 thread.running = False
                 thread.stop()
 
-    # def shutdown(self):
-    #     pass
-
     def process(self):
-        # Probably need to block in a background thread that I can control
-        # self.client.process(block=False)
-
         self.all_threads = []
 
-        try:
-            a_thread = XMPPThread(self.client)
-            a_thread.daemon = True
-            self.all_threads.append(a_thread)
-            a_thread.start()
-            while True:
-                time.sleep(1)
-        except (KeyboardInterrupt, SystemExit):
-            if self is not None:
-                self.disconnect()
-            raise
+        signal.signal(signal.SIGINT, self.havocbot.signal_handler)
+        a_thread = XMPPThread(self.client)
+        a_thread.daemon = True
+        self.all_threads.append(a_thread)
+        a_thread.start()
 
     def handle_message(self, **kwargs):
         if kwargs is not None:
@@ -125,11 +112,10 @@ class XMPP(Client):
                         logger.info("Received event for trigger '%s'" % (trigger))
 
                         # Pass the message to the function associated with the trigger
-                        triggered_function(self, message_object, capture_groups=match.groups())
-                        # try:
-                        #     triggered_function(self, message_object, capture_groups=match.groups())
-                        # except Exception as e:
-                        #     logger.error(e)
+                        try:
+                            triggered_function(self, message_object, capture_groups=match.groups())
+                        except Exception as e:
+                            logger.error(e)
 
                         break
                     else:
@@ -147,13 +133,12 @@ class XMPP(Client):
 
             if channel and message:
                 logger.info("Sending message '%s' to channel '%s'" % (message, channel))
-                self.client.send_message(mto=channel, mbody=message, mtype='groupchat')
-                # try:
-                #     self.client.send_message(mto=channel, mbody=message, mtype='groupchat')
-                # except AttributeError:
-                #     logger.error("Unable to send message. Are you connected?")
-                # except Exception as e:
-                #     logger.error("Unable to send message. %s" % (e))
+                try:
+                    self.client.send_message(mto=channel, mbody=message, mtype='groupchat')
+                except AttributeError:
+                    logger.error("Unable to send message. Are you connected?")
+                except Exception as e:
+                    logger.error("Unable to send message. %s" % (e))
 
     def send_messages_from_list(self, **kwargs):
         if kwargs is not None:
@@ -165,13 +150,12 @@ class XMPP(Client):
             if channel and message:
                 joined_message = "\n".join(message)
                 logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))
-                self.client.send_message(mto=channel, mbody=joined_message, mtype='groupchat')
-                # try:
-                #     self.client.send_message(mto=channel, mbody=joined_message, mtype='groupchat')
-                # except AttributeError:
-                #     logger.error("Unable to send message. Are you connected?")
-                # except Exception as e:
-                #     logger.error("Unable to send message. %s" % (e))
+                try:
+                    self.client.send_message(mto=channel, mbody=joined_message, mtype='groupchat')
+                except AttributeError:
+                    logger.error("Unable to send message. Are you connected?")
+                except Exception as e:
+                    logger.error("Unable to send message. %s" % (e))
 
     def get_user_by_id(self, name):
         room_full = "%s@%s" % (self.room_name, self.server)
@@ -207,11 +191,10 @@ class MUCBot(sleekxmpp.ClientXMPP):
         if msg['mucnick'] != self.nick:
             message_object = Message(msg['body'], msg['mucnick'], self.room, "message")
 
-            self.parent.handle_message(message_object=message_object)
-            # try:
-            #     self.parent.handle_message(message_object=message_object)
-            # except Exception as e:
-            #     logger.error(e)
+            try:
+                self.parent.handle_message(message_object=message_object)
+            except Exception as e:
+                logger.error(e)
 
 
 class XMPPUser(User):
@@ -234,13 +217,11 @@ def create_user_object_from_json(name, jabber_id):
 class XMPPThread(threading.Thread):
     def __init__(self, client):
         threading.Thread.__init__(self)
-        self.running = True
         self.client = client
 
     def run(self):
-        while self.running:
-            self.client.process(block=True)
-            time.sleep(1)
+        logger.debug("Running a background thread for %s" % (self.__class__.__name__))
+        self.client.process(block=True)
 
     def stop(self):
         self.client.set_stop()

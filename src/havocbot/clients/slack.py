@@ -4,11 +4,10 @@ from havocbot.user import User
 import json
 import logging
 import re
+import signal
 from slackclient import SlackClient
-import time
 
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
 
 PROCESS_ONE_WORD_TRIGGERS_IF_ONLY_CONTENT_IN_MESSAGE = True
 
@@ -54,22 +53,22 @@ class Slack(Client):
         self.client = SlackClient(self.token)
 
         if self.client.rtm_connect():
+            # Set some values from the login_data response
+            self.username = self.client.server.login_data["self"]["name"]
+            self.user_id = self.client.server.login_data["self"]["id"]
+
+            logger.info("I am.. %s! (%s)" % (self.username, self.user_id))
             return True
         else:
             return False
 
     def disconnect(self):
-        self.client = None
-
-    def shutdown(self):
-        pass
+        if self.client is not None:
+            self.client.server.websocket.close()
+            self.client = None
 
     def process(self):
-        # Set some values from the login_data response
-        self.username = self.client.server.login_data["self"]["name"]
-        self.user_id = self.client.server.login_data["self"]["id"]
-
-        logger.info("I am.. %s! (%s)" % (self.username, self.user_id))
+        signal.signal(signal.SIGINT, self.havocbot.signal_handler)
 
         while True and self.client is not None:
             try:
@@ -85,6 +84,7 @@ class Slack(Client):
                                 try:
                                     self.handle_message(message_object=message_object)
                                 except Exception as e:
+                                    logger.error("Unable to handle the message")
                                     logger.error(e)
                         elif event['type'] == 'user_typing':
                             logger.debug("user_typing received - '%s'" % (event))
@@ -102,10 +102,9 @@ class Slack(Client):
                         logger.debug("reply_to received - '%s'" % (event))
                     else:
                         logger.debug("UNKNOWN THING received - '%s'" % (event))
-                time.sleep(1)
-            except (AttributeError):
+            except AttributeError as e:
                 logger.error("We have a problem! Is there a client?")
-                break
+                logger.error(e)
 
     def handle_message(self, **kwargs):
         if kwargs is not None:

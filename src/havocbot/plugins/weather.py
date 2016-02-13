@@ -82,7 +82,6 @@ def create_weather_from_openweathermap_for_zip_code(zip_code):
         return WeatherObject(zip_code=zip_code, temperature=temperature, city=city, source=source, last_updated=float(epoch_seconds))
     else:
         logger.error("Invalid weather data for zip code %s" % (zip_code))
-        print("Invalid weather data for zip code %s" % (zip_code))
 
         return None
 
@@ -95,7 +94,6 @@ def create_weather_from_weatherunderground_for_zip_code(zip_code):
         return WeatherObject(zip_code=zip_code, temperature=data['current_observation']['temp_f'], city=data['current_observation']['display_location']['city'], state=data['current_observation']['display_location']['state'], source=source, last_updated=float(data['current_observation']['observation_epoch']))
     else:
         logger.error("Invalid weather data for zip code %s" % (zip_code))
-        print("Invalid weather data for zip code %s" % (zip_code))
 
         return None
 
@@ -225,7 +223,6 @@ def return_zip_code_string_from_file(filepath):
             data = myfile.read().replace('\n', '')
     except IOError:
         logger.error("Unable to find file")
-        print("Unable to find file")
 
     if data:
         return data

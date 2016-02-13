@@ -89,7 +89,7 @@ def load_plugins_of_type(havocbot, plugin_type):
         import pkg_resources
         core_package = 'havocbot.core'
         resources_list = pkg_resources.resource_listdir(core_package, '')
-        # print resources_list
+
         for f in resources_list:
 
             # Remove file extension
