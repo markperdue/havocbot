@@ -1,6 +1,5 @@
-===============================
 HavocBot
-===============================
+========
 
 .. image:: https://img.shields.io/pypi/v/havocbot.svg
     :target: https://pypi.python.org/pypi/havocbot
@@ -8,15 +7,15 @@ HavocBot
 HavocBot is an extensible chat bot that works across any number of chat programs
 
 Features
-------
+--------
 
-* Connect to multiple chat systems simultaneously
-* Plugin system designed to work across all integrated chat clients
-* New chat client integrations can be dropped into file system for new functionality
-* More coming soon...
+- Connect to multiple chat systems simultaneously
+- Plugin system designed to work across all integrated chat clients
+- New chat client integrations can be dropped into file system for new functionality
+- More coming soon...
 
 Installation
-------
+------------
 
 Install the latest version from pip
 
@@ -38,9 +37,8 @@ HavocBot should connect to the chat clients if valid credentials were provided
 
 
 Credits
-------
-Mark Perdue (markaperdue_, https://www.righteousbanana.com)
+-------
+Mark Perdue (https://github.com/markperdue, https://www.righteousbanana.com)
 
 .. _`main.py`: https://github.com/markperdue/havocbot/tree/master/src/havocbot/examples/main.py
 .. _`settings.ini`: https://github.com/markperdue/havocbot/tree/master/src/havocbot/examples/settings.ini
-.. _`markaperdue`: https://github.com/markperdue
