@@ -100,7 +100,7 @@ if __name__ == '__main__':
     try:
         main()
     except (KeyboardInterrupt, SystemExit):
-        print("Shutdown triggered")
+        print("Exiting HavocBot. Come again.")
         if _havocbot.clients is not None and len(_havocbot.clients) > 0:
             _havocbot.shutdown()
         sys.exit(0)

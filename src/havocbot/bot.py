@@ -3,7 +3,14 @@ from havocbot import pluginmanager
 import inspect
 import logging
 import sys
+import threading
 import time
+
+# Python2/3 compat
+try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
 
 logger = logging.getLogger(__name__)
 
@@ -11,12 +18,16 @@ logger = logging.getLogger(__name__)
 class HavocBot:
     def __init__(self):
         self.clients = []
+        self.queue = Queue()
         self.plugin_dirs = []
         self.plugins_core = []
         self.plugins_custom = []
         self.triggers = []
         self.settings = {}
         self.is_configured = False
+        self.processing_threads = []
+        self.should_shutdown = False
+        self.should_restart = False
 
     def set_settings(self, **kwargs):
         self.settings['havocbot'] = kwargs.get('havocbot_settings', None)
@@ -31,6 +42,7 @@ class HavocBot:
         self.load_plugins()
 
         # The bot is now configured
+        logger.debug("HavoceBot instance has been configured")
         self.is_configured = True
 
     def configure_bot(self, settings_dict):
@@ -122,24 +134,72 @@ class HavocBot:
             logger.info("Starting HavocBot")
 
         if self.clients is not None and len(self.clients) > 0:
+            logger.debug("Setting should_shutdown to False")
+            self.should_shutdown = False
+
             # Connect and begin processing for each client in tuple
             for client in self.clients:
+                # Spawn a thread for each unconnected client
+                logger.debug("Spawning new daemon thread for client %s" % (client.integration_name))
+                t = ClientThread(self)
+                t.daemon = True
+                self.processing_threads.append(t)
+                t.start()
+
                 logger.info("Connecting to %s" % (client.integration_name))
 
                 # Have the client connect to the client's services
                 if client.connect():
                     logger.info("%s client is connected" % (client.integration_name))
 
-                    # Begin client processing
-                    client.process()
+                    self.queue.put(client)
                 else:
                     logger.error("Unable to connect to the client %s" % (client.integration_name))
 
-            # Keep the main thread alive
-            while True:
-                time.sleep(1)
+            # Main thread of the bot
+            self.process()
         else:
             logger.critical("No valid client integrations found. Make sure the settings.ini file has an entry for clients_enabled and that the settings for the client are configured")
+
+    def process(self):
+        try:
+            while threading.activeCount() > 0:
+                # logger.debug("Main Loop - active threads: %s, should_shutdown: %s, should_restart: %s" % (threading.activeCount(), self.should_shutdown, self.should_restart))
+                # If exit mode is true the bot will be expecting porcessing threads to die off
+                # During every loop the bot will be checking to see if background threads have
+                # switch to inactive status. If so, the thread will be removed from the active
+                # processing thread list
+                if self.should_shutdown:
+                    #  Updating the list with only the threads that are still active
+                    self.processing_threads = [x for x in self.processing_threads if x.is_alive()]
+
+                    # Integrations like xmpp rely on sleekxmpp behind the scenes for processing.
+                    # Sleekxmpp spawns its own background threads for scheduling purposes that
+                    # take a little while longer to stop then the items in self.processing_threads
+                    # so this next conditional will wait not only until HavocBot threads are burned
+                    # down but also until the total active threads are down to just the main thread.
+                    # This probably should be redone to be cleaner. It is a TODO
+                    if len(self.processing_threads) == 0:
+                        if threading.activeCount() == 1:
+                            logger.debug("Only the main thread is active. All background threads have exited")
+                            self.should_shutdown = False
+                        else:
+                            logger.debug("Waiting on non HavocBot background thread to exit")
+                    else:
+                        logger.debug("Waiting on HavocBot background thread to exit")
+                else:
+                    # Reconfigure and restart the bot if coming from a restart event
+                    if self.should_restart:
+                        self.should_restart = False
+                        self.configure()
+                        self.start()
+                time.sleep(1)
+                pass
+        except (KeyboardInterrupt, SystemExit) as e:
+            logger.info("Interrupt received - %s" % (e))
+            # Cleanup before finally exiting
+            self.should_shutdown = True
+            self.exit()
 
     def register_triggers(self, trigger_tuple_list):
         if trigger_tuple_list:
@@ -177,8 +237,18 @@ class HavocBot:
         self.shutdown()
         sys.exit(0)
 
+    def restart(self):
+        self.should_restart = True
+        self.shutdown()
+
     def shutdown(self):
         self.disconnect()
+
+        # Need to kill threads
+        for thread in self.processing_threads:
+            if thread.is_active:
+                thread.queue.task_done()
+                thread.is_active = False
 
         self.clients = []
         self.plugins_core = []
@@ -187,16 +257,36 @@ class HavocBot:
         self.is_configured = False
 
     def disconnect(self):
+        self.should_shutdown = True
         for client in self.clients:
             logger.info("Disconnecting client %s" % (client.integration_name))
             client.disconnect()
 
-    def restart(self):
-        self.shutdown()
-        time.sleep(3)
-        self.configure()
-        self.start()
-
-    def signal_handler(self, signal, frame):
+    def signa_handler(self, signal, frame):
         logger.info("Received an interrupt. Starting shutdown")
         self.exit()
+
+    def show_threads(self):
+        for thread in self.processing_threads:
+            logger.debug("HavocBot.show_threads() - %s - thread is %s. is_active set to %s, is_alive set to %s" % (len(self.processing_threads), thread, thread.is_active, thread.is_alive()))
+
+
+class ClientThread(threading.Thread):
+    def __init__(self, havocbot):
+        threading.Thread.__init__(self)
+        self.havocbot = havocbot
+        self.queue = havocbot.queue
+        self.is_active = True
+
+    def run(self):
+        while not self.havocbot.should_shutdown:
+            try:
+                client = self.queue.get()
+                # Trigger the client integration's process() method
+                client.process()
+            except Exception as e:
+                logger.error(e)
+            finally:
+                if self.is_active:
+                    self.queue.task_done()
+                    self.is_active = False

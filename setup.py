@@ -11,14 +11,14 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='havocbot',
     version='0.1.1.dev0',
-    description='an extensible chat bot that works across any number of chat programs',
+    description='An extensible chat bot that works across any number of chat programs',
     long_description=long_description,
     url='https://github.com/markperdue/havocbot',
     author='Mark Perdue',
     author_email='markaperdue@gmail.com',
     license='MIT',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'License :: OSI Approved :: MIT License',
         'Intended Audience :: Developers',
         'Intended Audience :: End Users/Desktop',

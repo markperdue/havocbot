@@ -4,12 +4,9 @@ from havocbot.user import User
 import json
 import logging
 import re
-import signal
 from slackclient import SlackClient
 
 logger = logging.getLogger(__name__)
-
-PROCESS_ONE_WORD_TRIGGERS_IF_ONLY_CONTENT_IN_MESSAGE = True
 
 
 class Slack(Client):
@@ -25,6 +22,7 @@ class Slack(Client):
         self.token = None
         self.username = None
         self.user_id = None
+        self.exact_match_one_word_triggers = True
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
@@ -68,9 +66,7 @@ class Slack(Client):
             self.client = None
 
     def process(self):
-        signal.signal(signal.SIGINT, self.havocbot.signal_handler)
-
-        while True and self.client is not None:
+        while not self.havocbot.should_shutdown:
             try:
                 for event in self.client.rtm_read():
                     if 'type' in event:
@@ -80,6 +76,7 @@ class Slack(Client):
                             # Ignore messages originating from havocbot
                             if 'user' in event and event['user'] != self.user_id:
                                 message_object = create_message_object_from_json(event)
+                                logger.info("Received - %s" % (message_object))
 
                                 try:
                                     self.handle_message(message_object=message_object)
@@ -113,10 +110,8 @@ class Slack(Client):
 
             if message_object.type_ == 'message':
                 for (trigger, triggered_function) in self.havocbot.triggers:
-                    logger.debug("trigger is '%s', triggered_function is '%s'" % (trigger, str(triggered_function)))
-
                     # Add exact regex match if user defined
-                    if len(trigger.split()) == 1 and PROCESS_ONE_WORD_TRIGGERS_IF_ONLY_CONTENT_IN_MESSAGE is True:
+                    if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
                         if not trigger.startswith('^') and not trigger.endswith('$'):
                             logger.debug("Converting trigger to a line exact match requirement")
                             trigger = "^" + trigger + "$"
@@ -126,9 +121,7 @@ class Slack(Client):
 
                     match = regex.search(message_object.text)
                     if match is not None:
-                        logger.debug("Y MATCH FOR TRIGGER '%s' WITH %s'" % (trigger, match))
-
-                        logger.info("Received event for trigger '%s'" % (trigger))
+                        logger.info("Matched message against trigger '%s'" % (trigger))
 
                         # Pass the message to the function associated with the trigger
                         try:
@@ -138,7 +131,7 @@ class Slack(Client):
 
                         break
                     else:
-                        logger.debug("N MATCH FOR TRIGGER '%s' WITH %s'" % (trigger, match))
+                        logger.debug("No match. Skipping '%s'" % (trigger))
                         pass
             else:
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.type_))

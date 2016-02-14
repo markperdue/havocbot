@@ -3,13 +3,9 @@ from havocbot.message import Message
 from havocbot.user import User
 import logging
 import re
-import signal
 import sleekxmpp
-import threading
 
 logger = logging.getLogger(__name__)
-
-PROCESS_ONE_WORD_TRIGGERS_IF_ONLY_CONTENT_IN_MESSAGE = True
 
 
 class HipChat(Client):
@@ -27,6 +23,7 @@ class HipChat(Client):
         self.room_name = None
         self.nickname = None
         self.server = None
+        self.exact_match_one_word_triggers = True
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
@@ -58,8 +55,6 @@ class HipChat(Client):
 
         self.client = HipMUCBot(self, self.havocbot, self.username, self.password, self.room_name + "@" + self.server, self.nickname)
 
-        # self.client.use_signals(signals=['SIGHUP', 'SIGTERM', 'SIGINT'])
-
         self.client.register_plugin('xep_0030')  # Service Discovery
         self.client.register_plugin('xep_0045')  # Multi-User Chat
         self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # XMPP Ping set for a keepalive ping every 60 seconds
@@ -73,19 +68,9 @@ class HipChat(Client):
     def disconnect(self):
         if self.client is not None:
             self.client.disconnect()
-            for thread in self.all_threads:
-                logger.debug("Stopping thread %s" % (thread))
-                thread.running = False
-                thread.stop()
 
     def process(self):
-        self.all_threads = []
-
-        signal.signal(signal.SIGINT, self.havocbot.signal_handler)
-        a_thread = HipChatThread(self.client)
-        a_thread.daemon = True
-        self.all_threads.append(a_thread)
-        a_thread.start()
+        self.client.process(block=True)
 
     def handle_message(self, **kwargs):
         if kwargs is not None:
@@ -94,10 +79,8 @@ class HipChat(Client):
 
             if message_object.type_ == 'message':
                 for (trigger, triggered_function) in self.havocbot.triggers:
-                    logger.debug("trigger is '%s', triggered_function is '%s'" % (trigger, str(triggered_function)))
-
                     # Add exact regex match if user defined
-                    if len(trigger.split()) == 1 and PROCESS_ONE_WORD_TRIGGERS_IF_ONLY_CONTENT_IN_MESSAGE is True:
+                    if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
                         if not trigger.startswith('^') and not trigger.endswith('$'):
                             logger.debug("Converting trigger to a line exact match requirement")
                             trigger = "^" + trigger + "$"
@@ -107,9 +90,7 @@ class HipChat(Client):
 
                     match = regex.search(message_object.text)
                     if match is not None:
-                        logger.debug("Y MATCH FOR TRIGGER '%s' WITH %s'" % (trigger, match))
-
-                        logger.info("Received event for trigger '%s'" % (trigger))
+                        logger.info("Matched message against trigger '%s'" % (trigger))
 
                         # Pass the message to the function associated with the trigger
                         try:
@@ -119,7 +100,7 @@ class HipChat(Client):
 
                         break
                     else:
-                        logger.debug("N MATCH FOR TRIGGER '%s' WITH %s'" % (trigger, match))
+                        logger.debug("No match. Skipping '%s'" % (trigger))
                         pass
             else:
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.type_))
@@ -187,9 +168,9 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
         self.plugin['xep_0045'].joinMUC(self.room, self.nick, wait=True)
 
     def muc_message(self, msg):
-        # logger.info("msg['type'] is '%s', msg['to'] is '%s', msg['from'] is '%s', msg['mucroom'] is '%s', msg['mucnick'] is '%s', " % (msg['type'], msg['to'], msg['from'], msg['mucroom'], msg['mucnick'], ))
         if msg['mucnick'] != self.nick:
             message_object = Message(msg['body'], msg['mucnick'], self.room, "message")
+            logger.info("Received - %s" % (message_object))
 
             try:
                 self.parent.handle_message(message_object=message_object)
@@ -212,16 +193,3 @@ def create_user_object_from_json(name, jabber_id):
     logger.debug(user)
 
     return user
-
-
-class HipChatThread(threading.Thread):
-    def __init__(self, client):
-        threading.Thread.__init__(self)
-        self.client = client
-
-    def run(self):
-        logger.debug("Running a background thread for %s" % (self.__class__.__name__))
-        self.client.process(block=True)
-
-    def stop(self):
-        self.client.set_stop()
