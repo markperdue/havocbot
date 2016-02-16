@@ -20,15 +20,15 @@ class ShowtimesPlugin(HavocBotPlugin):
 
     @property
     def plugin_usages(self):
-        return (
-            ("showtimes for <movie name>", "get me showtimes for star wars", "look up showtimes for a movie"),
-        )
+        return [
+            ("movies in <zip code>", "movies in 94110", "displays the earliest upcoming movie showtimes in a zip code"),
+        ]
 
     @property
     def plugin_triggers(self):
-        return (
-            (".*showtimes for\s*(.*)", self.start),
-        )
+        return [
+            (".*movies in\s*(\d{5})", self.start),
+        ]
 
     def init(self, havocbot):
         self.havocbot = havocbot
@@ -41,17 +41,14 @@ class ShowtimesPlugin(HavocBotPlugin):
         self.havocbot = None
 
     def start(self, callback, message, **kwargs):
-        # "get me weather in 94010 and 94110"
-        # "find me the warmest weather between 94010 and 94110"
-
-        # Capture the movie name
+        # Capture the zip code
         capture = kwargs.get('capture_groups', None)
-        movie_name = '+'.join(capture[0].split())
-        logger.debug("start - searching for '%s'" % (movie_name))
-        showtimes_object = showtimes.create_showtimes("2325", datetime.now().strftime("%m-%d-%Y"), movie_name)
+        zip_code = capture[0]
+        logger.debug("start - searching for movies for '%s'" % (zip_code))
+        showtimes_object = showtimes.get_showtimes_for_zip_on_date(zip_code, datetime.now().strftime("%m-%d-%Y"))
         if message.channel:
             if showtimes_object:
-                callback.send_message(channel=message.channel, message=showtimes_object.return_showtimes())
+                callback.send_messages_from_list(channel=message.channel, message=showtimes_object)
             else:
                 callback.send_message(channel=message.channel, message="No showtime data found")
 
