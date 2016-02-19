@@ -98,7 +98,9 @@ class HipChat(Client):
                         except Exception as e:
                             logger.error(e)
 
-                        break
+                        # No longer breaking on a match since it is possible for two plugins to match
+                        # the same trigger and breaking would only allow one trigger to be matched
+                        # break
                     else:
                         logger.debug("No match. Skipping '%s'" % (trigger))
                         pass
