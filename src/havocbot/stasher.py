@@ -2,8 +2,8 @@ import json
 import jsonpickle
 import logging
 import os
-from singletonmixin import Singleton
-import user
+from havocbot.singletonmixin import Singleton
+import havocbot.user
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class Stasher(Singleton):
     def load_db(self):
         if not os.path.exists(self.filename):
             logger.info("Creating new Stasher database file")
-            file(self.filename, 'w').close()
+            file(self.filename, 'wt').close()
 
         data = {}
         with open(self.filename, 'r+') as data_file:
@@ -30,7 +30,7 @@ class Stasher(Singleton):
         return data
 
     def write_db(self):
-        with open(self.filename, 'wb') as outfile:
+        with open(self.filename, 'wt') as outfile:
             json.dump(json.loads(jsonpickle.encode(self.data, unpicklable=True)), outfile, indent=2, sort_keys=True)  # Rip out object references
 
     def add_alias(self, username, alias):
@@ -59,14 +59,14 @@ class Stasher(Singleton):
                     logger.info("Username %s already exists" % (username))
                 else:
                     logger.debug("Adding user")
-                    self.data['users'].append(user.User(name, username))
+                    self.data['users'].append(havocbot.user.User(name, username))
                     self.write_db()
             else:
                 logger.debug("Adding initial user")
-                self.data['users'] = [user.User(name, username)]
+                self.data['users'] = [havocbot.user.User(name, username)]
                 self.write_db()
         else:
-            self.data['users'] = [user.User(name, username)]
+            self.data['users'] = [havocbot.user.User(name, username)]
             self.write_db()
 
     def get_users(self):

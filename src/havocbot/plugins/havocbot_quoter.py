@@ -127,7 +127,7 @@ class StasherQuote(Stasher):
                 if any((known_quote['username'] == username and known_quote['quote'] == quote) for known_quote in self.data['quotes']):
                     print("Quote db already contains the quote '%s' for username %s" % (quote, username))
                 else:
-                    print("Adding alias")
+                    print("Adding quote")
                     self.data['quotes'].append({'username': username, 'quote': quote, 'client': client, 'channel': channel, 'timestamp': timestamp})
                     self.write_db()
             else:
