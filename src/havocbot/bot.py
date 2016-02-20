@@ -219,7 +219,12 @@ class HavocBot:
         if trigger_tuple_list:
             # Make a shallow copy of the currently known triggers
             working_copy_triggers = copy.copy(self.triggers)
-            working_copy_triggers = [x for x in working_copy_triggers not in trigger_tuple_list]
+
+            tmp_list = []
+            for x in working_copy_triggers:
+                if x not in trigger_tuple_list:
+                    tmp_list.append(x)
+            working_copy_triggers = tmp_list
 
             triggers_length = len(trigger_tuple_list)
             triggers_phrase = "trigger" if len(trigger_tuple_list) == 1 else "triggers"

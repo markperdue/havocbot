@@ -36,12 +36,13 @@ class ReloadPlugin(HavocBotPlugin):
 
     def shutdown(self):
         self.havocbot.unregister_triggers(self.plugin_triggers)
-        self.havocbot = None
+        # self.havocbot = None  # start() still needs the reference to self.havocbot
 
     def start(self, callback, message, **kwargs):
         self.havocbot.reload_plugins()
+        logger.info("Done with trigger reload_plugins()")
         if message.channel:
-            callback.send_message(channel=message.channel, message="Reloaded %d modules and discovered %s commands" % (len(self.havocbot.plugins_core) + len(self.havocbot.plugins_custom), len(self.havocbot.triggers)))
+            callback.send_message(channel=message.channel, message="Reloaded %d modules and discovered %s commands" % (len(self.havocbot.plugins_core) + len(self.havocbot.plugins_custom), len(self.havocbot.triggers)), type_=message.type_)
 
 
 # Make this plugin available to HavocBot

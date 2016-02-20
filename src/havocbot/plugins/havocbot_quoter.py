@@ -22,18 +22,18 @@ class QuoterPlugin(HavocBotPlugin):
 
     @property
     def plugin_usages(self):
-        return (
+        return [
             ("!quote <username>", "!quote markaperdue", "get a quote said by a user"),
             ("!addquote <username>", "!addquote markaperdue", "add the last message said by the user to the database"),
-        )
+        ]
 
     @property
     def plugin_triggers(self):
-        return (
+        return [
             ("!quote\s(.*)", self.get_quote),
             ("!addquote\s(.*)", self.add_quote),
             ("(.*)", self.start),
-        )
+        ]
 
     def init(self, havocbot):
         self.havocbot = havocbot
@@ -47,14 +47,14 @@ class QuoterPlugin(HavocBotPlugin):
         self.havocbot = None
 
     def start(self, callback, message, **kwargs):
-        message_string = "User: '%s', Channel: '%s', Timestamp: '%s', Text: '%s'" % (message.user, message.channel, message.ts, message.text)
+        message_string = "User: '%s', Channel: '%s', Timestamp: '%s', Text: '%s'" % (message.user, message.channel, message.timestamp, message.text)
         logger.info(callback.get_user_by_id(message.user))
         logger.info(message_string)
 
         # Remember only the past 5 messages said by a user. Quoter can potentially
         # be running across multiple clients so the recent_messages list has entries
         # setup like the following tuple:
-        # (User.username, message.text, Client.integration_name, message.channel, message.ts)
+        # (User.username, message.text, Client.integration_name, message.channel, message.timestamp)
         user = callback.get_user_by_id(message.user)
         if user:
             timestamp = datetime.utcnow().replace(tzinfo=tz.tzutc())
@@ -74,7 +74,7 @@ class QuoterPlugin(HavocBotPlugin):
             for (username, client, text, channel, timestamp) in self.recent_messages:
                 if captured_username == username:
                     text = "%s said '%s' on '%s' in channel '%s' on client '%s'" % (username, text, str(timestamp), channel, client)
-                    callback.send_message(channel=message.channel, message=text)
+                    callback.send_message(channel=message.channel, message=text, type_=message.type_)
 
     def get_quote(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -95,9 +95,9 @@ class QuoterPlugin(HavocBotPlugin):
                     temp_list.append("%s said '%s' on %s" % (result['username'], result['quote'], format_datetime_for_display(date)))
                 else:
                     temp_list.append("No quotes found from user %s" % (word))
-            callback.send_messages_from_list(channel=message.channel, message=temp_list)
+            callback.send_messages_from_list(channel=message.channel, message=temp_list, type_=message.type_)
         else:
-            callback.send_message(channel=message.channel, message="Too many parameters. What are you trying to do?")
+            callback.send_message(channel=message.channel, message="Too many parameters. What are you trying to do?", type_=message.type_)
 
     def add_quote(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -111,7 +111,7 @@ class QuoterPlugin(HavocBotPlugin):
                 if username == captured_username:
                     stasher.add_quote(username, quote, client, channel, timestamp)
                     text = "%s said something ridiculous. Archiving it" % (username)
-                    callback.send_message(channel=message.channel, message=text)
+                    callback.send_message(channel=message.channel, message=text, type_=message.type_)
                     break
 
 

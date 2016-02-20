@@ -113,7 +113,7 @@ class Slack(Client):
                     # Add exact regex match if user defined
                     if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
                         if not trigger.startswith('^') and not trigger.endswith('$'):
-                            logger.debug("Converting trigger to a line exact match requirement")
+                            # logger.debug("Converting trigger to a line exact match requirement")
                             trigger = "^" + trigger + "$"
 
                     # Use trigger as regex pattern and then search the message for a match
@@ -128,48 +128,44 @@ class Slack(Client):
                             triggered_function(self, message_object, capture_groups=match.groups())
                         except Exception as e:
                             logger.error(e)
-
-                        # No longer breaking on a match since it is possible for two plugins to match
-                        # the same trigger and breaking would only allow one trigger to be matched
-                        # break
                     else:
-                        logger.debug("No match. Skipping '%s'" % (trigger))
+                        logger.debug("Message did not match trigger '%s'" % (trigger))
                         pass
             else:
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.type_))
 
-    def send_message(self, **kwargs):
-        if kwargs is not None:
-            if 'message' in kwargs and kwargs.get('message') is not None:
-                message = kwargs.get('message')
-            if 'channel' in kwargs and kwargs.get('channel') is not None:
-                channel = kwargs.get('channel')
+    def send_message(self, message, channel, type_, **kwargs):
+        # if kwargs is not None:
+        #     if 'message' in kwargs and kwargs.get('message') is not None:
+        #         message = kwargs.get('message')
+        #     if 'channel' in kwargs and kwargs.get('channel') is not None:
+        #         channel = kwargs.get('channel')
 
-            if channel and message:
-                logger.info("Sending message '%s' to channel '%s'" % (message, channel))
-                try:
-                    self.client.rtm_send_message(channel, message)
-                except AttributeError:
-                    logger.error("Unable to send message. Are you connected?")
-                except Exception as e:
-                    logger.error("Unable to send message. %s" % (e))
+        if channel and message:
+            logger.info("Sending message '%s' to channel '%s'" % (message, channel))
+            try:
+                self.client.rtm_send_message(channel, message)
+            except AttributeError:
+                logger.error("Unable to send message. Are you connected?")
+            except Exception as e:
+                logger.error("Unable to send message. %s" % (e))
 
-    def send_messages_from_list(self, **kwargs):
-        if kwargs is not None:
-            if 'message' in kwargs and kwargs.get('message') is not None:
-                message = kwargs.get('message')
-            if 'channel' in kwargs and kwargs.get('channel') is not None:
-                channel = kwargs.get('channel')
+    def send_messages_from_list(self, message, channel, type_, **kwargs):
+        # if kwargs is not None:
+        #     if 'message' in kwargs and kwargs.get('message') is not None:
+        #         message = kwargs.get('message')
+        #     if 'channel' in kwargs and kwargs.get('channel') is not None:
+        #         channel = kwargs.get('channel')
 
-            if channel and message:
-                joined_message = "\n".join(message)
-                logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))
-                try:
-                    self.client.rtm_send_message(channel, joined_message)
-                except AttributeError:
-                    logger.error("Unable to send message. Are you connected?")
-                except Exception as e:
-                    logger.error("Unable to send message. %s" % (e))
+        if channel and message:
+            joined_message = "\n".join(message)
+            logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))
+            try:
+                self.client.rtm_send_message(channel, joined_message)
+            except AttributeError:
+                logger.error("Unable to send message. Are you connected?")
+            except Exception as e:
+                logger.error("Unable to send message. %s" % (e))
 
     def get_user_by_id(self, user_id):
         user = None
@@ -189,17 +185,17 @@ class Slack(Client):
 
 
 class SlackMessage(Message):
-    def __init__(self, text, user, channel, type_, team, reply_to, ts):
+    def __init__(self, text, user, channel, type_, team, reply_to, timestamp):
         self.text = text
         self.user = user
         self.channel = channel
         self.type_ = type_
         self.team = team
         self.reply_to = reply_to
-        self.ts = ts
+        self.timestamp = timestamp
 
     def __str__(self):
-        return "SlackMessage(Text: '%s', User: '%s', Channel: '%s', Type: '%s', Team: '%s', Reply To: '%s', Timestamp: '%s')" % (self.text, self.user, self.channel, self.type_, self.team, self.reply_to, self.ts)
+        return "SlackMessage(Text: '%s', User: '%s', Channel: '%s', Type: '%s', Team: '%s', Reply To: '%s', Timestamp: '%s')" % (self.text, self.user, self.channel, self.type_, self.team, self.reply_to, self.timestamp)
 
 
 class SlackUser(User):
@@ -220,9 +216,9 @@ def create_message_object_from_json(json):
     type_ = json['type'] if 'type' in json else None
     team = json['team'] if 'team' in json else None
     reply_to = json['reply_to'] if 'reply_to' in json else None
-    ts = json['ts'] if 'ts' in json else None
+    timestamp = json['ts'] if 'ts' in json else None
 
-    message = SlackMessage(text, user, channel, type_, team, reply_to, ts)
+    message = SlackMessage(text, user, channel, type_, team, reply_to, timestamp)
 
     return message
 

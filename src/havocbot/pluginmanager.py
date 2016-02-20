@@ -51,8 +51,6 @@ class StatefulPlugin:
 
 # Load a plugin by name
 def load_plugin(havocbot, name, path):
-    logger.log(0, "load_plugin called with name '%s' and path '%s'" % (name, path))
-
     if StatefulPlugin.is_valid(path):
         logger.debug("%s validated as a plugin" % (name))
 
@@ -63,8 +61,6 @@ def load_plugin(havocbot, name, path):
 
 # Load all core plugins and attaches them to the bot
 def load_plugins_core(havocbot):
-    logger.log(0, "load_plugins_core triggered")
-
     # Trigger shutdown of any running plugins
     unload_plugins_of_type(havocbot, 'core')
 
@@ -126,10 +122,12 @@ def load_plugins_of_type(havocbot, plugin_type):
 # Triggers the shutdown method in all loaded plugins
 def unload_plugins_of_type(havocbot, plugin_type):
     if plugin_type == "core":
-        for plugin in havocbot.plugins_core:
-            plugin.handler.shutdown()
+        if havocbot.plugins_core is not None:
+            for plugin in havocbot.plugins_core:
+                plugin.handler.shutdown()
     elif plugin_type == "custom":
-        for plugin in havocbot.plugins_custom:
-            plugin.handler.shutdown()
+        if havocbot.plugins_custom is not None:
+            for plugin in havocbot.plugins_custom:
+                plugin.handler.shutdown()
     else:
         return

@@ -48,9 +48,9 @@ class ShowtimesPlugin(HavocBotPlugin):
         showtimes_object = showtimes.get_showtimes_for_zip_on_date(zip_code, datetime.now().strftime("%m-%d-%Y"))
         if message.channel:
             if showtimes_object:
-                callback.send_messages_from_list(channel=message.channel, message=showtimes_object)
+                callback.send_messages_from_list(channel=message.channel, message=showtimes_object, type_=message.type_)
             else:
-                callback.send_message(channel=message.channel, message="No showtime data found")
+                callback.send_message(channel=message.channel, message="No showtime data found", type_=message.type_)
 
 
 # Make this plugin available to HavocBot

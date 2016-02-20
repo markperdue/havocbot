@@ -1,3 +1,5 @@
+from dateutil import tz
+from datetime import datetime
 from havocbot.client import Client
 from havocbot.message import Message
 from havocbot.user import User
@@ -77,12 +79,12 @@ class HipChat(Client):
             if 'message_object' in kwargs and kwargs.get('message_object') is not None:
                 message_object = kwargs.get('message_object')
 
-            if message_object.type_ == 'message':
+            if message_object.type_ in ('groupchat', 'chat', 'normal'):
                 for (trigger, triggered_function) in self.havocbot.triggers:
                     # Add exact regex match if user defined
                     if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
                         if not trigger.startswith('^') and not trigger.endswith('$'):
-                            logger.debug("Converting trigger to a line exact match requirement")
+                            # logger.debug("Converting trigger to a line exact match requirement")
                             trigger = "^" + trigger + "$"
 
                     # Use trigger as regex pattern and then search the message for a match
@@ -97,48 +99,32 @@ class HipChat(Client):
                             triggered_function(self, message_object, capture_groups=match.groups())
                         except Exception as e:
                             logger.error(e)
-
-                        # No longer breaking on a match since it is possible for two plugins to match
-                        # the same trigger and breaking would only allow one trigger to be matched
-                        # break
                     else:
-                        logger.debug("No match. Skipping '%s'" % (trigger))
+                        logger.debug("Message did not match trigger '%s'" % (trigger))
                         pass
             else:
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.type_))
 
-    def send_message(self, **kwargs):
-        if kwargs is not None:
-            if 'message' in kwargs and kwargs.get('message') is not None:
-                message = kwargs.get('message')
-            if 'channel' in kwargs and kwargs.get('channel') is not None:
-                channel = kwargs.get('channel')
+    def send_message(self, message, channel, type_, **kwargs):
+        if channel and message and type_:
+            logger.info("Sending %s message '%s' to channel '%s'" % (type_, message, channel))
+            try:
+                self.client.send_message(mto=channel, mbody=message, mtype=type_)
+            except AttributeError:
+                logger.error("Unable to send message. Are you connected?")
+            except Exception as e:
+                logger.error("Unable to send message. %s" % (e))
 
-            if channel and message:
-                logger.info("Sending message '%s' to channel '%s'" % (message, channel))
-                try:
-                    self.client.send_message(mto=channel, mbody=message, mtype='groupchat')
-                except AttributeError:
-                    logger.error("Unable to send message. Are you connected?")
-                except Exception as e:
-                    logger.error("Unable to send message. %s" % (e))
-
-    def send_messages_from_list(self, **kwargs):
-        if kwargs is not None:
-            if 'message' in kwargs and kwargs.get('message') is not None:
-                message = kwargs.get('message')
-            if 'channel' in kwargs and kwargs.get('channel') is not None:
-                channel = kwargs.get('channel')
-
-            if channel and message:
-                joined_message = "\n".join(message)
-                logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))
-                try:
-                    self.client.send_message(mto=channel, mbody=joined_message, mtype='groupchat')
-                except AttributeError:
-                    logger.error("Unable to send message. Are you connected?")
-                except Exception as e:
-                    logger.error("Unable to send message. %s" % (e))
+    def send_messages_from_list(self, message, channel, type_, **kwargs):
+        if channel and message and type_:
+            joined_message = "\n".join(message)
+            logger.info("Sending %s message list '%s' to channel '%s'" % (type_, joined_message, channel))
+            try:
+                self.client.send_message(mto=channel, mbody=joined_message, mtype=type_)
+            except AttributeError:
+                logger.error("Unable to send message. Are you connected?")
+            except Exception as e:
+                logger.error("Unable to send message. %s" % (e))
 
     def get_user_by_id(self, name):
         room_full = "%s@%s" % (self.room_name, self.server)
@@ -162,22 +148,42 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
         self.nick = nick
 
         self.add_event_handler("session_start", self.start)
-        self.add_event_handler("groupchat_message", self.muc_message)
+        self.add_event_handler("message", self.message)  # Also catches groupchat_message
 
     def start(self, event):
         self.get_roster()
         self.send_presence()
         self.plugin['xep_0045'].joinMUC(self.room, self.nick, wait=True)
 
-    def muc_message(self, msg):
-        if msg['mucnick'] != self.nick:
-            message_object = Message(msg['body'], msg['mucnick'], self.room, "message")
-            logger.info("Received - %s" % (message_object))
+    def log_msg(self, msg):
+        if msg['type'] == 'groupchat':
+            logger.info("Message - Type: '%s', To: '%s', From: '%s', ID: '%s', MUCNick: '%s', MUCRoom '%s', Body '%s'" % (msg['type'], msg['to'], msg['from'], msg['id'], msg['mucnick'], msg['mucroom'], msg['body']))
+            if msg['subject'] and msg['thread']:
+                logger.info("Message - Thread '%s', Body '%s'" % (msg['thread'], msg['body']))
+        else:
+            logger.info("Message - Type: '%s', To: '%s', From: '%s', ID: '%s', Body '%s'" % (msg['type'], msg['to'], msg['from'], msg['id'], msg['body']))
+            if msg['subject'] and msg['thread']:
+                logger.info("Message - Thread '%s', Body '%s'" % (msg['thread'], msg['body']))
 
-            try:
-                self.parent.handle_message(message_object=message_object)
-            except Exception as e:
-                logger.error(e)
+    def message(self, msg):
+        if msg['type'] == 'groupchat':
+            if msg['mucnick'] != self.nick:
+                message_object = Message(msg['body'], msg['mucnick'], msg['mucroom'], msg['type'], datetime.utcnow().replace(tzinfo=tz.tzutc()))
+                logger.info("Processed %s - %s" % (msg['type'], message_object))
+
+                try:
+                    self.parent.handle_message(message_object=message_object)
+                except Exception as e:
+                    logger.error(e)
+        elif msg['type'] in ('normal', 'chat'):
+            if msg['from'].bare != self.boundjid.bare:
+                message_object = Message(msg['body'], msg['from'], msg['from'], msg['type'], datetime.utcnow().replace(tzinfo=tz.tzutc()))
+                logger.info("Processed %s - %s" % (msg['type'], message_object))
+
+                try:
+                    self.parent.handle_message(message_object=message_object)
+                except Exception as e:
+                    logger.error(e)
 
 
 class HipChatUser(User):

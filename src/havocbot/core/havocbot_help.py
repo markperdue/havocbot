@@ -39,8 +39,11 @@ class HelpPlugin(HavocBotPlugin):
         self.havocbot.register_triggers(self.plugin_triggers)
 
     def shutdown(self):
+        logger.debug("shutdown() - about to unregister_triggers")
         self.havocbot.unregister_triggers(self.plugin_triggers)
+        logger.debug("shutdown() - about to set self.havocbot to None")
         self.havocbot = None
+        logger.debug("shutdown() finished")
 
     def start(self, callback, message, **kwargs):
         callback_message_list = ["HavocBot can help you with the following."]
@@ -48,7 +51,7 @@ class HelpPlugin(HavocBotPlugin):
             callback_message_list.append(usage_message)
 
         if message.channel:
-            callback.send_messages_from_list(channel=message.channel, message=callback_message_list)
+            callback.send_messages_from_list(channel=message.channel, message=callback_message_list, type_=message.type_)
 
     def help_plugins(self, callback, message, **kwargs):
         callback_message_list = []
@@ -59,7 +62,7 @@ class HelpPlugin(HavocBotPlugin):
         callback_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
 
         if message.channel:
-            callback.send_messages_from_list(channel=message.channel, message=callback_message_list)
+            callback.send_messages_from_list(channel=message.channel, message=callback_message_list, type_=message.type_)
 
     def help_plugin(self, callback, message, **kwargs):
         callback_message_list = []
@@ -81,7 +84,7 @@ class HelpPlugin(HavocBotPlugin):
             callback_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
 
         if message.channel:
-            callback.send_messages_from_list(channel=message.channel, message=callback_message_list)
+            callback.send_messages_from_list(channel=message.channel, message=callback_message_list, type_=message.type_)
 
     def get_plugin_help_matching_list(self, tuples_list):
         new_list = []
