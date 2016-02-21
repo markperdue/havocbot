@@ -167,7 +167,7 @@ class Slack(Client):
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def get_user_by_id(self, user_id):
+    def get_user_by_id(self, user_id, **kwargs):
         user = None
 
         if self.client:

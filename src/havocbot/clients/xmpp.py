@@ -14,7 +14,7 @@ class XMPP(Client):
 
     @property
     def integration_name(self):
-        return "xmpp"
+        return 'xmpp'
 
     def __init__(self, havocbot):
         # Capture a reference to havocbot
@@ -22,7 +22,7 @@ class XMPP(Client):
 
         self.token = None
         self.username = None
-        self.room_name = None
+        self.room_names = None
         self.nickname = None
         self.server = None
         self.exact_match_one_word_triggers = True
@@ -35,27 +35,33 @@ class XMPP(Client):
                 self.username = item[1]
             elif item[0] == 'password':
                 self.password = item[1]
-            elif item[0] == 'room_name':
-                self.room_name = item[1]
+            elif item[0] == 'room_names':
+                self.room_names = item[1].strip().split(',')
             elif item[0] == 'nickname':
                 self.nickname = item[1]
             elif item[0] == 'server':
                 self.server = item[1]
 
         # Return true if this integrations has the information required to connect
-        if self.username is not None and self.password is not None and self.room_name is not None and self.nickname is not None and self.server is not None:
-            return True
+        if self.username is not None and self.password is not None and self.room_names is not None and self.nickname is not None and self.server is not None:
+            # Make sure there is at least one non falsy room to join (ex. room_names = ,,,,,, should fail)
+            if len([x for x in self.room_names if x]) > 0:
+                logger.debug('There is at least one non falsy room name')
+                return True
+            else:
+                logger.error('You must enter at least one chatroom in settings.ini for this configuration')
+                return False
         else:
-            logger.error("XMPP configuration is not valid. Check your settings and try again")
+            logger.error('XMPP configuration is not valid. Check your settings and try again')
             return False
 
     def connect(self):
         if self.username is None:
-            logger.error("A XMPP username must be configured")
+            logger.error('A XMPP username must be configured')
         if self.password is None:
-            logger.error("A XMPP password must be configured")
+            logger.error('A XMPP password must be configured')
 
-        self.client = MUCBot(self, self.havocbot, self.username, self.password, self.room_name + "@" + self.server, self.nickname)
+        self.client = MUCBot(self, self.havocbot, self.username, self.password, self.room_names, self.server, self.nickname)
 
         self.client.register_plugin('xep_0030')  # Service Discovery
         self.client.register_plugin('xep_0045')  # Multi-User Chat
@@ -84,8 +90,8 @@ class XMPP(Client):
                     # Add exact regex match if user defined
                     if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
                         if not trigger.startswith('^') and not trigger.endswith('$'):
-                            # logger.debug("Converting trigger to a line exact match requirement")
-                            trigger = "^" + trigger + "$"
+                            # logger.debug('Converting trigger to a line exact match requirement')
+                            trigger = '^' + trigger + '$'
 
                     # Use trigger as regex pattern and then search the message for a match
                     regex = re.compile(trigger)
@@ -111,49 +117,63 @@ class XMPP(Client):
             try:
                 self.client.send_message(mto=channel, mbody=message, mtype=type_)
             except AttributeError:
-                logger.error("Unable to send message. Are you connected?")
+                logger.error('Unable to send message. Are you connected?')
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
     def send_messages_from_list(self, message, channel, type_, **kwargs):
         if channel and message and type_:
-            joined_message = "\n".join(message)
+            joined_message = '\n'.join(message)
             logger.info("Sending %s message list '%s' to channel '%s'" % (type_, joined_message, channel))
             try:
                 self.client.send_message(mto=channel, mbody=joined_message, mtype=type_)
             except AttributeError:
-                logger.error("Unable to send message. Are you connected?")
+                logger.error('Unable to send message. Are you connected?')
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def get_user_by_id(self, name):
-        room_full = "%s@%s" % (self.room_name, self.server)
-        jabber_id = self.client.plugin['xep_0045'].getJidProperty(room_full, name, 'jid')
+    def get_user_by_id(self, name, **kwargs):
+        user = None
 
-        user = create_user_object_from_json(name, jabber_id)
-
-        if user:
-            return user
+        # Check to see if the name is already a JID
+        jid_bare = getattr(name, 'bare', None)
+        if jid_bare is not None:
+            # JID already known
+            user = create_user_object_from_json(name, jid_bare)
         else:
-            return None
+            # Fetch JID from xep_0045
+            channel = kwargs.get('channel', None)
+            if channel is not None and channel:
+                if '@' not in channel:
+                    channel = "%s@%s" % (channel, self.server)
+
+                jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
+                user = create_user_object_from_json(name, jabber_id.bare)
+
+        return user
 
 
 class MUCBot(sleekxmpp.ClientXMPP):
-    def __init__(self, callback, havocbot, jid, password, room, nick):
+    def __init__(self, callback, havocbot, jid, password, rooms_list, server_host, nick):
         sleekxmpp.ClientXMPP.__init__(self, jid, password)
 
         self.havocbot = havocbot
         self.parent = callback
-        self.room = room
+        self.rooms = rooms_list
         self.nick = nick
+        self.server_host = server_host
 
-        self.add_event_handler("session_start", self.start)
-        self.add_event_handler("message", self.message)  # Also catches groupchat_message
+        self.add_event_handler('session_start', self.start)
+        self.add_event_handler('message', self.message)  # Also catches groupchat_message
 
     def start(self, event):
         self.get_roster()
         self.send_presence()
-        self.plugin['xep_0045'].joinMUC(self.room, self.nick, wait=True)
+        for item in self.rooms:
+            if len(item) > 0:
+                room_string = item + '@' + self.server_host
+                logger.debug("Joining room '%s'" % (room_string))
+                self.plugin['xep_0045'].joinMUC(room_string, self.nick, wait=True)
 
     def log_msg(self, msg):
         if msg['type'] == 'groupchat':

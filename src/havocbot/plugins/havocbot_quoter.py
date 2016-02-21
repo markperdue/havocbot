@@ -48,14 +48,14 @@ class QuoterPlugin(HavocBotPlugin):
 
     def start(self, callback, message, **kwargs):
         message_string = "User: '%s', Channel: '%s', Timestamp: '%s', Text: '%s'" % (message.user, message.channel, message.timestamp, message.text)
-        logger.info(callback.get_user_by_id(message.user))
+        logger.info(callback.get_user_by_id(message.user, channel=message.channel))
         logger.info(message_string)
 
         # Remember only the past 5 messages said by a user. Quoter can potentially
         # be running across multiple clients so the recent_messages list has entries
         # setup like the following tuple:
         # (User.username, message.text, Client.integration_name, message.channel, message.timestamp)
-        user = callback.get_user_by_id(message.user)
+        user = callback.get_user_by_id(message.user, channel=message.channel)
         if user:
             timestamp = datetime.utcnow().replace(tzinfo=tz.tzutc())
             a_message_tuple = (user.username, message.text, callback.integration_name, message.channel, timestamp.isoformat())
