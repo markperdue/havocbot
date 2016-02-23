@@ -38,8 +38,8 @@ HavocBot should connect to the chat clients if valid credentials were provided
 
 Python 2.6 Legacy Compatibility
 -------------------------------
- - XMPP, HipCHat are compatibile out of the box
- - Slack requires an extra pip module to be installed to support python 2.6. SlackClient v0.18.0 depends on 'requests' which requires ndg-httpsclient to support TLS SNI (See https://github.com/kennethreitz/requests/issues/749#issuecomment-19187417)
+ - XMPP, HipCHat are compatible out of the box
+ - Slack requires an extra pip module to be installed to support python 2.6. SlackClient v0.18.0 depends on 'requests' which requires 'ndg-httpsclient' to enable TLS SNI (See https://github.com/kennethreitz/requests/issues/749#issuecomment-19187417)
 
  .. code:: bash
 
