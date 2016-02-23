@@ -14,6 +14,7 @@ class Stasher(Singleton):
         self.data = self.load_db()
 
     def load_db(self):
+        logger.info("Reloading from db")
         if not os.path.exists(self.filename):
             logger.info("Creating new Stasher database file")
             file(self.filename, 'wt').close()
@@ -30,8 +31,10 @@ class Stasher(Singleton):
         return data
 
     def write_db(self):
+        logger.info("Writing to db")
         with open(self.filename, 'wt') as outfile:
-            json.dump(json.loads(jsonpickle.encode(self.data, unpicklable=True)), outfile, indent=2, sort_keys=True)  # Rip out object references
+            json.dump(json.loads(jsonpickle.encode(self.data, unpicklable=False)), outfile, indent=2, sort_keys=True)  # Rip out object references
+        self.load_db()
 
     def add_alias(self, username, alias):
         # logger.debug("Add alias triggered with username '%s' and alias '%s'" % (username, alias))
