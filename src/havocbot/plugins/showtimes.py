@@ -12,6 +12,13 @@ MAX_UPCOMING_SHOWTIMES_TO_DISPLAY = 5
 logger = logging.getLogger(__name__)
 
 
+# Python 2.6 does not support total_seconds()
+def timedelta_total_seconds(timedelta):
+    return (
+        timedelta.microseconds +
+        (timedelta.seconds + timedelta.days * 24 * 3600) * 10 ** 6) / 10 ** 6
+
+
 class TheatreObject(object):
     def __init__(self, id=None, name=None, city=None, state=None, movies=None):
         self.id = id
@@ -119,7 +126,8 @@ class Showtimes(object):
         nearest_showtimes = []
 
         if self.count and self.count > 0 and self.showtimes and len(self.showtimes) > 0:
-            sorted_list = sorted(self.showtimes, key=lambda x: (dt - x.get_showtime_as_datetime()).total_seconds())
+            sorted_list = sorted(self.showtimes, key=lambda x: timedelta_total_seconds(dt - x.get_showtime_as_datetime()))
+            # sorted_list = sorted(self.showtimes, key=lambda x: (dt - x.get_showtime_as_datetime()).total_seconds())
 
             if len(sorted_list) > max:
                 for showtime in sorted_list[:max]:

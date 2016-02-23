@@ -50,7 +50,8 @@ def configure_logging(settings_dict):
         log_file_parent_string = os.path.abspath(os.path.join(log_file, os.pardir))
         create_dir_if_not_exists(log_file_parent_string)
 
-        logging.basicConfig(level=log_level.upper(), stream=sys.stdout, format=log_format)
+        numeric_log_level = getattr(logging, log_level.upper(), None)
+        logging.basicConfig(level=numeric_log_level, stream=sys.stdout, format=log_format)
         formatter = logging.Formatter(log_format)
         hdlr = logging.handlers.RotatingFileHandler(log_file, encoding="utf-8", maxBytes=1024 * 1024, backupCount=10)
         hdlr.setFormatter(formatter)

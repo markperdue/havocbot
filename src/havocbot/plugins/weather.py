@@ -15,8 +15,16 @@ MAX_ZIP_CODES_PER_QUERY = 3
 logger = logging.getLogger(__name__)
 
 
+# Python 2.6 does not support total_seconds()
+def timedelta_total_seconds(timedelta):
+    return (
+        timedelta.microseconds +
+        (timedelta.seconds + timedelta.days * 24 * 3600) * 10 ** 6) / 10 ** 6
+
+
 class WeatherObject():
-    def __init__(self, zip_code, temperature, city=None, state=None, source="MockData", last_updated=(datetime.utcnow() - datetime.utcfromtimestamp(0)).total_seconds()):
+    def __init__(self, zip_code, temperature, city=None, state=None, source="MockData", last_updated=timedelta_total_seconds(datetime.utcnow() - datetime.utcfromtimestamp(0))):
+    # def __init__(self, zip_code, temperature, city=None, state=None, source="MockData", last_updated=(datetime.utcnow() - datetime.utcfromtimestamp(0)).total_seconds()):
         self.zip_code = zip_code
         self.temperature = temperature
         self.city = city
@@ -77,7 +85,8 @@ def create_weather_from_openweathermap_for_zip_code(zip_code):
 
         # Convert from 2015-08-27T05:21:06 to seconds since epoch
         date_time = datetime.strptime(date_raw, '%Y-%m-%dT%H:%M:%S')
-        epoch_seconds = (date_time - datetime.utcfromtimestamp(0)).total_seconds()
+        epoch_seconds = timedelta_total_seconds(date_time - datetime.utcfromtimestamp(0))
+        # epoch_seconds = (date_time - datetime.utcfromtimestamp(0)).total_seconds()
 
         return WeatherObject(zip_code=zip_code, temperature=temperature, city=city, source=source, last_updated=float(epoch_seconds))
     else:
