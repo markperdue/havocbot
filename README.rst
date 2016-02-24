@@ -37,7 +37,7 @@ Contributors are encouraged to create their own chat integrations not listed abo
 Installation
 ------------
 
-Install the latest version from pip
+Install the latest version from pip:
 
 .. code:: bash
 
@@ -47,7 +47,9 @@ Copy the example `main.py`_ and `settings.ini`_ files into a new directory on yo
 
 Make sure the chat client is also listed in the 'clients_enabled' field in settings.ini
 
-Open terminal and navigate to the directory where main.py and settings.ini is located.
+Open terminal and navigate to the directory where main.py and settings.ini is located
+
+Run the following in terminal:
 
 .. code:: bash
 
