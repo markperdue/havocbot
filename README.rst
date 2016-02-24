@@ -6,13 +6,33 @@ HavocBot
 
 HavocBot is an extensible chat bot that works across any number of chat programs
 
+
+
+
 Features
 --------
 
 - Connect to multiple chat systems simultaneously
 - Plugin system designed to work across all integrated chat clients
-- New chat client integrations can be dropped into file system for new functionality
+- New chat integrations can be dropped into file system for new functionality
+- Plugin focus will be on helpful DevOps integrations and work distractions
 - More coming soon...
+
+
+
+
+Supported Chat Integrations
+---------------
+
+Out of the box, the following chat integrations are supported::
+
+- Slack
+- XMPP
+- HipChat
+- Skype (see note below)
+
+Contributors are encouraged to create their own chat integrations not listed above and to provide them back to the community!
+
 
 Installation
 ------------
@@ -34,6 +54,32 @@ Open terminal and navigate to the directory where main.py and settings.ini is lo
     python main.py
 
 HavocBot should connect to the chat clients if valid credentials were provided
+
+
+
+
+Writing a Plugin
+----------------
+
+Coming soon...
+
+
+
+
+Skype Support
+-------------
+
+Microsoft has said that support for the Skype API will be dropped at some point in the future so support will be minimal. Skype integration requires some special setup as stated below.
+
+If using OSX, non 64-bit support through Skype4Py must be forced via::
+
+    arch -i386 pip install Skype4Py
+
+As well as prior to starting HavocBot with something similar to::
+
+    arch -i386 python main.py
+
+
 
 
 Python 2.6 Legacy Compatibility
