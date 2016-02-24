@@ -71,12 +71,11 @@ Skype Support
 
 Microsoft has said that support for the Skype API will be dropped at some point in the future so support will be minimal. Skype integration requires some special setup as stated below.
 
-If using OSX, non 64-bit support through Skype4Py must be forced via::
-
+- Skype support is only available in python 2.6 and 2.7 (Skype4Py does not support python 3)
+- The Skype desktop application must be running and logged in prior to starting HavocBot and must be ran alongside HavocBot to work.
+- If using OSX, 32-bit support through Skype4Py must be forced via::
     arch -i386 pip install Skype4Py
-
-As well as prior to starting HavocBot with something similar to::
-
+- HavocBot must also be forced to run in 32-bit mode via::
     arch -i386 python main.py
 
 
@@ -85,10 +84,8 @@ As well as prior to starting HavocBot with something similar to::
 Python 2.6 Legacy Compatibility
 -------------------------------
  - XMPP, HipCHat are compatible out of the box
- - Slack requires an extra pip module to be installed to support python 2.6. SlackClient v0.18.0 depends on 'requests' which requires 'ndg-httpsclient' to enable TLS SNI (See https://github.com/kennethreitz/requests/issues/749#issuecomment-19187417)
-
- .. code:: bash
-
+ - Skype support requires an extra pip module to be installed. See `Skype Support` above
+ - Slack requires an extra pip module to be installed to support python 2.6. SlackClient v0.18.0 depends on 'requests' which requires 'ndg-httpsclient' to enable TLS SNI (See https://github.com/kennethreitz/requests/issues/749#issuecomment-19187417)::
     pip install ndg-httpsclient
 
 
