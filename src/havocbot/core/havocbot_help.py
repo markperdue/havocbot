@@ -29,7 +29,7 @@ class HelpPlugin(HavocBotPlugin):
         return [
             ("!help", self.start),
             ("!help plugins", self.help_plugins),
-            ("!help plugin", self.help_plugin),
+            ("!help plugin\s", self.help_plugin),
         ]
 
     def init(self, havocbot):
