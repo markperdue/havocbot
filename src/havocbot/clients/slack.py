@@ -1,7 +1,6 @@
 from havocbot.client import Client
 from havocbot.message import Message
 from havocbot.user import User
-import json
 import logging
 import re
 from slackclient import SlackClient
@@ -20,7 +19,7 @@ class Slack(Client):
         self.havocbot = havocbot
 
         self.token = None
-        self.username = None
+        self.name = None
         self.user_id = None
         self.exact_match_one_word_triggers = True
 
@@ -52,10 +51,10 @@ class Slack(Client):
 
         if self.client.rtm_connect():
             # Set some values from the login_data response
-            self.username = self.client.server.login_data["self"]["name"]
+            self.name = self.client.server.login_data["self"]["name"]
             self.user_id = self.client.server.login_data["self"]["id"]
 
-            logger.info("I am.. %s! (%s)" % (self.username, self.user_id))
+            logger.info("I am.. %s! (%s)" % (self.name, self.user_id))
             return True
         else:
             return False
@@ -135,12 +134,6 @@ class Slack(Client):
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.type_))
 
     def send_message(self, message, channel, type_, **kwargs):
-        # if kwargs is not None:
-        #     if 'message' in kwargs and kwargs.get('message') is not None:
-        #         message = kwargs.get('message')
-        #     if 'channel' in kwargs and kwargs.get('channel') is not None:
-        #         channel = kwargs.get('channel')
-
         if channel and message:
             logger.info("Sending message '%s' to channel '%s'" % (message, channel))
             try:
@@ -151,12 +144,6 @@ class Slack(Client):
                 logger.error("Unable to send message. %s" % (e))
 
     def send_messages_from_list(self, message, channel, type_, **kwargs):
-        # if kwargs is not None:
-        #     if 'message' in kwargs and kwargs.get('message') is not None:
-        #         message = kwargs.get('message')
-        #     if 'channel' in kwargs and kwargs.get('channel') is not None:
-        #         channel = kwargs.get('channel')
-
         if channel and message:
             joined_message = "\n".join(message)
             logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))
@@ -168,20 +155,10 @@ class Slack(Client):
                 logger.error("Unable to send message. %s" % (e))
 
     def get_user_by_id(self, user_id, **kwargs):
-        user = None
-
         if self.client:
             user_json = self.client.api_call("users.info", user=user_id)
-            data = json.loads(user_json.decode())
 
-            user = create_user_object_from_json(data)
-        else:
-            logger.error("Unable to connect to the slack client")
-
-        if user:
-            return user
-        else:
-            return None
+        return create_user_object_from_json(user_json) if user_json is not None else None
 
 
 class SlackMessage(Message):
@@ -199,24 +176,24 @@ class SlackMessage(Message):
 
 
 class SlackUser(User):
-    def __init__(self, id, name, real_name, tz):
-        self.id = id
-        self.name = real_name
-        self.username = name
+    def __init__(self, user_id, name, username, tz):
+        self.user_id = user_id
+        self.name = name
+        self.username = username
         self.tz = tz
 
     def __str__(self):
-        return "SlackUser(Name: '%s', Username: '%s', ID: '%s', Timezone: '%s')" % (self.name, self.username, self.id, self.tz)
+        return "SlackUser(User ID: '%s', Name: '%s', Username: '%s', Timezone: '%s')" % (self.user_id, self.name, self.username, self.tz)
 
 
-def create_message_object_from_json(json):
-    text = json['text'] if 'text' in json else None
-    user = json['user'] if 'user' in json else None
-    channel = json['channel'] if 'channel' in json else None
-    type_ = json['type'] if 'type' in json else None
-    team = json['team'] if 'team' in json else None
-    reply_to = json['reply_to'] if 'reply_to' in json else None
-    timestamp = json['ts'] if 'ts' in json else None
+def create_message_object_from_json(json_data):
+    text = json_data['text'] if 'text' in json_data else None
+    user = json_data['user'] if 'user' in json_data else None
+    channel = json_data['channel'] if 'channel' in json_data else None
+    type_ = json_data['type'] if 'type' in json_data else None
+    team = json_data['team'] if 'team' in json_data else None
+    reply_to = json_data['reply_to'] if 'reply_to' in json_data else None
+    timestamp = json_data['ts'] if 'ts' in json_data else None
 
     message = SlackMessage(text, user, channel, type_, team, reply_to, timestamp)
 
@@ -224,12 +201,13 @@ def create_message_object_from_json(json):
 
 
 # Returns a newly created user from a json source
-def create_user_object_from_json(json):
-    if 'real_name' in json['user'] and len(json['user']['real_name']) > 0:
-        real_name = json['user']['real_name']
-    else:
-        real_name = None
+def create_user_object_from_json(json_data):
+    user_id = json_data['user']['id'] if 'id' in json_data['user'] and len(json_data['user']['id']) > 0 else None
+    username = json_data['user']['name'] if 'name' in json_data['user'] and len(json_data['user']['name']) > 0 else None
+    name = json_data['user']['real_name'] if 'real_name' in json_data['user'] and len(json_data['user']['real_name']) > 0 else None
+    time_zone = json_data['user']['tz'] if 'tz' in json_data['user'] and len(json_data['user']['tz']) > 0 else None
 
-    user = SlackUser(json['user']['id'], json['user']['name'], real_name, json['user']['tz'])
+    user = SlackUser(user_id, name, username, time_zone)
 
+    logger.debug("create_user_object_from_json - user '%s'" % (user))
     return user

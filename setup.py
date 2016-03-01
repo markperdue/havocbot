@@ -32,5 +32,5 @@ setup(
     packages=find_packages('src', exclude=['havocbot.plugins', 'havocbot.plugins.*']),
     package_dir={'': "src"},
     zip_safe=False,
-    install_requires=['requests>=2.6.0', 'sleekxmpp>=1.3.1', 'slackclient>=0.16', 'python-dateutil>=1.4', 'jsonpickle>=0.9.2'],
+    install_requires=['requests>=2.6.0', 'sleekxmpp>=1.3.1', 'slackclient>=1.0.0', 'python-dateutil>=1.4', 'jsonpickle>=0.9.2'],
 )
