@@ -49,7 +49,7 @@ class ReloadPlugin(HavocBotPlugin):
         self.havocbot.reload_plugins()
         logger.info("Done with trigger reload_plugins()")
         if message.channel:
-            callback.send_message(channel=message.channel, message="Reloaded %d modules and discovered %s commands" % (len(self.havocbot.plugins_core) + len(self.havocbot.plugins_custom), len(self.havocbot.triggers)), type_=message.type_)
+            callback.send_message(channel=message.channel, message="Reloaded %d modules and discovered %s commands" % (len(self.havocbot.plugins_core) + len(self.havocbot.plugins_custom), len(self.havocbot.triggers)), event=message.event)
 
 
 # Make this plugin available to HavocBot

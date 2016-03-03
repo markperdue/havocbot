@@ -55,7 +55,7 @@ class RollPlugin(HavocBotPlugin):
                 text = "%s rolled a %s" % (user.name, random.randrange(1, 101))
             else:
                 text = "%s rolled a %s" % (message.user, random.randrange(1, 101))
-            callback.send_message(channel=message.channel, message=text, type_=message.type_)
+            callback.send_message(channel=message.channel, message=text, event=message.event)
 
     def high_roll(self, callback, message, **kwargs):
         user = callback.get_user_by_id(message.user, channel=message.channel)
@@ -65,7 +65,7 @@ class RollPlugin(HavocBotPlugin):
                 text = "%s rolled a %s" % (user.name, random.randrange(1, 10001))
             else:
                 text = "%s rolled a %s" % (message.user, random.randrange(1, 10001))
-            callback.send_message(channel=message.channel, message=text, type_=message.type_)
+            callback.send_message(channel=message.channel, message=text, event=message.event)
 
 
 # Make this plugin available to HavocBot

@@ -68,9 +68,9 @@ class UserPlugin(HavocBotPlugin):
                     temp_list.extend(a_user.get_plugin_data_strings_as_list())
                 else:
                     temp_list.append("User %s was not found" % (word))
-            callback.send_messages_from_list(channel=message.channel, message=temp_list, type_=message.type_)
+            callback.send_messages_from_list(channel=message.channel, message=temp_list, event=message.event)
         else:
-            callback.send_message(channel=message.channel, message="Too many parameters. What are you trying to do?", type_=message.type_)
+            callback.send_message(channel=message.channel, message="Too many parameters. What are you trying to do?", event=message.event)
 
     def add_user(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -84,11 +84,11 @@ class UserPlugin(HavocBotPlugin):
             validation = stasher.add_user(words[0], words[1])
 
             if validation is True:
-                callback.send_message(channel=message.channel, message="User added", type_=message.type_)
+                callback.send_message(channel=message.channel, message="User added", event=message.event)
             else:
-                callback.send_message(channel=message.channel, message="That user already exists!", type_=message.type_)
+                callback.send_message(channel=message.channel, message="That user already exists!", event=message.event)
         else:
-            callback.send_message(channel=message.channel, message="Invalid parameters. Check the help option for usage", type_=message.type_)
+            callback.send_message(channel=message.channel, message="Invalid parameters. Check the help option for usage", event=message.event)
 
 # Make this plugin available to HavocBot
 havocbot_handler = UserPlugin()

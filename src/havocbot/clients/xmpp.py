@@ -97,7 +97,7 @@ class XMPP(Client):
             if 'message_object' in kwargs and kwargs.get('message_object') is not None:
                 message_object = kwargs.get('message_object')
 
-            if message_object.type_ in ('groupchat', 'chat', 'normal'):
+            if message_object.event in ('groupchat', 'chat', 'normal'):
                 for (trigger, triggered_function) in self.havocbot.triggers:
                     # Add exact regex match if user defined
                     if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
@@ -121,24 +121,24 @@ class XMPP(Client):
                         logger.debug("Message did not match trigger '%s'" % (trigger))
                         pass
             else:
-                logger.debug("Ignoring non message event of type '%s'" % (message_object.type_))
+                logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 
-    def send_message(self, message, channel, type_, **kwargs):
-        if channel and message and type_:
-            logger.info("Sending %s message '%s' to channel '%s'" % (type_, message, channel))
+    def send_message(self, message, channel, event, **kwargs):
+        if channel and message and event:
+            logger.info("Sending %s message '%s' to channel '%s'" % (event, message, channel))
             try:
-                self.client.send_message(mto=channel, mbody=message, mtype=type_)
+                self.client.send_message(mto=channel, mbody=message, mtype=event)
             except AttributeError:
                 logger.error('Unable to send message. Are you connected?')
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def send_messages_from_list(self, message, channel, type_, **kwargs):
-        if channel and message and type_:
+    def send_messages_from_list(self, message, channel, event, **kwargs):
+        if channel and message and event:
             joined_message = '\n'.join(message)
-            logger.info("Sending %s message list '%s' to channel '%s'" % (type_, joined_message, channel))
+            logger.info("Sending %s message list '%s' to channel '%s'" % (event, joined_message, channel))
             try:
-                self.client.send_message(mto=channel, mbody=joined_message, mtype=type_)
+                self.client.send_message(mto=channel, mbody=joined_message, mtype=event)
             except AttributeError:
                 logger.error('Unable to send message. Are you connected?')
             except Exception as e:

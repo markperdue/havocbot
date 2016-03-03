@@ -101,7 +101,7 @@ class Skype(Client):
             if 'message_object' in kwargs and kwargs.get('message_object') is not None:
                 message_object = kwargs.get('message_object')
 
-            if message_object.type_ == 'SAID':
+            if message_object.event == 'SAID':
                 for (trigger, triggered_function) in self.havocbot.triggers:
                     # Add exact regex match if user defined
                     if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
@@ -125,7 +125,7 @@ class Skype(Client):
                         logger.debug("Message did not match trigger '%s'" % (trigger))
                         pass
             else:
-                logger.debug("Ignoring non message event of type '%s'" % (message_object.type_))
+                logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 
     def get_chat_object_by_channel(self, channel):
         if self.client.Chats is not None:
@@ -135,7 +135,7 @@ class Skype(Client):
 
         return None
 
-    def send_message(self, message, channel, type_, **kwargs):
+    def send_message(self, message, channel, event, **kwargs):
         if channel and message:
             logger.info("Sending message '%s' to channel '%s'" % (message, channel))
             try:
@@ -147,7 +147,7 @@ class Skype(Client):
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def send_messages_from_list(self, message, channel, type_, **kwargs):
+    def send_messages_from_list(self, message, channel, event, **kwargs):
         if channel and message:
             joined_message = "\n".join(message)
             logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))

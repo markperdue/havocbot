@@ -83,7 +83,7 @@ class ScramblePlugin(HavocBotPlugin):
             if self.does_guess_match_scrambled_word(message.text, self.original_word):
                 if message.channel:
                     text = "%s got it correct. The answer was '%s'" % (message.user, self.original_word)
-                    callback.send_message(channel=message.channel, message=text, type_=message.type_)
+                    callback.send_message(channel=message.channel, message=text, event=message.event)
                     self.reset_scramble()
         else:
             return
@@ -105,7 +105,7 @@ class ScramblePlugin(HavocBotPlugin):
 
                     if message.channel:
                         text = "Unscramble the letters to form the word. Guessing is open for %d seconds - '%s'" % (self.scramble_duration, self.scrambled_word)
-                        callback.send_message(channel=message.channel, message=text, type_=message.type_)
+                        callback.send_message(channel=message.channel, message=text, event=message.event)
 
                     verify_original_word = self.original_word
 
@@ -115,11 +115,11 @@ class ScramblePlugin(HavocBotPlugin):
                     bg_thread.start()
 
                 else:
-                    callback.send_message(channel=message.channel, message="There was an error fetching a scrambled word", type_=message.type_)
+                    callback.send_message(channel=message.channel, message="There was an error fetching a scrambled word", event=message.event)
             else:
-                callback.send_message(channel=message.channel, message="There was an error fetching a scrambled word", type_=message.type_)
+                callback.send_message(channel=message.channel, message="There was an error fetching a scrambled word", event=message.event)
         else:
-            callback.send_message(channel=message.channel, message="Scramble is already running", type_=message.type_)
+            callback.send_message(channel=message.channel, message="Scramble is already running", event=message.event)
 
     def random_line(self, afile):
         return random.choice(open(afile).readlines()).strip()
@@ -128,7 +128,7 @@ class ScramblePlugin(HavocBotPlugin):
         time.sleep(self.scramble_duration)
         logger.debug("background_thread - original_word is '%s' and verify_original_word is '%s'" % (self.original_word, verify_original_word))
         if self.in_process and self.original_word == verify_original_word:
-            callback.send_message(channel=message.channel, message="Time's up! The answer was '%s'" % (self.original_word), type_=message.type_)
+            callback.send_message(channel=message.channel, message="Time's up! The answer was '%s'" % (self.original_word), event=message.event)
             self.reset_scramble()
             timer.stop()
 
@@ -136,7 +136,7 @@ class ScramblePlugin(HavocBotPlugin):
         if timer.is_running and self.in_process:
             if (len(word) > index + 1):
                 if word == self.original_word:
-                    callback.send_message(channel=message.channel, message="Hint: Character at position %s is '%s'" % (index + 1, word[index]), type_=message.type_)
+                    callback.send_message(channel=message.channel, message="Hint: Character at position %s is '%s'" % (index + 1, word[index]), event=message.event)
                 else:
                     timer.stop()
 

@@ -80,7 +80,7 @@ class QuoterPlugin(HavocBotPlugin):
             for (username, client, text, channel, timestamp) in self.recent_messages:
                 if captured_username == username:
                     text = "%s said '%s' on '%s' in channel '%s' on client '%s'" % (username, text, str(timestamp), channel, client)
-                    callback.send_message(channel=message.channel, message=text, type_=message.type_)
+                    callback.send_message(channel=message.channel, message=text, event=message.event)
 
     def get_quote(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -101,9 +101,9 @@ class QuoterPlugin(HavocBotPlugin):
                     temp_list.append("%s said '%s' on %s" % (result['username'], result['quote'], format_datetime_for_display(date)))
                 else:
                     temp_list.append("No quotes found from user %s" % (word))
-            callback.send_messages_from_list(channel=message.channel, message=temp_list, type_=message.type_)
+            callback.send_messages_from_list(channel=message.channel, message=temp_list, event=message.event)
         else:
-            callback.send_message(channel=message.channel, message="Too many parameters. What are you trying to do?", type_=message.type_)
+            callback.send_message(channel=message.channel, message="Too many parameters. What are you trying to do?", event=message.event)
 
     def add_quote(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -117,7 +117,7 @@ class QuoterPlugin(HavocBotPlugin):
                 if username == captured_username:
                     stasher.add_quote(username, quote, client, channel, timestamp)
                     text = "%s said something ridiculous. Archiving it" % (username)
-                    callback.send_message(channel=message.channel, message=text, type_=message.type_)
+                    callback.send_message(channel=message.channel, message=text, event=message.event)
                     break
 
 

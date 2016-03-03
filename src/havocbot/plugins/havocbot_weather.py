@@ -81,15 +81,15 @@ class WeatherPlugin(HavocBotPlugin):
                 warmest_weather = weather.return_warmest_weather_object_from_list(weather_list)
                 if message.channel:
                     if warmest_weather:
-                        callback.send_message(channel=message.channel, message="%s (%s) has the warmest weather of %sF" % (warmest_weather.city, warmest_weather.zip_code, warmest_weather.temperature), type_=message.type_)
+                        callback.send_message(channel=message.channel, message="%s (%s) has the warmest weather of %sF" % (warmest_weather.city, warmest_weather.zip_code, warmest_weather.temperature), event=message.event)
             else:
                 weather_list = weather.return_temperatures_list(zip_codes, self.api_key_weatherunderground, self.api_key_openweathermap, self.max_zip_codes_per_query)
                 if message.channel:
                     if weather_list:
                         for weather_object in weather_list:
-                            callback.send_message(channel=message.channel, message=weather_object.return_weather(), type_=message.type_)
+                            callback.send_message(channel=message.channel, message=weather_object.return_weather(), event=message.event)
                     else:
-                        callback.send_message(channel=message.channel, message="No weather data found", type_=message.type_)
+                        callback.send_message(channel=message.channel, message="No weather data found", event=message.event)
 
 
 # Make this plugin available to HavocBot

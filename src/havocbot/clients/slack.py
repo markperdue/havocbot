@@ -112,7 +112,7 @@ class Slack(Client):
             if 'message_object' in kwargs and kwargs.get('message_object') is not None:
                 message_object = kwargs.get('message_object')
 
-            if message_object.type_ == 'message':
+            if message_object.event == 'message':
                 for (trigger, triggered_function) in self.havocbot.triggers:
                     # Add exact regex match if user defined
                     if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
@@ -136,9 +136,9 @@ class Slack(Client):
                         logger.debug("Message did not match trigger '%s'" % (trigger))
                         pass
             else:
-                logger.debug("Ignoring non message event of type '%s'" % (message_object.type_))
+                logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 
-    def send_message(self, message, channel, type_, **kwargs):
+    def send_message(self, message, channel, event, **kwargs):
         if channel and message:
             logger.info("Sending message '%s' to channel '%s'" % (message, channel))
             try:
@@ -148,7 +148,7 @@ class Slack(Client):
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def send_messages_from_list(self, message, channel, type_, **kwargs):
+    def send_messages_from_list(self, message, channel, event, **kwargs):
         if channel and message:
             joined_message = "\n".join(message)
             logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))
@@ -167,17 +167,17 @@ class Slack(Client):
 
 
 class SlackMessage(Message):
-    def __init__(self, text, user, channel, type_, team, reply_to, timestamp):
+    def __init__(self, text, user, channel, event, team, reply_to, timestamp):
         self.text = text
         self.user = user
         self.channel = channel
-        self.type_ = type_
+        self.event = event
         self.team = team
         self.reply_to = reply_to
         self.timestamp = timestamp
 
     def __str__(self):
-        return "SlackMessage(Text: '%s', User: '%s', Channel: '%s', Type: '%s', Team: '%s', Reply To: '%s', Timestamp: '%s')" % (self.text, self.user, self.channel, self.type_, self.team, self.reply_to, self.timestamp)
+        return "SlackMessage(Text: '%s', User: '%s', Channel: '%s', Type: '%s', Team: '%s', Reply To: '%s', Timestamp: '%s')" % (self.text, self.user, self.channel, self.event, self.team, self.reply_to, self.timestamp)
 
 
 class SlackUser(User):
@@ -195,12 +195,12 @@ def create_message_object_from_json(json_data):
     text = json_data['text'] if 'text' in json_data else None
     user = json_data['user'] if 'user' in json_data else None
     channel = json_data['channel'] if 'channel' in json_data else None
-    type_ = json_data['type'] if 'type' in json_data else None
+    event = json_data['type'] if 'type' in json_data else None
     team = json_data['team'] if 'team' in json_data else None
     reply_to = json_data['reply_to'] if 'reply_to' in json_data else None
     timestamp = json_data['ts'] if 'ts' in json_data else None
 
-    message = SlackMessage(text, user, channel, type_, team, reply_to, timestamp)
+    message = SlackMessage(text, user, channel, event, team, reply_to, timestamp)
 
     return message
 
