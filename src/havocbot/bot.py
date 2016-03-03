@@ -151,6 +151,9 @@ class HavocBot:
 
         return tuple_list
 
+    def get_havocbot_setting_by_name(self, name):
+        return next((obj[1] for obj in self.settings['havocbot']['havocbot'] if name == obj[0]), None)
+
     def start(self):
         if self.is_configured is not True:
             sys.exit('Havocbot has not been configured. Please configure the bot and try again')

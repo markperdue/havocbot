@@ -21,7 +21,7 @@ class Slack(Client):
         self.token = None
         self.name = None
         self.user_id = None
-        self.exact_match_one_word_triggers = True
+        self.exact_match_one_word_triggers = False
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
@@ -34,6 +34,11 @@ class Slack(Client):
                 requirements_met = True
             elif item[0] == 'admins':
                 pass
+
+        # Set exact_match_one_word_triggers based off of value in havocbot if it is set
+        settings_value = self.havocbot.get_havocbot_setting_by_name('exact_match_one_word_triggers')
+        if settings_value is not None and settings_value.lower() == 'true':
+            self.exact_match_one_word_triggers = True
 
         # Return true if this integrations has the information required to connect
         if requirements_met:
