@@ -6,9 +6,11 @@ logger = logging.getLogger(__name__)
 
 class User(object):
     def __init__(self, name, username):
+        self.user_id = None
         self.name = name
         self.username = username
         self.aliases = []
+        self.email = None
         self.points = 0
         self.plugin_data = {}
 
