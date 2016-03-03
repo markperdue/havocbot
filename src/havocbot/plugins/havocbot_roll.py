@@ -5,7 +5,6 @@ import logging
 import random
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class RollPlugin(HavocBotPlugin):
@@ -35,8 +34,15 @@ class RollPlugin(HavocBotPlugin):
     def init(self, havocbot):
         self.havocbot = havocbot
 
-        # This will register the above triggers with havocbot
-        self.havocbot.register_triggers(self.plugin_triggers)
+    # Takes in a list of kv tuples in the format [('key', 'value'),...]
+    def configure(self, settings):
+        requirements_met = True
+
+        # Return true if this plugin has the information required to work
+        if requirements_met:
+            return True
+        else:
+            return False
 
     def shutdown(self):
         self.havocbot.unregister_triggers(self.plugin_triggers)
@@ -45,15 +51,21 @@ class RollPlugin(HavocBotPlugin):
     def start(self, callback, message, **kwargs):
         user = callback.get_user_by_id(message.user, channel=message.channel)
 
-        if message.channel and user:
-            text = "%s rolled a %s" % (user.name, random.randrange(1, 101))
+        if message.channel:
+            if user is not None:
+                text = "%s rolled a %s" % (user.name, random.randrange(1, 101))
+            else:
+                text = "%s rolled a %s" % (message.user, random.randrange(1, 101))
             callback.send_message(channel=message.channel, message=text, type_=message.type_)
 
     def high_roll(self, callback, message, **kwargs):
         user = callback.get_user_by_id(message.user, channel=message.channel)
 
-        if message.channel and user:
-            text = "%s rolled a %s" % (user.name, random.randrange(1, 10001))
+        if message.channel:
+            if user is not None:
+                text = "%s rolled a %s" % (user.name, random.randrange(1, 10001))
+            else:
+                text = "%s rolled a %s" % (message.user, random.randrange(1, 10001))
             callback.send_message(channel=message.channel, message=text, type_=message.type_)
 
 

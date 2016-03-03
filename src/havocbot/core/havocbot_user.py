@@ -21,20 +21,28 @@ class UserPlugin(HavocBotPlugin):
     def plugin_usages(self):
         return [
             ("!user <username>", "!user markaperdue", "get information on a user"),
-            ("!adduser <username>", "!adduser markaperdue", "add the last message said by the user to the database"),
+            ("!adduser <name> <username>", "!adduser mark markaperdue", "add the user to the database"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            ("!user\s(.*)", self.get_user)
+            ("!user\s(.*)", self.get_user),
+            ("!adduser\s(.*)", self.add_user),
         ]
 
     def init(self, havocbot):
         self.havocbot = havocbot
 
-        # This will register the above triggers with havocbot
-        self.havocbot.register_triggers(self.plugin_triggers)
+    # Takes in a list of kv tuples in the format [('key', 'value'),...]
+    def configure(self, settings):
+        requirements_met = True
+
+        # Return true if this plugin has the information required to work
+        if requirements_met:
+            return True
+        else:
+            return False
 
     def shutdown(self):
         self.havocbot.unregister_triggers(self.plugin_triggers)
@@ -64,6 +72,24 @@ class UserPlugin(HavocBotPlugin):
             callback.send_messages_from_list(channel=message.channel, message=temp_list, type_=message.type_)
         else:
             callback.send_message(channel=message.channel, message="Too many parameters. What are you trying to do?", type_=message.type_)
+
+    def add_user(self, callback, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_usernames = capture[0]
+        words = captured_usernames.split()
+
+        if len(words) == 2:
+            stasher = havocbot.user.UserStash.getInstance()
+            logger.info("Words are '%s' and '%s'" % (words[0], words[1]))
+            validation = stasher.add_user(words[0], words[1])
+
+            if validation is True:
+                callback.send_message(channel=message.channel, message="User added", type_=message.type_)
+            else:
+                callback.send_message(channel=message.channel, message="That user already exists!", type_=message.type_)
+        else:
+            callback.send_message(channel=message.channel, message="Invalid parameters. Check the help option for usage", type_=message.type_)
 
 # Make this plugin available to HavocBot
 havocbot_handler = UserPlugin()

@@ -91,7 +91,7 @@ def main(settings="settings.ini"):
     havocbot = get_bot()
 
     # Pass a dictionary of settings to the bot
-    havocbot.set_settings(havocbot_settings=settings_dict, clients_settings=clients_dict)
+    havocbot.set_settings(havocbot_settings=settings_dict, clients_settings=clients_dict, settings_file=settings)
 
     # Start it. Off we go
     havocbot.start()

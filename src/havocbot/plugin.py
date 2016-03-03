@@ -81,6 +81,24 @@ class HavocBotPlugin(object):
         pass
 
     @abstractmethod
+    def configure(self, settings):
+        """ Reads a settings bundle and configures the plugin prior to init.
+
+        The settings bundle comes from reading the settings.ini file and each
+        section is converted into a list of tuples
+
+        Args:
+            self (HavocBotPlugin): The HavocBotPlugin subclass
+            settings (list): a list of key-value tuples
+
+            example:
+            [('scramble_duration', 60), ('hint_interval', 14)]
+        Returns:
+            True/False depending on whether the plugin was able to get configured
+        """
+        pass
+
+    @abstractmethod
     def shutdown(self):
         """ Performs any work when a shutdown event is triggered.
 

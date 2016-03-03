@@ -22,8 +22,19 @@ class StatefulPlugin:
         plugin = imp.load_source(self.name, self.path)
         self.handler = plugin.havocbot_handler
 
+        plugin_class_name = self.handler.__class__.__name__
+        settings = havocbot.get_settings_for_plugin(plugin_class_name)
+
         # Call the init method in the plugin
         self.handler.init(havocbot)
+
+        if self.handler.configure(settings):
+            logger.debug("%s was configured successfully. Registering plugin triggers..." % (self.name))
+
+            # Register the triggers for the plugin
+            havocbot.register_triggers(self.handler.plugin_triggers)
+        else:
+            logger.error("%s was unable to be configured. Check your settings and try again" % (self.name))
 
     # Trigger the shutdown of the plugin
     @catch_exceptions

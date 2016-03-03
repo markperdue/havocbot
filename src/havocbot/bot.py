@@ -12,6 +12,12 @@ try:
 except ImportError:
     from Queue import Queue
 
+# Python2/3 compat
+try:
+    from configparser import SafeConfigParser
+except ImportError:
+    from ConfigParser import SafeConfigParser
+
 logger = logging.getLogger(__name__)
 
 
@@ -24,6 +30,7 @@ class HavocBot:
         self.plugins_custom = []
         self.triggers = []
         self.settings = {}
+        self.settings_file = None
         self.is_configured = False
         self.processing_threads = []
         self.should_shutdown = False
@@ -32,6 +39,7 @@ class HavocBot:
     def set_settings(self, **kwargs):
         self.settings['havocbot'] = kwargs.get('havocbot_settings', None)
         self.settings['clients'] = kwargs.get('clients_settings', None)
+        self.settings_file = kwargs.get('settings_file', None)
 
         self.configure()
 
@@ -126,6 +134,22 @@ class HavocBot:
     def load_plugins(self):
         self.plugins_core = pluginmanager.load_plugins_core(self)
         self.plugins_custom = pluginmanager.load_plugins_custom(self)
+
+    def get_settings_for_plugin(self, plugin):
+        tuple_list = []
+
+        parser = SafeConfigParser()
+        parser.read(self.settings_file)
+
+        # Covert the settings.ini settings into a dictionary for later processing
+        if parser.has_section(plugin):
+            # Create a bundle of plugin settings
+            tuple_list = parser.items(plugin)
+            logger.debug("Settings found for plugin - '%s'" % (tuple_list))
+        else:
+            logger.debug("No settings found for plugin '%s'" % (plugin))
+
+        return tuple_list
 
     def start(self):
         if self.is_configured is not True:

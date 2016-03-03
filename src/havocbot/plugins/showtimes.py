@@ -3,12 +3,6 @@ from datetime import datetime
 import logging
 import requests
 
-API_KEY_AMC = ""  # Enter WeatherUnderground API key here
-API_KEY_HEADER = "X-AMC-Vendor-Key"
-AMC_METREON_16 = "2325"
-MAX_DISTANCE_IN_MILES = 5.0
-MAX_UPCOMING_SHOWTIMES_TO_DISPLAY = 5
-
 logger = logging.getLogger(__name__)
 
 
@@ -190,8 +184,8 @@ class ShowtimeTicket(object):
         return "Ticket(Price: %s, Type: %s, SKU: %s)" % (self.price, self.type_, self.sku)
 
 
-def get_json_showtimes_at_theatre_on_date(theatre_object, date):
-    headers = {'X-AMC-Vendor-Key': API_KEY_AMC}
+def get_json_showtimes_at_theatre_on_date(theatre_object, date, api_key_amc):
+    headers = {'X-AMC-Vendor-Key': api_key_amc}
     url = "https://api.amctheatres.com/v2/theatres/%s/showtimes/%s/?pageSize=25" % (theatre_object.id, date)
 
     logger.debug("Fetching showtimes at %s on %s..." % (theatre_object.id, date))
@@ -204,8 +198,8 @@ def get_json_showtimes_at_theatre_on_date(theatre_object, date):
         return None
 
 
-def get_json_showtimes_at_theatre_on_date_for_movie(theatre_object, date, movie_name):
-    headers = {'X-AMC-Vendor-Key': API_KEY_AMC}
+def get_json_showtimes_at_theatre_on_date_for_movie(theatre_object, date, movie_name, api_key_amc):
+    headers = {'X-AMC-Vendor-Key': api_key_amc}
     url = "https://api.amctheatres.com/v2/theatres/%s/showtimes/%s/?movieName=%s&pageSize=25" % (theatre_object.id, date, movie_name)
 
     logger.debug("Fetching showtimes at %s on %s for %s..." % (theatre_object.id, date, movie_name))
@@ -248,10 +242,10 @@ def create_showtime_from_json(data):
         return None
 
 
-def get_location_suggestions(zip_code):
+def get_location_suggestions(zip_code, api_key_amc):
     logger.info("Fetching location suggestions for %s..." % (zip_code))
 
-    headers = {'X-AMC-Vendor-Key': API_KEY_AMC}
+    headers = {'X-AMC-Vendor-Key': api_key_amc}
     url = "https://api.amctheatres.com/v2/location-suggestions/?query=%s" % (zip_code)
 
     r = requests.get(url, headers=headers)
@@ -296,11 +290,11 @@ def parse_locations_for_theatre_objects_within_distance(json, distance):
     return theatre_objects_list
 
 
-def get_theater_id_list_from_locations_url(url):
+def get_theater_id_list_from_locations_url(url, api_key_amc):
     if url is not None and 'https://api.amctheatres.com' in url and len(url) > 30:
         logger.info("Fetching locations at %s..." % (url))
 
-        headers = {'X-AMC-Vendor-Key': API_KEY_AMC}
+        headers = {'X-AMC-Vendor-Key': api_key_amc}
 
         r = requests.get(url, headers=headers)
 
@@ -310,33 +304,37 @@ def get_theater_id_list_from_locations_url(url):
             return None
 
 
-def get_showtimes_for_zip_on_date(zip_code, date):
+def get_showtimes_for_zip_on_date(zip_code, date, api_key_amc, max_distance_in_miles, max_upcoming_showtimes_to_display):
     results = []
-    location_suggestions = get_location_suggestions(zip_code)
-    locations_url = parse_location_suggestions_for_locations_url(location_suggestions)
+    if zip_code is not None and date is not None and api_key_amc is not None and max_distance_in_miles is not None and max_upcoming_showtimes_to_display is not None:
+        location_suggestions = get_location_suggestions(zip_code, api_key_amc)
+        locations_url = parse_location_suggestions_for_locations_url(location_suggestions)
 
-    if locations_url is not None:
-        locations_json = get_theater_id_list_from_locations_url(locations_url)
-        theatre_list = parse_locations_for_theatre_objects_within_distance(locations_json, MAX_DISTANCE_IN_MILES)
+        if locations_url is not None:
+            locations_json = get_theater_id_list_from_locations_url(locations_url, api_key_amc)
+            theatre_list = parse_locations_for_theatre_objects_within_distance(locations_json, max_distance_in_miles)
 
-        # We now have some theates within the max distance of the zip code
-        for theatre in theatre_list:
-            results.append("Upcoming showtimes at %s" % (theatre.name))
-            showtimes_list = get_showtimes_list_for_theatre_object_and_date(theatre, date)
+            # We now have some theates within the max distance of the zip code
+            for theatre in theatre_list:
+                results.append("Upcoming showtimes at %s" % (theatre.name))
+                showtimes_list = get_showtimes_list_for_theatre_object_and_date(theatre, date, api_key_amc)
 
-            if showtimes_list is not None:
-                now = datetime.utcnow().replace(tzinfo=tz.tzutc())
-                nearest_showtimes_list = showtimes_list.get_nearest_showtimes_to_datetime(now, MAX_UPCOMING_SHOWTIMES_TO_DISPLAY)
-                if nearest_showtimes_list is not None:
-                    for showtime in nearest_showtimes_list:
-                        # print(showtime.return_basic_with_name())
-                        results.append("    %s" % (showtime.return_basic_with_name()))
+                if showtimes_list is not None:
+                    now = datetime.utcnow().replace(tzinfo=tz.tzutc())
+                    nearest_showtimes_list = showtimes_list.get_nearest_showtimes_to_datetime(now, max_upcoming_showtimes_to_display)
+                    if nearest_showtimes_list is not None:
+                        for showtime in nearest_showtimes_list:
+                            # print(showtime.return_basic_with_name())
+                            results.append("    %s" % (showtime.return_basic_with_name()))
+
+    if len(results) == 0:
+        results.append('No showtimes found')
 
     return results
 
 
-def get_showtimes_list_for_theatre_object_and_date(theatre_object, date):
-    data = get_json_showtimes_at_theatre_on_date(theatre_object, date)
+def get_showtimes_list_for_theatre_object_and_date(theatre_object, date, api_key_amc):
+    data = get_json_showtimes_at_theatre_on_date(theatre_object, date, api_key_amc)
 
     if data is not None:
         showtimes = Showtimes()
@@ -359,28 +357,9 @@ def get_showtimes_list_for_theatre_object_and_date(theatre_object, date):
         return None
 
 
-# def get_showtimes_for_movie_in_zip_on_date(movie_name, zip_code, date):
-#     location_suggestions = get_location_suggestions(zip_code)
-#     locations_url = parse_location_suggestions_for_locations_url(location_suggestions)
-
-#     if locations_url is not None:
-#         locations_json = get_theater_id_list_from_locations_url(locations_url)
-#         theatre_list = parse_locations_for_theatre_objects_within_distance(locations_json, MAX_DISTANCE_IN_MILES)
-
-#         # We now have some theates within the max distance of the zip code
-#         for theatre in theatre_list:
-#             # print("Upcoming showtimes for %s at %s" % (movie_name, theatre.name))
-#             showtimes_list = get_showtimes_list_for_theatre_object_and_date(theatre, date)
-
-#             nearest_showtimes_list = showtimes_list.get_nearest_showtimes_to_datetime(datetime.utcnow().replace(tzinfo=tz.tzutc()), MAX_UPCOMING_SHOWTIMES_TO_DISPLAY)
-
-#             # for showtime in nearest_showtimes_list:
-#             #     print(showtime.return_basic_with_name())
-
-
 def main():
     zip_code = "94110"
-    showtimes = get_showtimes_for_zip_on_date(zip_code, datetime.now().strftime("%m-%d-%Y"))
+    showtimes = get_showtimes_for_zip_on_date(zip_code, datetime.now().strftime("%m-%d-%Y"), None, None, None)
     if showtimes is not None:
         for listing in showtimes:
             print(listing)

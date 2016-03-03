@@ -5,7 +5,6 @@ from plugins import weather
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class WeatherPlugin(HavocBotPlugin):
@@ -33,9 +32,32 @@ class WeatherPlugin(HavocBotPlugin):
 
     def init(self, havocbot):
         self.havocbot = havocbot
+        self.api_key_weatherunderground = None
+        self.api_key_openweathermap = None
+        self.max_zip_codes_per_query = 3  # Default value
 
-        # This will register the above triggers with havocbot
-        self.havocbot.register_triggers(self.plugin_triggers)
+    # Takes in a list of kv tuples in the format [('key', 'value'),...]
+    def configure(self, settings):
+        requirements_met = False
+
+        if settings is not None and settings:
+            for item in settings:
+                # Switch on the key
+                if item[0] == 'api_key_weatherunderground':
+                    self.api_key_weatherunderground = item[1]
+                elif item[0] == 'api_key_openweathermap':
+                    self.api_key_openweathermap = item[1]
+
+        if (self.api_key_weatherunderground is not None and len(self.api_key_weatherunderground) > 0) or (self.api_key_openweathermap is not None and len(self.api_key_openweathermap) > 0):
+            requirements_met = True
+        else:
+            logger.error('There was an issue with the api key. Verify either an api_key_weatherunderground key is set or an api_key_openweathermap key is set in the settings file')
+
+        # Return true if this plugin has the information required to work
+        if requirements_met:
+            return True
+        else:
+            return False
 
     def shutdown(self):
         self.havocbot.unregister_triggers(self.plugin_triggers)
@@ -56,13 +78,13 @@ class WeatherPlugin(HavocBotPlugin):
             logger.debug("start - words are %s" % words)
             # Branch if the user wants the warmest weather
             if any(x in ['warmest', 'hottest'] for x in words):
-                weather_list = weather.return_temperatures_list(zip_codes)
+                weather_list = weather.return_temperatures_list(zip_codes, self.api_key_weatherunderground, self.api_key_openweathermap, self.max_zip_codes_per_query)
                 warmest_weather = weather.return_warmest_weather_object_from_list(weather_list)
                 if message.channel:
                     if warmest_weather:
                         callback.send_message(channel=message.channel, message="%s (%s) has the warmest weather of %sF" % (warmest_weather.city, warmest_weather.zip_code, warmest_weather.temperature), type_=message.type_)
             else:
-                weather_list = weather.return_temperatures_list(zip_codes)
+                weather_list = weather.return_temperatures_list(zip_codes, self.api_key_weatherunderground, self.api_key_openweathermap, self.max_zip_codes_per_query)
                 if message.channel:
                     if weather_list:
                         for weather_object in weather_list:

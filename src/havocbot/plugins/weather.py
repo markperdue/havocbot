@@ -7,11 +7,6 @@ import requests
 import sys
 from xml.etree import ElementTree
 
-
-API_KEY_WU = ""  # Enter WeatherUnderground API key here
-API_KEY_OW = ""  # Enter OpenWeathermap API key here
-MAX_ZIP_CODES_PER_QUERY = 3
-
 logger = logging.getLogger(__name__)
 
 
@@ -24,7 +19,6 @@ def timedelta_total_seconds(timedelta):
 
 class WeatherObject():
     def __init__(self, zip_code, temperature, city=None, state=None, source="MockData", last_updated=timedelta_total_seconds(datetime.utcnow() - datetime.utcfromtimestamp(0))):
-    # def __init__(self, zip_code, temperature, city=None, state=None, source="MockData", last_updated=(datetime.utcnow() - datetime.utcfromtimestamp(0)).total_seconds()):
         self.zip_code = zip_code
         self.temperature = temperature
         self.city = city
@@ -74,9 +68,9 @@ class WeatherObject():
         return utc.astimezone(tz.tzlocal()).strftime('%b %d %Y %I:%M:%S%p')
 
 
-def create_weather_from_openweathermap_for_zip_code(zip_code):
+def create_weather_from_openweathermap_for_zip_code(zip_code, api_key_openweathermap):
     source = "OpenWeatherMap"
-    data = get_openweathermap_xml_for_zip_code(zip_code)
+    data = get_openweathermap_xml_for_zip_code(zip_code, api_key_openweathermap)
 
     if data is not None and is_valid_openweathermap_data(data):
         temperature = data.find('temperature').get('value')
@@ -86,7 +80,6 @@ def create_weather_from_openweathermap_for_zip_code(zip_code):
         # Convert from 2015-08-27T05:21:06 to seconds since epoch
         date_time = datetime.strptime(date_raw, '%Y-%m-%dT%H:%M:%S')
         epoch_seconds = timedelta_total_seconds(date_time - datetime.utcfromtimestamp(0))
-        # epoch_seconds = (date_time - datetime.utcfromtimestamp(0)).total_seconds()
 
         return WeatherObject(zip_code=zip_code, temperature=temperature, city=city, source=source, last_updated=float(epoch_seconds))
     else:
@@ -95,9 +88,9 @@ def create_weather_from_openweathermap_for_zip_code(zip_code):
         return None
 
 
-def create_weather_from_weatherunderground_for_zip_code(zip_code):
+def create_weather_from_weatherunderground_for_zip_code(zip_code, api_key_weatherunderground):
     source = "WeatherUnderground"
-    data = get_weather_underground_data_for_zip_code(zip_code)
+    data = get_weather_underground_data_for_zip_code(zip_code, api_key_weatherunderground)
 
     if data is not None and is_valid_wu_weather(data):
         return WeatherObject(zip_code=zip_code, temperature=data['current_observation']['temp_f'], city=data['current_observation']['display_location']['city'], state=data['current_observation']['display_location']['state'], source=source, last_updated=float(data['current_observation']['observation_epoch']))
@@ -107,10 +100,10 @@ def create_weather_from_weatherunderground_for_zip_code(zip_code):
         return None
 
 
-def get_openweathermap_xml_for_zip_code(zip_code):
+def get_openweathermap_xml_for_zip_code(zip_code, api_key_openweathermap):
     logger.info("Fetching OpenWeatherMap data for zip code %s..." % (zip_code))
 
-    r = requests.get('http://api.openweathermap.org/data/2.5/weather?zip=%s,us&mode=xml&units=imperial' % (zip_code))
+    r = requests.get('http://api.openweathermap.org/data/2.5/weather?zip=%s,us&mode=xml&units=imperial&appid=%s' % (zip_code, api_key_openweathermap))
 
     if r.status_code == 200:
         try:
@@ -123,10 +116,10 @@ def get_openweathermap_xml_for_zip_code(zip_code):
         return None
 
 
-def get_weather_underground_data_for_zip_code(zip_code):
+def get_weather_underground_data_for_zip_code(zip_code, api_key_weatherunderground):
     logger.info("Fetching WeatherUnderground data for zip code %s..." % (zip_code))
 
-    r = requests.get('http://api.wunderground.com/api/%s/conditions/q/%s.json' % (API_KEY_WU, zip_code))
+    r = requests.get('http://api.wunderground.com/api/%s/conditions/q/%s.json' % (api_key_weatherunderground, zip_code))
 
     if r.status_code == 200:
         return r.json()
@@ -247,9 +240,11 @@ def parse_args_and_return():
     args = vars(parser.parse_args())
 
     if args['verbose']:
-        logging.basicConfig(level="DEBUG", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        numeric_log_level = getattr(logging, 'DEBUG', None)
+        logging.basicConfig(level=numeric_log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     else:
-        # logging.basicConfig(level="INFO", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        # numeric_log_level = getattr(logging, 'INFO', None)
+        # logging.basicConfig(level=numeric_log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         pass
 
     # Deal with both zip_code and file args being provided. Exit
@@ -289,14 +284,14 @@ def add_most_recent_weather_in_list_to_master_list(new_list, master_list):
         logger.debug("No recent weather objects found")
 
 
-def return_temperatures_list(zip_code_list):
+def return_temperatures_list(zip_code_list, api_key_weatherunderground, api_key_openweathermap, max_zip_codes_per_query):
     temperatures = []
 
     # Fetch weather data for the zip codes in the global list
-    if len(zip_code_list) > MAX_ZIP_CODES_PER_QUERY:
-        logger.debug("Too many zip codes requested. Fetching only the first %d elements" % (MAX_ZIP_CODES_PER_QUERY))
+    if len(zip_code_list) > max_zip_codes_per_query:
+        logger.info("Too many zip codes requested. Fetching only the first %d elements" % (max_zip_codes_per_query))
 
-    for item in zip_code_list[:MAX_ZIP_CODES_PER_QUERY]:
+    for item in zip_code_list[:max_zip_codes_per_query]:
         # Strip off spaces if the user provided them during input
         zip_code_temp = item.strip()
 
@@ -305,18 +300,20 @@ def return_temperatures_list(zip_code_list):
             sources = []
 
             # Get data from WeatherUnderground
-            weather = create_weather_from_weatherunderground_for_zip_code(zip_code_temp)
-            if weather:
-                sources.append(weather)
+            if api_key_weatherunderground is not None and len(api_key_weatherunderground) > 0:
+                weather = create_weather_from_weatherunderground_for_zip_code(zip_code_temp, api_key_weatherunderground)
+                if weather:
+                    sources.append(weather)
 
             # Get data from OpenWeatherMap
-            weather_alt = create_weather_from_openweathermap_for_zip_code(zip_code_temp)
-            if weather_alt:
-                sources.append(weather_alt)
+            if api_key_openweathermap is not None and len(api_key_openweathermap) > 0:
+                weather_alt = create_weather_from_openweathermap_for_zip_code(zip_code_temp, api_key_openweathermap)
+                if weather_alt:
+                    sources.append(weather_alt)
 
             add_most_recent_weather_in_list_to_master_list(sources, temperatures)
         else:
-            logger.debug("'%s' is not a valid zip code" % (zip_code_temp))
+            logger.info("'%s' is not a valid zip code" % (zip_code_temp))
 
     return temperatures
 

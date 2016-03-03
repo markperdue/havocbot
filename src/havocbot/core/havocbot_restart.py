@@ -31,8 +31,15 @@ class RestartPlugin(HavocBotPlugin):
     def init(self, havocbot):
         self.havocbot = havocbot
 
-        # This will register the above triggers with havocbot
-        self.havocbot.register_triggers(self.plugin_triggers)
+    # Takes in a list of kv tuples in the format [('key', 'value'),...]
+    def configure(self, settings):
+        requirements_met = True
+
+        # Return true if this plugin has the information required to work
+        if requirements_met:
+            return True
+        else:
+            return False
 
     def shutdown(self):
         self.havocbot.unregister_triggers(self.plugin_triggers)
