@@ -104,7 +104,7 @@ class HipChat(Client):
 
                     match = regex.search(message_object.text)
                     if match is not None:
-                        logger.info("%s - Matched message against trigger '%s'" % (triggered_function.im_class.__name__, trigger))
+                        logger.info("%s - Matched message against trigger '%s'" % (self.havocbot.get_method_class_name(triggered_function), trigger))
 
                         # Pass the message to the function associated with the trigger
                         try:

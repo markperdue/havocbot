@@ -302,6 +302,15 @@ class HavocBot:
         for thread in self.processing_threads:
             logger.debug("HavocBot.show_threads() - %s - thread is %s. is_active set to %s, is_alive set to %s" % (len(self.processing_threads), thread, thread.is_active, thread.is_alive()))
 
+    def get_method_class_name(self, method):
+        """ Compatibility helper across python2/3 for getting a function's class name.
+        """
+
+        if sys.version_info < (3,):
+            return method.im_class.__name__
+        else:
+            return method.__self__.__class__.__name__
+
 
 class ClientThread(threading.Thread):
     def __init__(self, havocbot):
