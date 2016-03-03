@@ -105,7 +105,7 @@ class XMPP(Client):
 
                     match = regex.search(message_object.text)
                     if match is not None:
-                        logger.info("Matched message against trigger '%s'" % (trigger))
+                        logger.info("%s - Matched message against trigger '%s'" % (triggered_function.im_class.__name__, trigger))
 
                         # Pass the message to the function associated with the trigger
                         try:
