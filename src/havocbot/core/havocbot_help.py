@@ -46,11 +46,7 @@ class HelpPlugin(HavocBotPlugin):
             return False
 
     def shutdown(self):
-        logger.debug("shutdown() - about to unregister_triggers")
-        self.havocbot.unregister_triggers(self.plugin_triggers)
-        logger.debug("shutdown() - about to set self.havocbot to None")
         self.havocbot = None
-        logger.debug("shutdown() finished")
 
     def start(self, callback, message, **kwargs):
         callback_message_list = ["HavocBot can help you with the following."]

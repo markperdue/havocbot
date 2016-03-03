@@ -36,14 +36,14 @@ class StatefulPlugin:
         else:
             logger.error("%s was unable to be configured. Check your settings and try again" % (self.name))
 
-    # Trigger the shutdown of the plugin
-    @catch_exceptions
-    def shutdown(self):
-        self.handler.shutdown()
+    # # Trigger the shutdown of the plugin
+    # @catch_exceptions
+    # def shutdown(self):
+    #     self.handler.shutdown()
 
-    @catch_exceptions
-    def handle(self, message):
-        return self.handler.handle_message(message)
+    # @catch_exceptions
+    # def handle(self, message):
+    #     return self.handler.handle_message(message)
 
     # Determines if the object at a path is a havocbot plugin
     @staticmethod
@@ -135,10 +135,16 @@ def unload_plugins_of_type(havocbot, plugin_type):
     if plugin_type == "core":
         if havocbot.plugins_core is not None:
             for plugin in havocbot.plugins_core:
+                # Unregister the triggers set for the plugin
+                havocbot.unregister_triggers(plugin.handler.plugin_triggers)
+
                 plugin.handler.shutdown()
     elif plugin_type == "custom":
         if havocbot.plugins_custom is not None:
             for plugin in havocbot.plugins_custom:
+                # Unregister the triggers set for the plugin
+                havocbot.unregister_triggers(plugin.handler.plugin_triggers)
+
                 plugin.handler.shutdown()
     else:
         return

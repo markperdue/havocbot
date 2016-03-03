@@ -42,8 +42,8 @@ class ReloadPlugin(HavocBotPlugin):
             return False
 
     def shutdown(self):
-        self.havocbot.unregister_triggers(self.plugin_triggers)
         # self.havocbot = None  # start() still needs the reference to self.havocbot
+        pass
 
     def start(self, callback, message, **kwargs):
         self.havocbot.reload_plugins()

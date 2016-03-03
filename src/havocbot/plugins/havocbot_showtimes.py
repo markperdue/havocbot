@@ -68,7 +68,6 @@ class ShowtimesPlugin(HavocBotPlugin):
             return False
 
     def shutdown(self):
-        self.havocbot.unregister_triggers(self.plugin_triggers)
         self.havocbot = None
 
     def start(self, callback, message, **kwargs):
