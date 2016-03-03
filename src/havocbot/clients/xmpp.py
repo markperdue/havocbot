@@ -6,6 +6,7 @@ from havocbot.user import User
 import logging
 import re
 import sleekxmpp
+# import ssl
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +42,11 @@ class XMPP(Client):
                 self.nickname = item[1]
             elif item[0] == 'server':
                 self.server = item[1]
+            elif item[0] == 'chat_server':
+                self.chat_server = item[1]
 
         # Return true if this integrations has the information required to connect
-        if self.username is not None and self.password is not None and self.room_names is not None and self.nickname is not None and self.server is not None:
+        if self.username is not None and self.password is not None and self.room_names is not None and self.nickname is not None and self.server is not None and self.chat_server is not None:
             # Make sure there is at least one non falsy room to join (ex. room_names = ,,,,,, should fail)
             if len([x for x in self.room_names if x]) > 0:
                 logger.debug('There is at least one non falsy room name')
@@ -61,13 +64,16 @@ class XMPP(Client):
         if self.password is None:
             logger.error('A XMPP password must be configured')
 
-        self.client = MUCBot(self, self.havocbot, self.username, self.password, self.room_names, self.server, self.nickname)
+        self.client = MUCBot(self, self.havocbot, self.username, self.password, self.room_names, self.server, self.nickname, self.chat_server)
 
         self.client.register_plugin('xep_0030')  # Service Discovery
         self.client.register_plugin('xep_0045')  # Multi-User Chat
         self.client.register_plugin('xep_0054')  # vCard
         self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # XMPP Ping set for a keepalive ping every 60 seconds
 
+        # self.client.ssl_version = ssl.PROTOCOL_SSLv23
+
+        # if self.client.connect(address=(self.server, 5223), use_ssl=True):
         if self.client.connect():
             logger.info("I am.. %s! (%s)" % (self.nickname, self.username))
             return True
@@ -184,14 +190,15 @@ class XMPP(Client):
             if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
                 user = create_user_object(jabber_id.bare, name, None)
 
+        logger.debug("get_user_by_name - user is '%s'" % (user))
         if user is not None:
             return user
         else:
-            return None
+            return XMPPUser(name, name, name)
 
 
 class MUCBot(sleekxmpp.ClientXMPP):
-    def __init__(self, callback, havocbot, jid, password, rooms_list, server_host, nick):
+    def __init__(self, callback, havocbot, jid, password, rooms_list, server_host, nick, chat_server):
         sleekxmpp.ClientXMPP.__init__(self, jid, password)
 
         self.havocbot = havocbot
@@ -199,6 +206,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
         self.rooms = rooms_list
         self.nick = nick
         self.server_host = server_host
+        self.chat_server = chat_server
 
         self.add_event_handler('session_start', self.start)
         self.add_event_handler('message', self.message)  # Also catches groupchat_message
@@ -208,7 +216,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
         self.send_presence()
         for item in self.rooms:
             if len(item) > 0:
-                room_string = item + '@' + self.server_host
+                room_string = item + '@' + self.chat_server
                 logger.debug("Joining room '%s'" % (room_string))
                 self.plugin['xep_0045'].joinMUC(room_string, self.nick, wait=True)
 
