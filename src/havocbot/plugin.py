@@ -82,7 +82,7 @@ class HavocBotPlugin(object):
 
     @abstractmethod
     def configure(self, settings):
-        """ Reads a settings bundle and configures the plugin prior to init.
+        """ Reads a settings bundle and configures the plugin after init has been called.
 
         The settings bundle comes from reading the settings.ini file and each
         section is converted into a list of tuples
