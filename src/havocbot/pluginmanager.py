@@ -88,33 +88,34 @@ def did_process_dependencies_for_plugin(plugin_name, dependencies_string, havocb
             plugins_can_install_modules = havocbot.get_havocbot_setting_by_name('plugins_can_install_modules')
 
             if plugins_can_install_modules.lower() == 'true':
-                result = install_dependencies(plugin_name, dependency_tuple_list)
+                logger.info("global setting 'plugins_can_install_modules' is set to True. Installing plugin dependencies")
+                result = install_dependencies(plugin_name, dependency_tuple_list, havocbot)
             else:
                 result = True
 
     return result
 
 
-# TODO - Need to find the correct version of pip to use. This will use whatever is the first pip on the PATH and not the virtualenv pip
-def install_dependencies(plugin_name, dependency_tuple_list):
+def install_dependencies(plugin_name, dependency_tuple_list, havocbot):
     if dependency_tuple_list is not None and len(dependency_tuple_list) > 0:
-        import subprocess
+        import pip
 
-        subprocess_list = ['pip', 'install']
+        arg_list = ['install']
         for (pip_module_name, pip_module_version) in dependency_tuple_list:
-            subprocess_list.append("%s%s" % (pip_module_name, pip_module_version))
-        logger.info("%s plugin requires dependencies - checking pip for %s" % (plugin_name, ', '.join("'%s'" % (item) for item in subprocess_list[2:])))
+            arg_list.append("%s%s" % (pip_module_name, pip_module_version))
 
-        # Using a subprocess call here since the internal api for pip leaks root loggers
-        # See https://github.com/pypa/pip/issues/3043
         try:
-            p = subprocess.Popen(subprocess_list, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            output, error = p.communicate()
-            if p.returncode == 0:
+            return_code = pip.main(arg_list)
+
+            # Fix for pip leaking root handlers. See https://github.com/pypa/pip/issues/3043
+            havocbot.reset_logging()
+
+            logger.info("install_dependencies - return_code is '%s'" % (return_code))
+            if return_code == 0:
                 logger.debug("%s plugin dependencies installed successfully or requirements already satisfied" % (plugin_name))
                 return True
             else:
-                logger.error(output.splitlines()[-1].decode('ascii'))  # decode for python3 compatibility
+                # logger.error(output.splitlines()[-1].decode('ascii'))  # decode for python3 compatibility
                 logger.error("%s plugin dependencies were unable to be installed" % (plugin_name))
         # Catch pip not being installed
         except OSError as e:

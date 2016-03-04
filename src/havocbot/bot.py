@@ -36,22 +36,49 @@ class HavocBot:
         self.should_shutdown = False
         self.should_restart = False
 
-    def set_settings(self, **kwargs):
-        self.settings['havocbot'] = kwargs.get('havocbot_settings', None)
-        self.settings['clients'] = kwargs.get('clients_settings', None)
-        self.settings_file = kwargs.get('settings_file', None)
-
-        self.configure()
-
-    def configure(self):
+    def configure(self, settings_file):
+        self.load_settings_from_file(settings_file)
         self.configure_bot(self.settings['havocbot'])
         self.configure_clients(self.settings['clients'])
-
         self.load_plugins()
 
         # The bot is now configured
         logger.debug("HavoceBot instance has been configured")
         self.is_configured = True
+
+    def load_settings_from_file(self, settings_file):
+        """ Reads a settings file and sets the values to HavocBot.
+
+        Takes in a settings file to be parsed by a config parser of
+        format https://wiki.python.org/moin/ConfigParserExamples
+        """
+        self.settings_file = settings_file
+
+        parser = SafeConfigParser()
+        parser.read(self.settings_file)
+
+        settings_dict = {}
+        clients_dict = {}
+
+        # Covert the settings file into a dictionary for later processing
+        if parser.has_section('havocbot'):
+            # Create a bundle of havocbot settings
+            settings_dict['havocbot'] = parser.items('havocbot')
+
+            if parser.has_option('havocbot', 'clients_enabled'):
+                clients_string = parser.get('havocbot', 'clients_enabled')
+                clients_list = clients_string.strip().split(",")
+
+                # Create a bundle of settings to pass the client integration for processing
+                # Bundle format is a list of tuples in the format [('integration name'), [('property1', 'value1'), ('property2', 'value12)], ...]
+                for client in clients_list:
+                    if parser.has_section(client):
+                        clients_dict[client] = parser.items(client)
+
+            self.settings['havocbot'] = settings_dict
+            self.settings['clients'] = clients_dict
+        else:
+            sys.exit("Could not find havocbot settings in settings.ini")
 
     def configure_bot(self, settings_dict):
         """ Configures the bot prior to starting up.
@@ -136,6 +163,11 @@ class HavocBot:
         self.plugins_custom = pluginmanager.load_plugins_custom(self)
 
     def get_settings_for_plugin(self, plugin):
+        """ Public method for plugins to request their setting bundle.
+
+        TODO - refactor this to not call SafeConfigParser. Should only return what is in self.settings
+        """
+
         tuple_list = []
 
         parser = SafeConfigParser()
@@ -191,21 +223,26 @@ class HavocBot:
     def process(self):
         try:
             while threading.activeCount() > 0:
+                """
+                If exit mode is true the bot will be expecting processing threads to die off.
+                During every loop the bot will be checking to see if background threads have
+                switched to inactive status. If so, the thread will be removed from the active
+                processing thread list.
+                """
+
                 # logger.debug("Main Loop - active threads: %s, should_shutdown: %s, should_restart: %s" % (threading.activeCount(), self.should_shutdown, self.should_restart))
-                # If exit mode is true the bot will be expecting porcessing threads to die off
-                # During every loop the bot will be checking to see if background threads have
-                # switch to inactive status. If so, the thread will be removed from the active
-                # processing thread list
                 if self.should_shutdown:
                     #  Updating the list with only the threads that are still active
                     self.processing_threads = [x for x in self.processing_threads if x.is_alive()]
 
-                    # Integrations like xmpp rely on sleekxmpp behind the scenes for processing.
-                    # Sleekxmpp spawns its own background threads for scheduling purposes that
-                    # take a little while longer to stop then the items in self.processing_threads
-                    # so this next conditional will wait not only until HavocBot threads are burned
-                    # down but also until the total active threads are down to just the main thread.
-                    # This probably should be redone to be cleaner. It is a TODO
+                    """
+                    Integrations like xmpp rely on sleekxmpp behind the scenes for processing.
+                    Sleekxmpp spawns its own background threads for scheduling purposes that
+                    take a little while longer to stop then the items in self.processing_threads
+                    so this next conditional will wait not only until HavocBot threads are burned
+                    down but also until the total active threads are down to just the main thread.
+                    This probably should be redone to be cleaner. It is a TODO
+                    """
                     if len(self.processing_threads) == 0:
                         if threading.activeCount() == 1:
                             logger.debug("Only the main thread is active. All background threads have exited")
@@ -293,6 +330,52 @@ class HavocBot:
         for client in self.clients:
             logger.info("Disconnecting client %s" % (client.integration_name))
             client.disconnect()
+
+    def reset_logging(self):
+        """ Resets logging through HavocBot.
+
+        Generally should not be called. This is to fix an issue with using the
+        private api of pip which breaks havocbot's root log handler. This is called
+        during startup if the setting 'plugins_can_install_modules' is set to True
+        at least one plugin has a 'depedencies' setting
+
+        See https://github.com/pypa/pip/issues/3043
+        """
+        log_file = None
+        log_format = None
+        log_level = None
+
+        # Pick up any changes from the settings file
+        self.load_settings_from_file(self.settings_file)
+        havocbot_settings = self.settings['havocbot']
+
+        if havocbot_settings is not None and 'havocbot' in havocbot_settings:
+            for (key, value) in havocbot_settings['havocbot']:
+                if key == 'log_file':
+                    log_file = value.strip()
+                if key == 'log_format':
+                    log_format = value.strip()
+                if key == 'log_level':
+                    log_level = value.strip()
+
+        if log_file is not None and log_format is not None and log_level is not None:
+            # Remove any existing root handlers. Goodbye pip loggers!
+            for handler in logging.root.handlers[:]:
+                logging.root.removeHandler(handler)
+
+            # for name, logger_object in logging.Logger.manager.loggerDict.items():
+            #     if 'pip' in name:
+            #         # print("Disabling pip key '%s' and value '%s'" % (name, logger_object))
+            #         logger_object.disabled = True
+
+            numeric_log_level = getattr(logging, log_level.upper(), None)
+            logging.basicConfig(level=numeric_log_level, stream=sys.stdout, format=log_format)
+            formatter = logging.Formatter(log_format)
+            hdlr = logging.handlers.RotatingFileHandler(log_file, encoding="utf-8", maxBytes=1024 * 1024, backupCount=10)
+            hdlr.setFormatter(formatter)
+            logger.addHandler(hdlr)
+
+            logger.debug('HavocBot logging has been reset')
 
     def signa_handler(self, signal, frame):
         logger.info("Received an interrupt. Starting shutdown")
