@@ -32,29 +32,32 @@ class StatefulPlugin:
             self.load_plugin(plugin_settings, havocbot)
 
     def load_plugin(self, plugin_settings, havocbot):
-        plugin = imp.load_source(self.name, self.path)
-        self.handler = plugin.havocbot_handler
+        try:
+            plugin = imp.load_source(self.name, self.path)
+            self.handler = plugin.havocbot_handler
 
-        # Check if plugin is valid. Returns a tuple of format (True/False, None/'error message string')
-        result_tuple = self.handler.is_valid()
-        if result_tuple[0] is True:
-            logger.debug("%s plugin passed validation" % (self.name))
+            # Check if plugin is valid. Returns a tuple of format (True/False, None/'error message string')
+            result_tuple = self.handler.is_valid()
+            if result_tuple[0] is True:
+                logger.debug("%s plugin passed validation" % (self.name))
 
-            # Call the init method in the plugin
-            self.handler.init(havocbot)
+                # Call the init method in the plugin
+                self.handler.init(havocbot)
 
-            if self.handler.configure(plugin_settings):
-                logger.debug("%s was configured successfully. Registering plugin triggers" % (self.name))
+                if self.handler.configure(plugin_settings):
+                    logger.debug("%s was configured successfully. Registering plugin triggers" % (self.name))
 
-                # Register the triggers for the plugin
-                havocbot.register_triggers(self.handler.plugin_triggers)
+                    # Register the triggers for the plugin
+                    havocbot.register_triggers(self.handler.plugin_triggers)
 
-                # Confirm that the plugin has now been validated
-                self.is_validated = True
+                    # Confirm that the plugin has now been validated
+                    self.is_validated = True
+                else:
+                    logger.error("%s was unable to be configured. Check your settings and try again" % (self.name))
             else:
-                logger.error("%s was unable to be configured. Check your settings and try again" % (self.name))
-        else:
-            logger.error("%s plugin failed validation and was not loaded - %s" % (self.name, result_tuple[1]))
+                logger.error("%s plugin failed validation and was not loaded - %s" % (self.name, result_tuple[1]))
+        except ImportError as e:
+            logger.error("%s plugin failed to import. Install any missing third party dependencies and try again - %s" % (self.name, e))
 
     # Determines if the object at a path is a havocbot plugin
     @staticmethod
@@ -78,15 +81,16 @@ def did_process_dependencies_for_plugin(plugin_name, dependencies_string, havocb
         dependency_tuple_list = [(x[0], x[1]) for x in (x.split(':') for x in dependencies_string.split(','))]
 
         if dependency_tuple_list is not None and len(dependency_tuple_list) > 0:
+            dependencies_formatted = ', '.join("%s (%s)" % (t[0], t[1]) for t in dependency_tuple_list)
+            logger.info("%s plugin requires third party dependencies prior to startup - %s" % (plugin_name, dependencies_formatted))
+
             # Get setting from havocbot
             plugins_can_install_modules = havocbot.get_havocbot_setting_by_name('plugins_can_install_modules')
 
             if plugins_can_install_modules.lower() == 'true':
                 result = install_dependencies(plugin_name, dependency_tuple_list)
             else:
-                dependencies_formatted = ', '.join("%s (%s)" % (t[0], t[1]) for t in dependency_tuple_list)
-                logger.info("%s plugin requires third party dependencies prior to startup - %s" % (plugin_name, dependencies_formatted))
-                result = False
+                result = True
 
     return result
 
