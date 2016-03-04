@@ -19,6 +19,19 @@ class StatefulPlugin:
     # The handler is set to the exported class instance of the plugin
     @catch_exceptions
     def init(self, havocbot):
+        # Get the settings bundle for the plugin
+        plugin_settings = havocbot.get_settings_for_plugin(self.name)
+
+        # Look for any dependencies listed in the settings bundle
+        dependencies_string = next((obj[1] for obj in plugin_settings if obj[0] == 'dependencies'), None)
+        if dependencies_string is not None:
+            # Do dependency work
+            if did_process_dependencies_for_plugin(self.name, dependencies_string, havocbot) is True:
+                self.load_plugin(plugin_settings, havocbot)
+        else:
+            self.load_plugin(plugin_settings, havocbot)
+
+    def load_plugin(self, plugin_settings, havocbot):
         plugin = imp.load_source(self.name, self.path)
         self.handler = plugin.havocbot_handler
 
@@ -30,11 +43,7 @@ class StatefulPlugin:
             # Call the init method in the plugin
             self.handler.init(havocbot)
 
-            # Get the settings bundle for the plugin
-            plugin_class_name = self.handler.__class__.__name__
-            settings = havocbot.get_settings_for_plugin(plugin_class_name)
-
-            if self.handler.configure(settings):
+            if self.handler.configure(plugin_settings):
                 logger.debug("%s was configured successfully. Registering plugin triggers" % (self.name))
 
                 # Register the triggers for the plugin
@@ -58,6 +67,55 @@ class StatefulPlugin:
         f.close()
         if data.startswith(b"#!/havocbot"):
             return True
+
+        return False
+
+
+def did_process_dependencies_for_plugin(plugin_name, dependencies_string, havocbot):
+    result = False
+
+    if dependencies_string is not None:
+        dependency_tuple_list = [(x[0], x[1]) for x in (x.split(':') for x in dependencies_string.split(','))]
+
+        if dependency_tuple_list is not None and len(dependency_tuple_list) > 0:
+            # Get setting from havocbot
+            plugins_can_install_modules = havocbot.get_havocbot_setting_by_name('plugins_can_install_modules')
+
+            if plugins_can_install_modules.lower() == 'true':
+                result = install_dependencies(plugin_name, dependency_tuple_list)
+            else:
+                dependencies_formatted = ', '.join("%s (%s)" % (t[0], t[1]) for t in dependency_tuple_list)
+                logger.info("%s plugin requires third party dependencies prior to startup - %s" % (plugin_name, dependencies_formatted))
+                result = False
+
+    return result
+
+
+# TODO - Need to find the correct version of pip to use. This will use whatever is the first pip on the PATH and not the virtualenv pip
+def install_dependencies(plugin_name, dependency_tuple_list):
+    if dependency_tuple_list is not None and len(dependency_tuple_list) > 0:
+        import subprocess
+
+        subprocess_list = ['pip', 'install']
+        for (pip_module_name, pip_module_version) in dependency_tuple_list:
+            subprocess_list.append("%s%s" % (pip_module_name, pip_module_version))
+        logger.info("%s plugin requires dependencies - checking pip for %s" % (plugin_name, ', '.join("'%s'" % (item) for item in subprocess_list[2:])))
+
+        # Using a subprocess call here since the internal api for pip leaks root loggers
+        # See https://github.com/pypa/pip/issues/3043
+        try:
+            p = subprocess.Popen(subprocess_list, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            output, error = p.communicate()
+            if p.returncode == 0:
+                logger.debug("%s plugin dependencies installed successfully or requirements already satisfied" % (plugin_name))
+                return True
+            else:
+                logger.error(output.splitlines()[-1].decode('ascii'))  # decode for python3 compatibility
+                logger.error("%s plugin dependencies were unable to be installed" % (plugin_name))
+        # Catch pip not being installed
+        except OSError as e:
+            logger.error("Is pip installed? Unable to install plugin dependencies - %s" % (e))
+            return False
 
         return False
 
