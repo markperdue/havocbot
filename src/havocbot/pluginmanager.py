@@ -13,6 +13,7 @@ class StatefulPlugin:
         self.path = path
         self.name = name
         self.handler = None
+        self.validated = False
         self.init(havocbot)
 
     # Load a havocbot plugin
@@ -25,29 +26,30 @@ class StatefulPlugin:
         plugin_class_name = self.handler.__class__.__name__
         settings = havocbot.get_settings_for_plugin(plugin_class_name)
 
-        # Call the init method in the plugin
-        self.handler.init(havocbot)
+        # Check if plugin is valid. Returns a tuple of format (True/False, None/'error message string')
+        result_tuple = self.handler.is_valid()
+        if result_tuple[0] is True:
+            logger.debug("%s plugin passed validation" % (self.name))
 
-        if self.handler.configure(settings):
-            logger.debug("%s was configured successfully. Registering plugin triggers..." % (self.name))
+            # Call the init method in the plugin
+            self.handler.init(havocbot)
 
-            # Register the triggers for the plugin
-            havocbot.register_triggers(self.handler.plugin_triggers)
+            if self.handler.configure(settings):
+                logger.debug("%s was configured successfully. Registering plugin triggers" % (self.name))
+
+                # Register the triggers for the plugin
+                havocbot.register_triggers(self.handler.plugin_triggers)
+
+                # Confirm that the plugin has now been validated
+                self.validated = True
+            else:
+                logger.error("%s was unable to be configured. Check your settings and try again" % (self.name))
         else:
-            logger.error("%s was unable to be configured. Check your settings and try again" % (self.name))
-
-    # # Trigger the shutdown of the plugin
-    # @catch_exceptions
-    # def shutdown(self):
-    #     self.handler.shutdown()
-
-    # @catch_exceptions
-    # def handle(self, message):
-    #     return self.handler.handle_message(message)
+            logger.error("%s plugin failed validation and was not loaded - %s" % (self.name, result_tuple[1]))
 
     # Determines if the object at a path is a havocbot plugin
     @staticmethod
-    def is_valid(path):
+    def is_havocbot_file(path):
         if not path.endswith(".py"):
             return False
 
@@ -62,12 +64,12 @@ class StatefulPlugin:
 
 # Load a plugin by name
 def load_plugin(havocbot, name, path):
-    if StatefulPlugin.is_valid(path):
-        logger.debug("%s validated as a plugin" % (name))
+    if StatefulPlugin.is_havocbot_file(path):
+        logger.debug("%s is a havocbot file and passed first round of validation" % (name))
 
         return StatefulPlugin(havocbot, name, path)
-    else:
-        return None
+
+    return None
 
 
 # Load all core plugins and attaches them to the bot
@@ -107,7 +109,7 @@ def load_plugins_of_type(havocbot, plugin_type):
                 resource_filename = pkg_resources.resource_filename(core_package, f)
 
                 plugin = load_plugin(havocbot, name, resource_filename)
-                if plugin and isinstance(plugin.handler, HavocBotPlugin):
+                if plugin and isinstance(plugin.handler, HavocBotPlugin) and plugin.validated is True:
                     logger.info("%s core plugin loaded" % (name))
                     plugins.append(plugin)
     elif plugin_type == "custom":
@@ -121,7 +123,7 @@ def load_plugins_of_type(havocbot, plugin_type):
                     body, ext = os.path.splitext(f)
 
                     plugin = load_plugin(havocbot, body, fpath)
-                    if plugin and isinstance(plugin.handler, HavocBotPlugin):
+                    if plugin and isinstance(plugin.handler, HavocBotPlugin) and plugin.validated is True:
                         logger.info("%s custom plugin loaded" % (body))
                         plugins.append(plugin)
             else:
