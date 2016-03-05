@@ -69,8 +69,11 @@ class HavocBot:
                 clients_string = parser.get('havocbot', 'clients_enabled')
                 clients_list = clients_string.strip().split(",")
 
-                # Create a bundle of settings to pass the client integration for processing
-                # Bundle format is a list of tuples in the format [('integration name'), [('property1', 'value1'), ('property2', 'value12)], ...]
+                # Create a bundle of settings to pass the client integration
+                # for processing
+                # Bundle format is a list of tuples in the format
+                # [('integration name'), [('property1', 'value1'),
+                # ('property2', 'value12)], ...]
                 for client in clients_list:
                     if parser.has_section(client):
                         clients_dict[client] = parser.items(client)
@@ -83,11 +86,13 @@ class HavocBot:
     def configure_bot(self, settings_dict):
         """ Configures the bot prior to starting up.
 
-        Takes in a dictionary with keys relating to the bot name with the value
-        containg a standard SafeConfigParser.items() tuple list
+        Takes in a dictionary with keys relating to the bot name with
+        the value containg a standard SafeConfigParser.items() tuple
+        list
 
         example:
-        {'havocbot': [('plugins_dir', 'plugins'), ('property2', 'value12)], ...}
+        {'havocbot': [('plugins_dir', 'plugins'),
+        ('property2', 'value12)], ...}
         """
         if settings_dict is not None and 'havocbot' in settings_dict:
             for (key, value) in settings_dict['havocbot']:
@@ -97,25 +102,28 @@ class HavocBot:
     def configure_clients(self, clients_dict):
         """ Configures a client integration prior to starting up.
 
-        Takes in a dictionary with keys relating to the client name with the values
-        containg a standard SafeConfigParser.items() tuple list. The client
-        names are iterated over and a instance of the client integration is
-        instantiated if possible. The tuple list is then passed to the configure()
-        method inside the client integration for processing
+        Takes in a dictionary with keys relating to the client name with
+        the values containg a standard SafeConfigParser.items() tuple
+        list. The client names are iterated over and a instance of the
+        client integration is instantiated if possible. The tuple list
+        is then passed to the configure() method inside the client
+        integration for processing
 
         example:
-        {'slask': [('plugins_dir', 'plugins'), ('property2', 'value12)], ...}
+        {'slack': [('plugins_dir', 'plugins'), ('property2', 'value12)] }
         """
 
-        # Placeholder for client integration instances that will be override the self.clients value
+        # Placeholder for client integration instances that will be
+        # override the self.clients value
         clientList = []
 
         if clients_dict is not None:
-            # for client_name, client_settings_tuple_list in clients_dict.iteritems():  # Python 3 incompatible
-            for client_name, client_settings_tuple_list in clients_dict.items():
+            for client_name, client_settings_tuple_list \
+                    in clients_dict.items():
                 client_temp = self.import_and_return_client(client_name)
                 if client_temp is not None:
-                    # Instantiates the temp client and passes it the running HavocBot instance
+                    # Instantiates the temp client and passes it the
+                    # running HavocBot instance
                     client = client_temp(self)
 
                     if client.configure(client_settings_tuple_list):
@@ -128,7 +136,8 @@ class HavocBot:
     def import_and_return_client(self, name, module=None):
         mod = self.import_module(name, module=None)
 
-        # Inspect the module and iterate over all the members looking for entries that are classes that inherit from client.Client
+        # Inspect the module and iterate over all the members looking
+        # for entries that are classes that inherit from client.Client
         for name, obj in inspect.getmembers(mod):
             if inspect.isclass(obj):
                 base_classes = inspect.getmro(obj)
@@ -136,10 +145,10 @@ class HavocBot:
                 parent = base_classes[1]
                 if parent is not None:
                     if parent.__name__ == 'Client':
-                        # logger.debug("Name: %s, Object: %s, Base Classes: %s" % (name, obj, base_classes))
                         client_instantiator = name
 
-                        if client_instantiator is not None and hasattr(mod, client_instantiator):
+                        if (client_instantiator is not None and
+                                hasattr(mod, client_instantiator)):
                             client = getattr(mod, client_instantiator)
                             return client
 
@@ -154,7 +163,8 @@ class HavocBot:
 
                 return mod
         except ImportError:
-            logger.error("Unable to import the %s client integration file" % (name))
+            logger.error("Unable to import the %s client integration file"
+                         % (name))
 
             return None
 
@@ -165,7 +175,8 @@ class HavocBot:
     def get_settings_for_plugin(self, plugin):
         """ Public method for plugins to request their setting bundle.
 
-        TODO - refactor this to not call SafeConfigParser. Should only return what is in self.settings
+        TODO - refactor this to not call SafeConfigParser.
+        Should only return what is in self.settings
         """
 
         tuple_list = []
@@ -173,7 +184,8 @@ class HavocBot:
         parser = SafeConfigParser()
         parser.read(self.settings_file)
 
-        # Covert the settings.ini settings into a dictionary for later processing
+        # Covert the settings.ini settings into a dictionary for
+        # later processing
         if parser.has_section(plugin):
             # Create a bundle of plugin settings
             tuple_list = parser.items(plugin)
@@ -184,11 +196,13 @@ class HavocBot:
         return tuple_list
 
     def get_havocbot_setting_by_name(self, name):
-        return next((obj[1] for obj in self.settings['havocbot']['havocbot'] if name == obj[0]), None)
+        return next((obj[1] for obj in self.settings['havocbot']['havocbot']
+                    if name == obj[0]), None)
 
     def start(self):
         if self.is_configured is not True:
-            sys.exit('Havocbot has not been configured. Please configure the bot and try again')
+            sys.exit('Havocbot has not been configured. \
+                     Please configure the bot and try again')
         else:
             logger.info("Starting HavocBot")
 
@@ -199,7 +213,8 @@ class HavocBot:
             # Connect and begin processing for each client in tuple
             for client in self.clients:
                 # Spawn a thread for each unconnected client
-                logger.debug("Spawning new daemon thread for client %s" % (client.integration_name))
+                logger.debug("Spawning new daemon thread for client %s"
+                             % (client.integration_name))
                 t = ClientThread(self)
                 t.daemon = True
                 self.processing_threads.append(t)
@@ -209,50 +224,69 @@ class HavocBot:
 
                 # Have the client connect to the client's services
                 if client.connect():
-                    logger.info("%s client is connected" % (client.integration_name))
+                    logger.info("%s client is connected"
+                                % (client.integration_name))
 
                     self.queue.put(client)
                 else:
-                    logger.error("Unable to connect to the client %s" % (client.integration_name))
+                    logger.error("Unable to connect to the client %s"
+                                 % (client.integration_name))
 
             # Main thread of the bot
             self.process()
         else:
-            logger.critical("No valid client integrations found. Make sure the settings.ini file has an entry for clients_enabled and that the settings for the client are configured")
+            logger.critical("No valid client integrations found. Make sure \
+            the settings.ini file has an entry for clients_enabled and that \
+            the settings for the client are configured")
 
     def process(self):
         try:
             while threading.activeCount() > 0:
                 """
-                If exit mode is true the bot will be expecting processing threads to die off.
-                During every loop the bot will be checking to see if background threads have
-                switched to inactive status. If so, the thread will be removed from the active
-                processing thread list.
+                If exit mode is true the bot will be expecting
+                processing threads to die off. During every loop the bot
+                will be checking to see if background threads have
+                switched to inactive status. If so, the thread will be
+                removed from the active processing thread list.
                 """
 
-                # logger.debug("Main Loop - active threads: %s, should_shutdown: %s, should_restart: %s" % (threading.activeCount(), self.should_shutdown, self.should_restart))
+                logger.debug("Main Loop - active threads: %s, \
+                    should_shutdown: %s, should_restart: %s"
+                             % (threading.activeCount(), self.should_shutdown,
+                                self.should_restart))
                 if self.should_shutdown:
-                    #  Updating the list with only the threads that are still active
-                    self.processing_threads = [x for x in self.processing_threads if x.is_alive()]
+                    #  Updating the list with only the threads that are
+                    # still active
+                    self.processing_threads = [x for x in
+                                               self.processing_threads if
+                                               x.is_alive()]
 
                     """
-                    Integrations like xmpp rely on sleekxmpp behind the scenes for processing.
-                    Sleekxmpp spawns its own background threads for scheduling purposes that
-                    take a little while longer to stop then the items in self.processing_threads
-                    so this next conditional will wait not only until HavocBot threads are burned
-                    down but also until the total active threads are down to just the main thread.
-                    This probably should be redone to be cleaner. It is a TODO
+                    Integrations like xmpp rely on sleekxmpp behind the
+                    scenes for processing. Sleekxmpp spawns its own
+                    background threads for scheduling purposes that take
+                    a little while longer to stop then the items in
+                    self.processing_threads so this next conditional will
+                    wait not only until HavocBot threads are burned down
+                    but also until the total active threads are down to
+                    just the main thread.
+
+                    TODO: This probably should be redone to be cleaner.
                     """
                     if len(self.processing_threads) == 0:
                         if threading.activeCount() == 1:
-                            logger.debug("Only the main thread is active. All background threads have exited")
+                            logger.debug("Only the main thread is active. \
+                                All background threads have exited")
                             self.should_shutdown = False
                         else:
-                            logger.debug("Waiting on non HavocBot background thread to exit")
+                            logger.debug("Waiting on non HavocBot background \
+                                thread to exit")
                     else:
-                        logger.debug("Waiting on HavocBot background thread to exit")
+                        logger.debug("Waiting on HavocBot background thread \
+                            to exit")
                 else:
-                    # Reconfigure and restart the bot if coming from a restart event
+                    # Reconfigure and restart the bot if coming from
+                    # a restart event
                     if self.should_restart:
                         self.should_restart = False
                         self.configure()
@@ -272,11 +306,16 @@ class HavocBot:
             working_copy_triggers += trigger_tuple_list
 
             triggers_length = len(trigger_tuple_list)
-            triggers_phrase = "trigger" if len(trigger_tuple_list) == 1 else "triggers"
+            triggers_phrase = "trigger" if len(trigger_tuple_list) == 1 \
+                else "triggers"
             existing_triggers_length = len(self.triggers)
-            existing_triggers_phrase = "trigger" if len(self.triggers) == 1 else "triggers"
+            existing_triggers_phrase = "trigger" if len(self.triggers) == 1 \
+                else "triggers"
 
-            logger.debug("Loading %s new %s. %s %s previously loaded" % (triggers_length, triggers_phrase, existing_triggers_length, existing_triggers_phrase))
+            logger.debug("Loading %s new %s. %s %s previously loaded"
+                         % (triggers_length, triggers_phrase,
+                            existing_triggers_length,
+                            existing_triggers_phrase))
             self.triggers = working_copy_triggers
 
     def unregister_triggers(self, trigger_tuple_list):
@@ -291,11 +330,16 @@ class HavocBot:
             working_copy_triggers = tmp_list
 
             triggers_length = len(trigger_tuple_list)
-            triggers_phrase = "trigger" if len(trigger_tuple_list) == 1 else "triggers"
+            triggers_phrase = "trigger" if len(trigger_tuple_list) == 1 \
+                else "triggers"
             existing_triggers_length = len(self.triggers)
-            existing_triggers_phrase = "trigger" if len(self.triggers) == 1 else "triggers"
+            existing_triggers_phrase = "trigger" if len(self.triggers) == 1 \
+                else "triggers"
 
-            logger.debug("Removing %s existing %s. %s %s previously loaded" % (triggers_length, triggers_phrase, existing_triggers_length, existing_triggers_phrase))
+            logger.debug("Removing %s existing %s. %s %s previously loaded"
+                         % (triggers_length, triggers_phrase,
+                            existing_triggers_length,
+                            existing_triggers_phrase))
             self.triggers = working_copy_triggers
 
     def reload_plugins(self):
@@ -334,10 +378,11 @@ class HavocBot:
     def reset_logging(self):
         """ Resets logging through HavocBot.
 
-        Generally should not be called. This is to fix an issue with using the
-        private api of pip which breaks havocbot's root log handler. This is called
-        during startup if the setting 'plugins_can_install_modules' is set to True
-        at least one plugin has a 'depedencies' setting
+        Generally should not be called. This is to fix an issue with
+        using the private api of pip which breaks havocbot's root log
+        handler. This is called during startup if the setting
+        'plugins_can_install_modules' is set to True and at least one
+        plugin has a 'depedencies' setting
 
         See https://github.com/pypa/pip/issues/3043
         """
@@ -358,20 +403,20 @@ class HavocBot:
                 if key == 'log_level':
                     log_level = value.strip()
 
-        if log_file is not None and log_format is not None and log_level is not None:
+        if log_file is not None and log_format is not None and log_level \
+                is not None:
             # Remove any existing root handlers. Goodbye pip loggers!
             for handler in logging.root.handlers[:]:
                 logging.root.removeHandler(handler)
 
-            # for name, logger_object in logging.Logger.manager.loggerDict.items():
-            #     if 'pip' in name:
-            #         # print("Disabling pip key '%s' and value '%s'" % (name, logger_object))
-            #         logger_object.disabled = True
-
             numeric_log_level = getattr(logging, log_level.upper(), None)
-            logging.basicConfig(level=numeric_log_level, stream=sys.stdout, format=log_format)
+            logging.basicConfig(level=numeric_log_level, stream=sys.stdout,
+                                format=log_format)
             formatter = logging.Formatter(log_format)
-            hdlr = logging.handlers.RotatingFileHandler(log_file, encoding="utf-8", maxBytes=1024 * 1024, backupCount=10)
+            hdlr = logging.handlers.RotatingFileHandler(log_file,
+                                                        encoding="utf-8",
+                                                        maxBytes=1024 * 1024,
+                                                        backupCount=10)
             hdlr.setFormatter(formatter)
             logger.addHandler(hdlr)
 
@@ -383,10 +428,13 @@ class HavocBot:
 
     def show_threads(self):
         for thread in self.processing_threads:
-            logger.debug("HavocBot.show_threads() - %s - thread is %s. is_active set to %s, is_alive set to %s" % (len(self.processing_threads), thread, thread.is_active, thread.is_alive()))
+            logger.debug("HavocBot.show_threads() - %s - thread is %s. \
+                is_active set to %s, is_alive set to %s"
+                         % (len(self.processing_threads), thread,
+                            thread.is_active, thread.is_alive()))
 
     def get_method_class_name(self, method):
-        """ Compatibility helper across python2/3 for getting a function's class name.
+        """ Compatibility across python2/3.
         """
 
         if sys.version_info < (3,):
