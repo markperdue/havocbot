@@ -50,6 +50,10 @@ def configure_logging(settings_dict):
         log_file_parent_string = os.path.abspath(os.path.join(log_file, os.pardir))
         create_dir_if_not_exists(log_file_parent_string)
 
+        # Remove any existing root handlers
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+
         numeric_log_level = getattr(logging, log_level.upper(), None)
         logging.basicConfig(level=numeric_log_level, stream=sys.stdout, format=log_format)
         formatter = logging.Formatter(log_format)
@@ -65,22 +69,11 @@ def main(settings="settings.ini"):
     parser.read(settings)
 
     settings_dict = {}
-    clients_dict = {}
 
     # Covert the settings.ini settings into a dictionary for later processing
     if parser.has_section('havocbot'):
         # Create a bundle of havocbot settings
         settings_dict['havocbot'] = parser.items('havocbot')
-
-        if parser.has_option('havocbot', 'clients_enabled'):
-            clients_string = parser.get('havocbot', 'clients_enabled')
-            clients_list = clients_string.strip().split(",")
-
-            # Create a bundle of settings to pass the client integration for processing
-            # Bundle format is a list of tuples in the format [('integration name'), [('property1', 'value1'), ('property2', 'value12)], ...]
-            for client in clients_list:
-                if parser.has_section(client):
-                    clients_dict[client] = parser.items(client)
     else:
         sys.exit("Could not find havocbot settings in settings.ini")
 
@@ -90,8 +83,8 @@ def main(settings="settings.ini"):
     # Get an instance of the bot if it does not exist
     havocbot = get_bot()
 
-    # Pass a dictionary of settings to the bot
-    havocbot.set_settings(havocbot_settings=settings_dict, clients_settings=clients_dict, settings_file=settings)
+    # Pass a settings file to the bot
+    havocbot.configure(settings)
 
     # Start it. Off we go
     havocbot.start()
