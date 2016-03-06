@@ -201,7 +201,7 @@ class HavocBot:
 
     def start(self):
         if self.is_configured is not True:
-            sys.exit(('Havocbot has not been configured.'
+            sys.exit(('Havocbot has not been configured. '
                       'Please configure the bot and try again'))
         else:
             logger.info("Starting HavocBot")
@@ -236,8 +236,8 @@ class HavocBot:
             self.process()
         else:
             logger.critical((
-                'No valid client integrations found. Make sure'
-                'the settings.ini file has an entry for clients_enabled and that'
+                'No valid client integrations found. Make sure '
+                'the settings.ini file has an entry for clients_enabled and that '
                 'the settings for the client are configured')
             )
 
