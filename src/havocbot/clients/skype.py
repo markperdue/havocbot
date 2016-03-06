@@ -102,7 +102,10 @@ class Skype(Client):
                 message_object = kwargs.get('message_object')
 
             if message_object.event == 'SAID':
-                for (trigger, triggered_function) in self.havocbot.triggers:
+                for tuple_item in self.havocbot.triggers:
+                    trigger = tuple_item[0]
+                    triggered_function = tuple_item[1]
+
                     # Add exact regex match if user defined
                     if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
                         if not trigger.startswith('^') and not trigger.endswith('$'):
@@ -118,7 +121,11 @@ class Skype(Client):
 
                         # Pass the message to the function associated with the trigger
                         try:
-                            triggered_function(self, message_object, capture_groups=match.groups())
+                            if len(tuple_item) == 2:
+                                triggered_function(self, message_object, capture_groups=match.groups())
+                            elif len(tuple_item) == 3:
+                                additional_args = tuple_item[2]
+                                triggered_function(self, message_object, capture_groups=match.groups(), **additional_args)
                         except Exception as e:
                             logger.error(e)
                     else:
@@ -171,10 +178,25 @@ class Skype(Client):
         logger.debug("Returning user '%s'" % (user))
         return user
 
+    def get_users_by_name(self, name, **kwargs):
+        results = []
+
+        # TODO
+
+        logger.debug("get_users_by_name returning with '%s'" % (results))
+        return results
+
+    def get_users_in_channel(self, team, **kwargs):
+        result_list = []
+
+        # TODO
+
+        return result_list
+
 
 # Returns a newly created user from a json source
 def create_user_object_from_json(name, handle):
-    user = User(name, handle)
+    user = User(handle)
     logger.debug(user)
 
     return user

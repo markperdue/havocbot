@@ -98,12 +98,15 @@ class XMPP(Client):
                 message_object = kwargs.get('message_object')
 
             if message_object.event in ('groupchat', 'chat', 'normal'):
-                for (trigger, triggered_function) in self.havocbot.triggers:
+                for tuple_item in self.havocbot.triggers:
+                    trigger = tuple_item[0]
+                    triggered_function = tuple_item[1]
+
                     # Add exact regex match if user defined
                     if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
                         if not trigger.startswith('^') and not trigger.endswith('$'):
-                            # logger.debug('Converting trigger to a line exact match requirement')
-                            trigger = '^' + trigger + '$'
+                            # logger.debug("Converting trigger to a line exact match requirement")
+                            trigger = "^" + trigger + "$"
 
                     # Use trigger as regex pattern and then search the message for a match
                     regex = re.compile(trigger)
@@ -114,7 +117,11 @@ class XMPP(Client):
 
                         # Pass the message to the function associated with the trigger
                         try:
-                            triggered_function(self, message_object, capture_groups=match.groups())
+                            if len(tuple_item) == 2:
+                                triggered_function(self, message_object, capture_groups=match.groups())
+                            elif len(tuple_item) == 3:
+                                additional_args = tuple_item[2]
+                                triggered_function(self, message_object, capture_groups=match.groups(), **additional_args)
                         except Exception as e:
                             logger.error(e)
                     else:
@@ -181,6 +188,24 @@ class XMPP(Client):
         else:
             return None
 
+    def get_users_by_name(self, name, **kwargs):
+        results = []
+
+        # Fetch JID from xep_0045
+        channel = kwargs.get('channel', None)
+        if channel is not None and channel:
+            if '@' not in channel:
+                channel = "%s@%s" % (channel, self.server)
+
+            jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
+
+            if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
+                user = create_user_object(jabber_id.bare, name, None)
+                results.append(user)
+
+        logger.debug("get_users_by_name returning with '%s'" % (results))
+        return results
+
     def get_user_by_name(self, name, **kwargs):
         user = None
 
@@ -200,6 +225,13 @@ class XMPP(Client):
             return user
         else:
             return XMPPUser(name, name, name)
+
+    def get_users_in_channel(self, team, **kwargs):
+        result_list = []
+
+        # TODO
+
+        return result_list
 
 
 class MUCBot(sleekxmpp.ClientXMPP):

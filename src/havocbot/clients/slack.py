@@ -113,7 +113,10 @@ class Slack(Client):
                 message_object = kwargs.get('message_object')
 
             if message_object.event == 'message':
-                for (trigger, triggered_function) in self.havocbot.triggers:
+                for tuple_item in self.havocbot.triggers:
+                    trigger = tuple_item[0]
+                    triggered_function = tuple_item[1]
+
                     # Add exact regex match if user defined
                     if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
                         if not trigger.startswith('^') and not trigger.endswith('$'):
@@ -129,7 +132,11 @@ class Slack(Client):
 
                         # Pass the message to the function associated with the trigger
                         try:
-                            triggered_function(self, message_object, capture_groups=match.groups())
+                            if len(tuple_item) == 2:
+                                triggered_function(self, message_object, capture_groups=match.groups())
+                            elif len(tuple_item) == 3:
+                                additional_args = tuple_item[2]
+                                triggered_function(self, message_object, capture_groups=match.groups(), **additional_args)
                         except Exception as e:
                             logger.error(e)
                     else:
@@ -161,9 +168,39 @@ class Slack(Client):
 
     def get_user_by_id(self, user_id, **kwargs):
         if self.client:
-            user_json = self.client.api_call("users.info", user=user_id)
+            user_json = self.client.api_call('users.info', user=user_id)
+            logger.debug(user_json)
 
-        return create_user_object_from_json(user_json) if user_json is not None else None
+        return create_user_object_from_json(user_json['user']) if user_json is not None and 'user' in user_json else None
+
+    def get_users_by_name(self, name, **kwargs):
+        results = []
+
+        if self.client:
+            api_users = self.get_users_in_channel(None)
+            logger.info('api users below')
+            logger.info(api_users)
+            matched_users = [x for x in api_users if (x.username is not None and x.username.lower() == name.lower()) or (x.name is not None and x.name.lower() == name.lower())]
+            if matched_users:
+                if len(matched_users) > 1:
+                    results = matched_users
+                else:
+                    results.append(matched_users[0])
+
+        logger.debug("get_users_by_name returning with '%s'" % (results))
+        return results
+
+    def get_users_in_channel(self, team, **kwargs):
+        result_list = []
+
+        if self.client:
+            result = self.client.api_call('users.list', presense=0)
+            if 'members' in result and result['members']:
+                for member in result['members']:
+                    a_user = create_user_object_from_json(member)
+                    result_list.append(a_user)
+
+        return result_list
 
 
 class SlackMessage(Message):
@@ -182,6 +219,7 @@ class SlackMessage(Message):
 
 class SlackUser(User):
     def __init__(self, user_id, name, username, tz):
+        super(SlackUser, self).__init__(user_id)
         self.user_id = user_id
         self.name = name
         self.username = username
@@ -205,14 +243,13 @@ def create_message_object_from_json(json_data):
     return message
 
 
-# Returns a newly created user from a json source
-def create_user_object_from_json(json_data):
-    user_id = json_data['user']['id'] if 'id' in json_data['user'] and len(json_data['user']['id']) > 0 else None
-    username = json_data['user']['name'] if 'name' in json_data['user'] and len(json_data['user']['name']) > 0 else None
-    name = json_data['user']['real_name'] if 'real_name' in json_data['user'] and len(json_data['user']['real_name']) > 0 else None
-    time_zone = json_data['user']['tz'] if 'tz' in json_data['user'] and len(json_data['user']['tz']) > 0 else None
+def create_user_object_from_json(json_user_data):
+    user_id = json_user_data['id'] if 'id' in json_user_data and json_user_data['id'] is not None and len(json_user_data['id']) > 0 else None
+    name = json_user_data['real_name'] if 'real_name' in json_user_data and json_user_data['real_name'] is not None and len(json_user_data['real_name']) > 0 else None
+    username = json_user_data['name'] if 'name' in json_user_data and json_user_data['name'] is not None and len(json_user_data['name']) > 0 else None
+    time_zone = json_user_data['tz'] if 'tz' in json_user_data and json_user_data['tz'] is not None and len(json_user_data['tz']) > 0 else None
 
     user = SlackUser(user_id, name, username, time_zone)
+    user.client = 'slack'
 
-    logger.debug("create_user_object_from_json - user '%s'" % (user))
     return user
