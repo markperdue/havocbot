@@ -250,10 +250,11 @@ class HavocBot:
                 removed from the active processing thread list.
                 """
 
-                logger.debug("Main Loop - active threads: %s, \
-                    should_shutdown: %s, should_restart: %s"
-                             % (threading.activeCount(), self.should_shutdown,
-                                self.should_restart))
+                # logger.debug("Main Loop - active threads: %s,\
+                #              should_shutdown: %s, should_restart: %s"
+                #              % (threading.activeCount(),
+                #                 self.should_shutdown,
+                #                 self.should_restart))
                 if self.should_shutdown:
                     #  Updating the list with only the threads that are
                     # still active
