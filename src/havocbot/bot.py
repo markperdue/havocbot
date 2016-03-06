@@ -201,8 +201,8 @@ class HavocBot:
 
     def start(self):
         if self.is_configured is not True:
-            sys.exit('Havocbot has not been configured. \
-                     Please configure the bot and try again')
+            sys.exit(('Havocbot has not been configured.'
+                      'Please configure the bot and try again'))
         else:
             logger.info("Starting HavocBot")
 
@@ -235,9 +235,11 @@ class HavocBot:
             # Main thread of the bot
             self.process()
         else:
-            logger.critical("No valid client integrations found. Make sure \
-            the settings.ini file has an entry for clients_enabled and that \
-            the settings for the client are configured")
+            logger.critical((
+                'No valid client integrations found. Make sure'
+                'the settings.ini file has an entry for clients_enabled and that'
+                'the settings for the client are configured')
+            )
 
     def process(self):
         try:
@@ -250,17 +252,20 @@ class HavocBot:
                 removed from the active processing thread list.
                 """
 
-                # logger.debug("Main Loop - active threads: %s,\
-                #              should_shutdown: %s, should_restart: %s"
-                #              % (threading.activeCount(),
-                #                 self.should_shutdown,
-                #                 self.should_restart))
+                # logger.debug(
+                #     "Main Loop - active threads: %s, "
+                #     "should_shutdown: %s, should_restart: %s"
+                #     % (threading.activeCount(), self.should_shutdown,
+                #        self.should_restart)
+                # )
                 if self.should_shutdown:
-                    #  Updating the list with only the threads that are
-                    # still active
-                    self.processing_threads = [x for x in
-                                               self.processing_threads if
-                                               x.is_alive()]
+                    # Updating the list with only the threads
+                    # that are still active
+                    self.processing_threads = [
+                        x for x
+                        in self.processing_threads
+                        if x.is_alive()
+                    ]
 
                     """
                     Integrations like xmpp rely on sleekxmpp behind the
@@ -276,15 +281,21 @@ class HavocBot:
                     """
                     if len(self.processing_threads) == 0:
                         if threading.activeCount() == 1:
-                            logger.debug("Only the main thread is active. \
-                                All background threads have exited")
+                            logger.debug(
+                                'Only the main thread is active. '
+                                'All background threads have exited'
+                            )
                             self.should_shutdown = False
                         else:
-                            logger.debug("Waiting on non HavocBot background \
-                                thread to exit")
+                            logger.debug(
+                                'Waiting on non HavocBot background '
+                                'thread to exit'
+                            )
                     else:
-                        logger.debug("Waiting on HavocBot background thread \
-                            to exit")
+                        logger.debug(
+                            'Waiting on HavocBot background thread '
+                            'to exit'
+                        )
                 else:
                     # Reconfigure and restart the bot if coming from
                     # a restart event
@@ -307,11 +318,17 @@ class HavocBot:
             working_copy_triggers += trigger_tuple_list
 
             triggers_length = len(trigger_tuple_list)
-            triggers_phrase = "trigger" if len(trigger_tuple_list) == 1 \
-                else "triggers"
+            triggers_phrase = (
+                'trigger'
+                if len(trigger_tuple_list) == 1
+                else 'triggers'
+            )
             existing_triggers_length = len(self.triggers)
-            existing_triggers_phrase = "trigger" if len(self.triggers) == 1 \
-                else "triggers"
+            existing_triggers_phrase = (
+                'trigger'
+                if len(self.triggers) == 1
+                else 'triggers'
+            )
 
             logger.debug("Loading %s new %s. %s %s previously loaded"
                          % (triggers_length, triggers_phrase,
@@ -331,11 +348,17 @@ class HavocBot:
             working_copy_triggers = tmp_list
 
             triggers_length = len(trigger_tuple_list)
-            triggers_phrase = "trigger" if len(trigger_tuple_list) == 1 \
-                else "triggers"
+            triggers_phrase = (
+                'trigger'
+                if len(trigger_tuple_list) == 1
+                else 'triggers'
+            )
             existing_triggers_length = len(self.triggers)
-            existing_triggers_phrase = "trigger" if len(self.triggers) == 1 \
-                else "triggers"
+            existing_triggers_phrase = (
+                'trigger'
+                if len(self.triggers) == 1
+                else 'triggers'
+            )
 
             logger.debug("Removing %s existing %s. %s %s previously loaded"
                          % (triggers_length, triggers_phrase,
@@ -404,8 +427,8 @@ class HavocBot:
                 if key == 'log_level':
                     log_level = value.strip()
 
-        if log_file is not None and log_format is not None and log_level \
-                is not None:
+        if (log_file is not None and log_format is not None and log_level
+                is not None):
             # Remove any existing root handlers. Goodbye pip loggers!
             for handler in logging.root.handlers[:]:
                 logging.root.removeHandler(handler)
@@ -429,10 +452,12 @@ class HavocBot:
 
     def show_threads(self):
         for thread in self.processing_threads:
-            logger.debug("HavocBot.show_threads() - %s - thread is %s. \
-                is_active set to %s, is_alive set to %s"
-                         % (len(self.processing_threads), thread,
-                            thread.is_active, thread.is_alive()))
+            logger.debug(
+                "HavocBot.show_threads() - %s - thread is %s. "
+                "is_active set to %s, is_alive set to %s"
+                % (len(self.processing_threads), thread,
+                   thread.is_active, thread.is_alive())
+            )
 
     def get_method_class_name(self, method):
         """ Compatibility across python2/3.
