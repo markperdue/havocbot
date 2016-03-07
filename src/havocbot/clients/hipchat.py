@@ -182,7 +182,7 @@ class HipChat(Client):
         else:
             return None
 
-    def get_users_by_name(self, name, **kwargs):
+    def get_users_by_name(self, name, channel=None, **kwargs):
         results = []
 
         # Fetch JID from xep_0045
@@ -284,6 +284,7 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
 
 class HipChatUser(User):
     def __init__(self, user_id, name, email):
+        super(HipChatUser, self).__init__(user_id)
         self.user_id = user_id
         self.name = name
         self.email = email

@@ -173,7 +173,7 @@ class Slack(Client):
 
         return create_user_object_from_json(user_json['user']) if user_json is not None and 'user' in user_json else None
 
-    def get_users_by_name(self, name, **kwargs):
+    def get_users_by_name(self, name, channel=None, **kwargs):
         results = []
 
         if self.client:

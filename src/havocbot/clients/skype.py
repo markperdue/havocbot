@@ -178,7 +178,7 @@ class Skype(Client):
         logger.debug("Returning user '%s'" % (user))
         return user
 
-    def get_users_by_name(self, name, **kwargs):
+    def get_users_by_name(self, name, channel=None, **kwargs):
         results = []
 
         # TODO

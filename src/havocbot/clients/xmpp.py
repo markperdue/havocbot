@@ -188,11 +188,11 @@ class XMPP(Client):
         else:
             return None
 
-    def get_users_by_name(self, name, **kwargs):
+    def get_users_by_name(self, name, channel=None, **kwargs):
         results = []
 
         # Fetch JID from xep_0045
-        channel = kwargs.get('channel', None)
+        # channel = kwargs.get('channel', None)
         if channel is not None and channel:
             if '@' not in channel:
                 channel = "%s@%s" % (channel, self.server)
@@ -292,6 +292,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
 
 class XMPPUser(User):
     def __init__(self, user_id, name, email):
+        super(XMPPUser, self).__init__(user_id)
         self.user_id = user_id
         self.name = name
         self.email = email
