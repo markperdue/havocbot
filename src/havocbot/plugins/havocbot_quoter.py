@@ -32,12 +32,14 @@ class QuoterPlugin(HavocBotPlugin):
         return [
             ("!quote\s(.*)", self.get_quote),
             ("!addquote\s(.*)", self.add_quote),
+            ("!debugquote", self.debug_quote),
             ("(.*)", self.start),
         ]
 
     def init(self, havocbot):
         self.havocbot = havocbot
         self.recent_messages = []
+        self.max_messages_per_user_per_channel = 5
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
@@ -53,23 +55,30 @@ class QuoterPlugin(HavocBotPlugin):
         self.havocbot = None
 
     def start(self, callback, message, **kwargs):
-        message_string = "User: '%s', Channel: '%s', Timestamp: '%s', Text: '%s'" % (message.user, message.channel, message.timestamp, message.text)
-        logger.info(callback.get_user_by_id(message.user, channel=message.channel))
-        logger.info(message_string)
+        if message.text.startswith(('!addquote', '!debugquote')):
+            return
 
-        # Remember only the past 5 messages said by a user. Quoter can potentially
-        # be running across multiple clients so the recent_messages list has entries
-        # setup like the following tuple:
-        # (User.username, message.text, Client.integration_name, message.channel, message.timestamp)
-        user = callback.get_user_by_id(message.user, channel=message.channel)
-        if user:
-            timestamp = datetime.utcnow().replace(tzinfo=tz.tzutc())
-            a_message_tuple = (user.username, message.text, callback.integration_name, message.channel, timestamp.isoformat())
-            self.recent_messages.append(a_message_tuple)
-        else:
-            timestamp = datetime.utcnow().replace(tzinfo=tz.tzutc())
-            a_message_tuple = (message.user, message.text, callback.integration_name, message.channel, timestamp.isoformat())
-            self.recent_messages.append(a_message_tuple)
+        # message_string = "User: '%s', Channel: '%s', Timestamp: '%s', Text: '%s'" % (message.user, message.channel, message.timestamp, message.text)
+        # logger.info(message_string)
+
+        timestamp = datetime.utcnow().replace(tzinfo=tz.tzutc())
+        a_message_tuple = (message.user, message.text, callback.integration_name, message.channel, timestamp.isoformat())
+
+        # Count occurences of messages by a user in a client integration
+        previous_messages = [x for x in self.recent_messages if x[0] == message.user and x[2] == callback.integration_name and x[3] == message.channel]
+        logger.info("tracked messages for user %s in channel %s is %d" % (message.user, message.channel, len(previous_messages)))
+
+        if len(previous_messages) >= self.max_messages_per_user_per_channel:
+            # Remove oldest message from this user for the client
+            try:
+                self.recent_messages.remove(previous_messages[0])
+            except ValueError:
+                pass
+
+        logger.info("Adding message by user %s to recent messages" % (message.user))
+
+        # Add new message
+        self.recent_messages.append(a_message_tuple)
 
     def get_recent_messages(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -112,13 +121,35 @@ class QuoterPlugin(HavocBotPlugin):
 
         stasher = StasherQuote.getInstance()
 
+        # logger.info("captured_username is '%s', integration_name is '%s', channel is '%s'" % (captured_username, callback.integration_name, message.channel))
+
         if message.channel and captured_username is not None:
-            for (username, quote, client, channel, timestamp) in reversed(self.recent_messages):
-                if username == captured_username:
-                    stasher.add_quote(username, quote, client, channel, timestamp)
-                    text = "%s said something ridiculous. Archiving it" % (username)
-                    callback.send_message(channel=message.channel, message=text, event=message.event)
-                    break
+            found_message = next((
+                x for x in reversed(self.recent_messages)
+                if x[0].lower() == captured_username.lower()
+                and x[2].lower() == callback.integration_name.lower()
+                and x[3].lower() == message.channel.lower()
+            ), None)
+
+            if found_message is not None:
+                name = found_message[0]
+                logger.info("Searching for user_id for '%s'" % (name))
+                # Fetch the user_id of the message
+                users = callback.get_users_by_name(name, channel=message.channel)
+                if users is not None and len(users) == 1:
+                    stasher.add_quote(users[0].user_id, found_message[1], found_message[2], found_message[3], found_message[4])
+                    message_text = "%s said something ridiculous. Archiving it" % (captured_username)
+                    callback.send_message(channel=message.channel, message=message_text, event=message.event)
+                else:
+                    message_text = "Unable to fetch user id for %s" % (captured_username)
+                    callback.send_message(channel=message.channel, message=message_text, event=message.event)
+            else:
+                message_text = "No recent messages found for user %s" % (captured_username)
+                callback.send_message(channel=message.channel, message=message_text, event=message.event)
+
+    def debug_quote(self, callback, message, **kwargs):
+        for message in self.recent_messages:
+            logger.info(message)
 
 
 def format_datetime_for_display(date_object):
@@ -127,21 +158,22 @@ def format_datetime_for_display(date_object):
 
 
 class StasherQuote(Stasher):
-    def add_quote(self, username, quote, client, channel, timestamp):
+    def add_quote(self, user_id, quote, client, channel, timestamp):
+        logger.info("Adding new quote - user_id '%s', client '%s', channel '%s', timestamp '%s', quote '%s'" % (user_id, client, channel, timestamp, quote))
         if self.data is not None:
             if 'quotes' in self.data:
-                if any((known_quote['username'] == username and known_quote['quote'] == quote) for known_quote in self.data['quotes']):
-                    print("Quote db already contains the quote '%s' for username %s" % (quote, username))
+                if any((known_quote['user_id'] == user_id and known_quote['quote'] == quote) for known_quote in self.data['quotes']):
+                    print("Quote db already contains the quote '%s' for user_id %s" % (quote, user_id))
                 else:
                     print("Adding quote")
-                    self.data['quotes'].append({'username': username, 'quote': quote, 'client': client, 'channel': channel, 'timestamp': timestamp})
+                    self.data['quotes'].append({'user_id': user_id, 'quote': quote, 'client': client, 'channel': channel, 'timestamp': timestamp})
                     self.write_db()
             else:
                 print("Adding initial quote")
-                self.data['quotes'] = [{'username': username, 'quote': quote, 'client': client, 'channel': channel, 'timestamp': timestamp}]
+                self.data['quotes'] = [{'user_id': user_id, 'quote': quote, 'client': client, 'channel': channel, 'timestamp': timestamp}]
                 self.write_db()
         else:
-            self.data['quotes'] = [{'username': username, 'quote': quote, 'client': client, 'channel': channel, 'timestamp': timestamp}]
+            self.data['quotes'] = [{'user_id': user_id, 'quote': quote, 'client': client, 'channel': channel, 'timestamp': timestamp}]
             self.write_db()
 
     def get_quote_from_username(self, username):
