@@ -45,8 +45,9 @@ class ListPlugin(HavocBotPlugin):
         self.havocbot = None
 
     def start(self, callback, message, **kwargs):
-        if message.channel:
-            callback.send_message(channel=message.channel, message="Available Commands: '" + "', '".join([(i[0]) for i in self.havocbot.triggers]) + "'", event=message.event)
+        if message.to:
+            text = "Available Commands: '" + "', '".join([(i[0]) for i in self.havocbot.triggers]) + "'"
+            callback.send_message(text, message.to, event=message.event)
 
 
 # Make this plugin available to HavocBot

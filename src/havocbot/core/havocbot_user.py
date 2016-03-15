@@ -28,6 +28,7 @@ class UserPlugin(HavocBotPlugin):
             ("!adduser <user_id>", "!adduser markaperdue", "add the user to the database"),
             ("!clientuser <name>", "!clientuser mark", "get information on a user from the chat client"),
             ("!stasheruser <name>", "!stasheruser mark", "get information on a user from local storage"),
+            ("!me", None, "get information on you"),
         ]
 
     @property
@@ -39,6 +40,7 @@ class UserPlugin(HavocBotPlugin):
             ("!adduser\s(.*)", self.trigger_add_user),
             ("!clientuser\s(.*)", self.trigger_get_user, {'client': True}),
             ("!stasheruser\s(.*)", self.trigger_get_user, {'stasher': True}),
+            ("!me", self.trigger_get_sender),
         ]
 
     def init(self, havocbot):
@@ -59,6 +61,11 @@ class UserPlugin(HavocBotPlugin):
 
     def start(self, callback, message, **kwargs):
         pass
+
+    def trigger_get_sender(self, callback, message, **kwargs):
+        user = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
+
+        callback.send_message(repr(user), message.to, event=message.event)
 
     def trigger_get_user(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -85,7 +92,7 @@ class UserPlugin(HavocBotPlugin):
                         if user_result is not None:
                             stasher_results = [user_result]
                     else:
-                        stasher_results = stasher.get_users_by_name(word)
+                        stasher_results = stasher.get_users_by_name(word, channel=message.to, event=message.event)
 
                     if stasher_results:
                         matched_users.extend(stasher_results)
@@ -98,24 +105,18 @@ class UserPlugin(HavocBotPlugin):
                         if user_result is not None:
                             callback_results = [user_result]
                     else:
-                        callback_results = callback.get_users_by_name(word)
+                        callback_results = callback.get_users_by_name(word, channel=message.to, event=message.event)
 
                     if callback_results:
                         matched_users.extend(callback_results)
                         user_found = True
 
                 if not user_found:
-                    callback.send_message(
-                        channel=message.channel,
-                        message="User %s was not found" % (word),
-                        event=message.event
-                    )
+                    text = "User %s was not found" % (word)
+                    callback.send_message(text, message.to, event=message.event)
         else:
-            callback.send_message(
-                channel=message.channel,
-                message='Too many parameters. What are you trying to do?',
-                event=message.event
-            )
+            text = 'Too many parameters. What are you trying to do?'
+            callback.send_message(text, message.to, event=message.event)
 
         if matched_users:
             set_users = set(matched_users)
@@ -131,8 +132,8 @@ class UserPlugin(HavocBotPlugin):
 
         if message_list:
             callback.send_messages_from_list(
-                channel=message.channel,
-                message=message_list,
+                message_list,
+                message.to,
                 event=message.event
             )
 
@@ -140,7 +141,7 @@ class UserPlugin(HavocBotPlugin):
         matched_users = []
         message_list = []
 
-        users = callback.get_users_in_channel(None)
+        users = callback.get_users_in_channel(message.to, event=message.event)
         if users:
             for user_object in users:
                 matched_users.append(user_object)
@@ -154,16 +155,13 @@ class UserPlugin(HavocBotPlugin):
 
         if message_list:
             callback.send_messages_from_list(
-                channel=message.channel,
-                message=message_list,
+                message_list,
+                message.to,
                 event=message.event
             )
         else:
-            callback.send_message(
-                channel=message.channel,
-                message='No users found',
-                event=message.event
-            )
+            text = 'No users found'
+            callback.send_message(text, message.to, event=message.event)
 
     def trigger_add_user(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -182,27 +180,18 @@ class UserPlugin(HavocBotPlugin):
                 if a_user is not None and a_user.is_valid():
                     stasher.add_user(a_user)
 
-                callback.send_message(
-                    channel=message.channel,
-                    message="User added",
-                    event=message.event
-                )
+                text = 'User added'
+                callback.send_message(text, message.to, event=message.event)
             except exceptions.StasherEntryAlreadyExistsError as e:
                 logger.error(
                     "User alread exists - Existing user json is '%s'" % (e)
                 )
 
-                callback.send_message(
-                    channel=message.channel,
-                    message="That user already exists!",
-                    event=message.event
-                )
+                text = 'That user already exists!'
+                callback.send_message(text, message.to, event=message.event)
         else:
-            callback.send_message(
-                channel=message.channel,
-                message="Invalid parameters. Check the help option for usage",
-                event=message.event
-            )
+            text = 'Invalid parameters. Check the help option for usage'
+            callback.send_message(text, message.to, event=message.event)
 
 # Make this plugin available to HavocBot
 havocbot_handler = UserPlugin()

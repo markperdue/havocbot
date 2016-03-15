@@ -7,23 +7,21 @@ logger = logging.getLogger(__name__)
 
 class User(object):
     def __init__(self, user_id):
+        timestamp = (
+            datetime.utcnow()
+            .replace(tzinfo=tz.tzutc())
+            .isoformat()
+        )
+
         self.aliases = []
         self.client = None
         self.email = None
         self.is_stashed = False
-        self.last_modified = (
-            datetime.utcnow()
-                    .replace(tzinfo=tz.tzutc())
-                    .isoformat()
-        )
+        self.last_modified = timestamp
         self.name = None
         self.plugin_data = {}
         self.points = 0
-        self.timestamp = (
-            datetime.utcnow()
-                    .replace(tzinfo=tz.tzutc())
-                    .isoformat()
-        )
+        self.timestamp = timestamp
         self.user_id = user_id
         self.username = None
 

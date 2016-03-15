@@ -142,22 +142,22 @@ class Skype(Client):
 
         return None
 
-    def send_message(self, message, channel, event, **kwargs):
-        if channel and message:
-            logger.info("Sending message '%s' to channel '%s'" % (message, channel))
+    def send_message(self, text, channel, event=None, **kwargs):
+        if channel and text:
+            logger.info("Sending text '%s' to channel '%s'" % (text, channel))
             try:
                 chat = self.get_chat_object_by_channel(channel)
                 if chat is not None:
-                    chat.SendMessage(message)
+                    chat.SendMessage(text)
             except AttributeError:
                 logger.error("Unable to send message. Are you connected?")
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def send_messages_from_list(self, message, channel, event, **kwargs):
-        if channel and message:
-            joined_message = "\n".join(message)
-            logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))
+    def send_messages_from_list(self, text_list, channel, event=None, **kwargs):
+        if channel and text_list:
+            joined_message = "\n".join(text_list)
+            logger.info("Sending text list '%s' to channel '%s'" % (joined_message, channel))
             try:
                 chat = self.get_chat_object_by_channel(channel)
                 if chat is not None:
@@ -178,18 +178,28 @@ class Skype(Client):
         logger.debug("Returning user '%s'" % (user))
         return user
 
-    def get_users_by_name(self, name, channel=None, **kwargs):
+    def get_users_by_name(self, name, channel=None, event=None, **kwargs):
         results = []
 
         # TODO
+        logger.info("Channel is '%s', name is '%s', event is '%s'" % (channel, name, event))
 
         logger.debug("get_users_by_name returning with '%s'" % (results))
         return results
 
-    def get_users_in_channel(self, team, **kwargs):
+    def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
+        user = None
+
+        # TODO
+        logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
+
+        return user
+
+    def get_users_in_channel(self, channel, event=None, **kwargs):
         result_list = []
 
         # TODO
+        logger.info("Channel is '%s', event is '%s'" % (channel, event))
 
         return result_list
 

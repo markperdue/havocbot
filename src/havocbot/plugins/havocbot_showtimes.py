@@ -76,11 +76,12 @@ class ShowtimesPlugin(HavocBotPlugin):
         zip_code = capture[0]
         logger.debug("start - searching for movies for '%s'" % (zip_code))
         showtimes_object = showtimes.get_showtimes_for_zip_on_date(zip_code, datetime.now().strftime("%m-%d-%Y"), self.api_key_amc, self.max_distance_in_miles, self.max_upcoming_showtimes_to_display)
-        if message.channel:
+        if message.to:
             if showtimes_object:
-                callback.send_messages_from_list(channel=message.channel, message=showtimes_object, event=message.event)
+                callback.send_messages_from_list(showtimes_object, message.to, event=message.event)
             else:
-                callback.send_message(channel=message.channel, message="No showtime data found", event=message.event)
+                text = 'No showtime data found'
+                callback.send_message(text, message.to, event=message.event)
 
 
 # Make this plugin available to HavocBot

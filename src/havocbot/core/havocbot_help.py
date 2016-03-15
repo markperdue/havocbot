@@ -53,8 +53,8 @@ class HelpPlugin(HavocBotPlugin):
         for usage_message in self.get_usage_lines_from_plugin_as_list(self.plugin_usages):
             callback_message_list.append(usage_message)
 
-        if message.channel:
-            callback.send_messages_from_list(channel=message.channel, message=callback_message_list, event=message.event)
+        if message.to:
+            callback.send_messages_from_list(callback_message_list, message.to, event=message.event)
 
     def help_plugins(self, callback, message, **kwargs):
         callback_message_list = []
@@ -64,8 +64,8 @@ class HelpPlugin(HavocBotPlugin):
         callback_message_list.append("Loaded Plugins - " + ", ".join([("%s (%s)" % (i[1], i[0])) for i in tuples_list]))
         callback_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
 
-        if message.channel:
-            callback.send_messages_from_list(channel=message.channel, message=callback_message_list, event=message.event)
+        if message.to:
+            callback.send_messages_from_list(callback_message_list, message.to, event=message.event)
 
     def help_plugin(self, callback, message, **kwargs):
         callback_message_list = []
@@ -86,8 +86,8 @@ class HelpPlugin(HavocBotPlugin):
             callback_message_list.append("Loaded Plugins - " + ", ".join([("%s (%s)" % (i[1], i[0])) for i in tuples_list]))
             callback_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
 
-        if message.channel:
-            callback.send_messages_from_list(channel=message.channel, message=callback_message_list, event=message.event)
+        if message.to:
+            callback.send_messages_from_list(callback_message_list, message.to, event=message.event)
 
     def get_plugin_help_matching_list(self, tuples_list):
         new_list = []

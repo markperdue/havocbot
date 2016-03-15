@@ -45,8 +45,10 @@ class RestartPlugin(HavocBotPlugin):
         self.havocbot = None
 
     def start(self, callback, message, **kwargs):
-        if message.channel:
-            callback.send_message(channel=message.channel, message="Restarting the bot. Hang tight", event=message.event)
+        if message.to:
+            text = 'Restarting the bot. Hang tight'
+            callback.send_message(text, message.to, event=message.event)
+
         self.havocbot.restart()
 
 

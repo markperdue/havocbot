@@ -145,22 +145,22 @@ class Slack(Client):
             else:
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 
-    def send_message(self, message, channel, event, **kwargs):
-        if channel and message:
-            logger.info("Sending message '%s' to channel '%s'" % (message, channel))
+    def send_message(self, text, to, event=None, **kwargs):
+        if to and text:
+            logger.info("Sending text '%s' to '%s'" % (text, to))
             try:
-                self.client.rtm_send_message(channel, message)
+                self.client.rtm_send_message(to, text)
             except AttributeError:
                 logger.error("Unable to send message. Are you connected?")
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def send_messages_from_list(self, message, channel, event, **kwargs):
-        if channel and message:
-            joined_message = "\n".join(message)
-            logger.info("Sending message list '%s' to channel '%s'" % (joined_message, channel))
+    def send_messages_from_list(self, text_list, to, event=None, **kwargs):
+        if to and text_list:
+            joined_message = "\n".join(text_list)
+            logger.info("Sending text list '%s' to '%s'" % (joined_message, to))
             try:
-                self.client.rtm_send_message(channel, joined_message)
+                self.client.rtm_send_message(to, joined_message)
             except AttributeError:
                 logger.error("Unable to send message. Are you connected?")
             except Exception as e:
@@ -173,7 +173,7 @@ class Slack(Client):
 
         return create_user_object_from_json(user_json['user']) if user_json is not None and 'user' in user_json else None
 
-    def get_users_by_name(self, name, channel=None, **kwargs):
+    def get_users_by_name(self, name, channel=None, event=None, **kwargs):
         results = []
 
         if self.client:
@@ -190,31 +190,45 @@ class Slack(Client):
         logger.debug("get_users_by_name returning with '%s'" % (results))
         return results
 
-    def get_users_in_channel(self, team, **kwargs):
+    def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
+        user = None
+
+        logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
+
+        if event is not None and event:
+            if event == 'message':
+                # Get user from message
+                user = self.get_user_by_id(message_sender)
+
+        return user
+
+    def get_users_in_channel(self, channel, event=None, **kwargs):
         result_list = []
 
         if self.client:
-            result = self.client.api_call('users.list', presense=0)
+            result = self.client.api_call('users.list', presence=1)
+            # logger.debug(json.dumps(result, indent=2, sort_keys=True))
             if 'members' in result and result['members']:
                 for member in result['members']:
-                    a_user = create_user_object_from_json(member)
-                    result_list.append(a_user)
+                    if 'presence' in member and member['presence'] is not None and member['presence'] == 'active':
+                        a_user = create_user_object_from_json(member)
+                        result_list.append(a_user)
 
         return result_list
 
 
 class SlackMessage(Message):
-    def __init__(self, text, user, channel, event, team, reply_to, timestamp):
+    def __init__(self, text, sender, to, event, team, reply_to, timestamp):
         self.text = text
-        self.user = user
-        self.channel = channel
+        self.sender = sender
+        self.to = to
         self.event = event
         self.team = team
         self.reply_to = reply_to
         self.timestamp = timestamp
 
     def __str__(self):
-        return "SlackMessage(Text: '%s', User: '%s', Channel: '%s', Type: '%s', Team: '%s', Reply To: '%s', Timestamp: '%s')" % (self.text, self.user, self.channel, self.event, self.team, self.reply_to, self.timestamp)
+        return "SlackMessage(Text: '%s', Sender: '%s', To: '%s', Event: '%s', Team: '%s', Reply To: '%s', Timestamp: '%s')" % (self.text, self.sender, self.to, self.event, self.team, self.reply_to, self.timestamp)
 
 
 class SlackUser(User):
@@ -231,14 +245,14 @@ class SlackUser(User):
 
 def create_message_object_from_json(json_data):
     text = json_data['text'] if 'text' in json_data else None
-    user = json_data['user'] if 'user' in json_data else None
-    channel = json_data['channel'] if 'channel' in json_data else None
+    sender = json_data['user'] if 'user' in json_data else None
+    to = json_data['channel'] if 'channel' in json_data else None
     event = json_data['type'] if 'type' in json_data else None
     team = json_data['team'] if 'team' in json_data else None
     reply_to = json_data['reply_to'] if 'reply_to' in json_data else None
     timestamp = json_data['ts'] if 'ts' in json_data else None
 
-    message = SlackMessage(text, user, channel, event, team, reply_to, timestamp)
+    message = SlackMessage(text, sender, to, event, team, reply_to, timestamp)
 
     return message
 

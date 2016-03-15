@@ -1,15 +1,10 @@
-import logging
-
-logger = logging.getLogger(__name__)
-
-
 class Message(object):
-    def __init__(self, text, user, channel, event, timestamp):
+    def __init__(self, text, sender, to, event, timestamp):
         self.text = text
-        self.user = user
-        self.channel = channel
+        self.sender = sender
+        self.to = to
         self.event = event
         self.timestamp = timestamp
 
     def __str__(self):
-        return "Message(Text: '%s', User: '%s', Channel: '%s', Type: '%s')" % (self.text, self.user, self.channel, self.event)
+        return "Message(Text: '%s', Sender: '%s', To: '%s', Type: '%s')" % (self.text, self.sender, self.to, self.event)

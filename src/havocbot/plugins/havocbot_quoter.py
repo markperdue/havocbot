@@ -58,15 +58,15 @@ class QuoterPlugin(HavocBotPlugin):
         if message.text.startswith(('!addquote', '!debugquote')):
             return
 
-        # message_string = "User: '%s', Channel: '%s', Timestamp: '%s', Text: '%s'" % (message.user, message.channel, message.timestamp, message.text)
+        # message_string = "User: '%s', Channel: '%s', Timestamp: '%s', Text: '%s'" % (message.sender, message.to, message.timestamp, message.text)
         # logger.info(message_string)
 
         timestamp = datetime.utcnow().replace(tzinfo=tz.tzutc())
-        a_message_tuple = (message.user, message.text, callback.integration_name, message.channel, timestamp.isoformat())
+        a_message_tuple = (message.sender, message.text, callback.integration_name, message.to, timestamp.isoformat())
 
         # Count occurences of messages by a user in a client integration
-        previous_messages = [x for x in self.recent_messages if x[0] == message.user and x[2] == callback.integration_name and x[3] == message.channel]
-        logger.info("tracked messages for user %s in channel %s is %d" % (message.user, message.channel, len(previous_messages)))
+        previous_messages = [x for x in self.recent_messages if x[0] == message.sender and x[2] == callback.integration_name and x[3] == message.to]
+        logger.info("tracked messages for user %s in channel %s is %d" % (message.sender, message.to, len(previous_messages)))
 
         if len(previous_messages) >= self.max_messages_per_user_per_channel:
             # Remove oldest message from this user for the client
@@ -75,7 +75,7 @@ class QuoterPlugin(HavocBotPlugin):
             except ValueError:
                 pass
 
-        logger.info("Adding message by user %s to recent messages" % (message.user))
+        logger.info("Adding message by user %s to recent messages" % (message.sender))
 
         # Add new message
         self.recent_messages.append(a_message_tuple)
@@ -85,11 +85,11 @@ class QuoterPlugin(HavocBotPlugin):
         capture = kwargs.get('capture_groups', None)
         captured_username = capture[0]
 
-        if message.channel and captured_username is not None:
+        if message.to and captured_username is not None:
             for (username, client, text, channel, timestamp) in self.recent_messages:
                 if captured_username == username:
                     text = "%s said '%s' on '%s' in channel '%s' on client '%s'" % (username, text, str(timestamp), channel, client)
-                    callback.send_message(channel=message.channel, message=text, event=message.event)
+                    callback.send_message(text, message.to, event=message.event)
 
     def get_quote(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -110,9 +110,10 @@ class QuoterPlugin(HavocBotPlugin):
                     temp_list.append("%s said '%s' on %s" % (result['username'], result['quote'], format_datetime_for_display(date)))
                 else:
                     temp_list.append("No quotes found from user %s" % (word))
-            callback.send_messages_from_list(channel=message.channel, message=temp_list, event=message.event)
+            callback.send_messages_from_list(temp_list, message.to, event=message.event)
         else:
-            callback.send_message(channel=message.channel, message="Too many parameters. What are you trying to do?", event=message.event)
+            text = 'Too many parameters. What are you trying to do?'
+            callback.send_message(text, message.to, event=message.event)
 
     def add_quote(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -121,31 +122,31 @@ class QuoterPlugin(HavocBotPlugin):
 
         stasher = StasherQuote.getInstance()
 
-        # logger.info("captured_username is '%s', integration_name is '%s', channel is '%s'" % (captured_username, callback.integration_name, message.channel))
+        # logger.info("captured_username is '%s', integration_name is '%s', channel is '%s'" % (captured_username, callback.integration_name, message.to))
 
-        if message.channel and captured_username is not None:
+        if message.to and captured_username is not None:
             found_message = next((
                 x for x in reversed(self.recent_messages)
                 if x[0].lower() == captured_username.lower()
                 and x[2].lower() == callback.integration_name.lower()
-                and x[3].lower() == message.channel.lower()
+                and x[3].lower() == message.to.lower()
             ), None)
 
             if found_message is not None:
                 name = found_message[0]
                 logger.info("Searching for user_id for '%s'" % (name))
                 # Fetch the user_id of the message
-                users = callback.get_users_by_name(name, channel=message.channel)
+                users = callback.get_users_by_name(name, channel=message.to)
                 if users is not None and len(users) == 1:
                     stasher.add_quote(users[0].user_id, found_message[1], found_message[2], found_message[3], found_message[4])
-                    message_text = "%s said something ridiculous. Archiving it" % (captured_username)
-                    callback.send_message(channel=message.channel, message=message_text, event=message.event)
+                    text = "%s said something ridiculous. Archiving it" % (captured_username)
+                    callback.send_message(text, message.to, event=message.event)
                 else:
-                    message_text = "Unable to fetch user id for %s" % (captured_username)
-                    callback.send_message(channel=message.channel, message=message_text, event=message.event)
+                    text = "Unable to fetch user id for %s" % (captured_username)
+                    callback.send_message(text, message.to, event=message.event)
             else:
-                message_text = "No recent messages found for user %s" % (captured_username)
-                callback.send_message(channel=message.channel, message=message_text, event=message.event)
+                text = "No recent messages found for user %s" % (captured_username)
+                callback.send_message(text, message.to, event=message.event)
 
     def debug_quote(self, callback, message, **kwargs):
         for message in self.recent_messages:

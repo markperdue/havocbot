@@ -124,20 +124,20 @@ class HipChat(Client):
             else:
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 
-    def send_message(self, message, channel, event, **kwargs):
-        if channel and message and event:
-            logger.info("Sending %s message '%s' to channel '%s'" % (event, message, channel))
+    def send_message(self, text, channel, event=None, **kwargs):
+        if channel and text and event:
+            logger.info("Sending %s text '%s' to channel '%s'" % (event, text, channel))
             try:
-                self.client.send_message(mto=channel, mbody=message, mtype=event)
+                self.client.send_message(mto=channel, mbody=text, mtype=event)
             except AttributeError:
                 logger.error('Unable to send message. Are you connected?')
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def send_messages_from_list(self, message, channel, event, **kwargs):
-        if channel and message and event:
-            joined_message = '\n'.join(message)
-            logger.info("Sending %s message list '%s' to channel '%s'" % (event, joined_message, channel))
+    def send_messages_from_list(self, text_list, channel, event=None, **kwargs):
+        if channel and text_list and event:
+            joined_message = '\n'.join(text_list)
+            logger.info("Sending %s text list '%s' to channel '%s'" % (event, joined_message, channel))
             try:
                 self.client.send_message(mto=channel, mbody=joined_message, mtype=event)
             except AttributeError:
@@ -168,13 +168,13 @@ class HipChat(Client):
 
         # Arrive here commonly through private messages
         if isinstance(jabber_id, sleekxmpp.jid.JID):
-            vcard = self.get_vcard_by_jabber_id(jabber_id)
+            vcard = self._get_vcard_by_jabber_id(jabber_id)
             if vcard is not None:
                 user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
         # Arrive here commonly through group messages
         else:
             # Fallback to trying to get a user object from a name
-            user = self.get_user_by_name(jabber_id, **kwargs)
+            user = self._get_user_from_groupchat(jabber_id, **kwargs)
 
         logger.debug("get_user_by_id - user is '%s'" % (user))
         if user is not None:
@@ -182,49 +182,280 @@ class HipChat(Client):
         else:
             return None
 
-    def get_users_by_name(self, name, channel=None, **kwargs):
+    def get_users_by_name(self, name, channel=None, event=None, **kwargs):
         results = []
 
+        logger.info("Channel is '%s', name is '%s', event is '%s'" % (channel, name, event))
+
         # Fetch JID from xep_0045
-        channel = kwargs.get('channel', None)
         if channel is not None and channel:
             if '@' not in channel:
                 channel = "%s@%s" % (channel, self.server)
 
-            jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
-
-            if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
-                user = create_user_object(jabber_id.bare, name, None)
-                results.append(user)
+            if event is not None and event == 'groupchat':
+                user = self._get_user_from_groupchat(name, channel)
+                if user is not None:
+                    results.append(user)
 
         logger.debug("get_users_by_name returning with '%s'" % (results))
         return results
 
-    def get_user_by_name(self, name, **kwargs):
+    def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
+        user = None
+
+        logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
+
+        if event is not None and event:
+            if event in ['chat', 'normal']:
+                # Get users from private message
+                logger.info('CHAT FOUND')
+                user = self._get_user_from_private_chat(message_sender)
+
+            elif event in ['groupchat']:
+                # Get users from groupchat
+                logger.info('GROUPCHAT FOUND')
+                user = self._get_user_from_groupchat(message_sender, channel)
+
+        return user
+
+    def get_users_in_channel(self, channel, event=None, **kwargs):
+        result_list = []
+
+        logger.info('starting get_active_users_in_channel')
+        if event is not None and event == 'groupchat':
+            roster = self.client.plugin['xep_0045'].getRoster(channel)
+            if roster is not None and roster:
+                logger.info("roster is '%s'" % (roster))
+                for roster_item in roster:
+                    logger.info("roster_item is '%s'" % (roster_item))
+                    user = self._get_user_from_groupchat(roster_item, channel)
+                    if user is not None and user:
+                        result_list.append(user)
+
+        return result_list
+
+    def _get_user_from_groupchat(self, name, channel):
         user = None
 
         # Fetch JID from xep_0045
-        channel = kwargs.get('channel', None)
         if channel is not None and channel:
             if '@' not in channel:
                 channel = "%s@%s" % (channel, self.server)
 
             jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
 
+            if isinstance(jabber_id, sleekxmpp.jid.JID):
+                logger.info('IT IS A JID INSTANCE')
+            else:
+                logger.info('IT IS NOT A JID INSTANCE')
+
             if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
+                vcard = self._get_vcard_by_jabber_id(jabber_id)
+                if vcard is not None:
+                    user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
+                else:
+                    user = create_user_object(jabber_id.bare, name, None)
+
+                logger.info(repr(user))
+
+        return user
+
+    def _get_user_from_private_chat(self, name):
+        user = None
+
+        if name is not None:
+            if isinstance(name, sleekxmpp.jid.JID):
+                logger.info('IT IS A JID INSTANCE')
+                jabber_id = name
+                # bare_jid = name.bare
+            else:
+                logger.info('IT IS NOT A JID INSTANCE')
+                jabber_id = name
+                # bare_jid = name
+
+            vcard = self._get_vcard_by_jabber_id(jabber_id)
+            if vcard is not None:
+                user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
+            else:
                 user = create_user_object(jabber_id.bare, name, None)
 
-        if user is not None:
-            return user
-        else:
-            return None
+            logger.info(repr(user))
 
-    def get_users_in_channel(self, team, **kwargs):
-        result_list = []
+        return user
 
-        # TODO
+    def _get_vcard_by_jabber_id(self, jabber_id):
+        vcard = None
 
-        return result_list
+        if jabber_id is not None:
+            if isinstance(jabber_id, sleekxmpp.jid.JID):
+                bare_jid = jabber_id.bare
+            else:
+                bare_jid = jabber_id
+
+            try:
+                vcard = self.client.plugin['xep_0054'].get_vcard(jid=bare_jid)
+            except sleekxmpp.exceptions.IqError as e:
+                logger.error("IqError - %s" % (e.iq))
+            except sleekxmpp.exceptions.IqTimeout:
+                logger.error('IqTimeOut')
+
+            return vcard
+
+    # def get_user_by_id(self, jabber_id, **kwargs):
+    #     user = None
+
+    #     # Arrive here commonly through private messages
+    #     if isinstance(jabber_id, sleekxmpp.jid.JID):
+    #         vcard = self.get_vcard_by_jabber_id(jabber_id)
+    #         if vcard is not None:
+    #             user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
+    #     # Arrive here commonly through group messages
+    #     else:
+    #         # Fallback to trying to get a user object from a name
+    #         user = self.get_user_by_name(jabber_id, **kwargs)
+
+    #     logger.debug("get_user_by_id - user is '%s'" % (user))
+    #     if user is not None:
+    #         return user
+    #     else:
+    #         return None
+
+    # def get_user_from_groupchat(self, name, channel):
+    #     user = None
+
+    #     # Fetch JID from xep_0045
+    #     if channel is not None and channel:
+    #         if '@' not in channel:
+    #             channel = "%s@%s" % (channel, self.server)
+
+    #         jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
+
+    #         if isinstance(jabber_id, sleekxmpp.jid.JID):
+    #             logger.info('IT IS A JID INSTANCE')
+    #         else:
+    #             logger.info('IT IS NOT A JID INSTANCE')
+
+    #         if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
+    #             vcard = self.get_vcard_by_jabber_id(jabber_id)
+    #             if vcard is not None:
+    #                 user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
+    #             else:
+    #                 user = create_user_object(jabber_id.bare, name, None)
+
+    #             logger.info(repr(user))
+
+    #     return user
+
+    # def get_user_from_private_chat(self, name):
+    #     user = None
+
+    #     if name is not None:
+    #         if isinstance(name, sleekxmpp.jid.JID):
+    #             logger.info('IT IS A JID INSTANCE')
+    #             jabber_id = name
+    #             # bare_jid = name.bare
+    #         else:
+    #             logger.info('IT IS NOT A JID INSTANCE')
+    #             jabber_id = name
+    #             # bare_jid = name
+
+    #         vcard = self.get_vcard_by_jabber_id(jabber_id)
+    #         if vcard is not None:
+    #             user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
+    #         else:
+    #             user = create_user_object(jabber_id.bare, name, None)
+
+    #         logger.info(repr(user))
+
+    #     return user
+
+    # def get_user_by_message_sender(self, message_sender, channel=None, event=None, **kwargs):
+    #     user = None
+
+    #     logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
+
+    #     if event is not None and event:
+    #         if event in ['chat', 'normal']:
+    #             # Get users from private message
+    #             logger.info('CHAT FOUND')
+    #             user = self.get_user_from_private_chat(message_sender)
+
+    #         elif event in ['groupchat']:
+    #             # Get users from groupchat
+    #             logger.info('GROUPCHAT FOUND')
+    #             user = self.get_user_from_groupchat(message_sender, channel)
+
+    #     return user
+
+    # def get_users_by_name(self, name, channel=None, event=None, **kwargs):
+    #     results = []
+
+    #     logger.info("Channel is '%s', name is '%s', event is '%s'" % (channel, name, event))
+
+    #     if event is not None and event:
+    #         if event in ['chat', 'normal']:
+    #             # Get users from private message
+    #             logger.info('CHAT FOUND')
+    #             user = self.get_user_from_private_chat(name)
+    #             results.append(user)
+
+    #         elif event in ['groupchat']:
+    #             # Get users from groupchat
+    #             logger.info('GROUPCHAT FOUND')
+    #             user = self.get_user_from_groupchat(name, channel)
+    #             results.append(user)
+
+    #     # # Fetch JID from xep_0045
+    #     # if channel is not None and channel:
+    #     #     if '@' not in channel:
+    #     #         channel = "%s@%s" % (channel, self.server)
+
+    #     #     jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
+
+    #     #     if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
+    #     #         vcard = self.get_vcard_by_jabber_id(jabber_id)
+    #     #         if vcard is not None:
+    #     #             user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
+    #     #         else:
+    #     #             user = create_user_object(jabber_id.bare, name, None)
+
+    #     #         logger.info(repr(user))
+    #     #         results.append(user)
+
+    #     logger.debug("get_users_by_name returning with '%s'" % (results))
+    #     return results
+
+    # def get_user_by_name(self, name, **kwargs):
+    #     user = None
+
+    #     # Fetch JID from xep_0045
+    #     channel = kwargs.get('channel', None)
+    #     if channel is not None and channel:
+    #         if '@' not in channel:
+    #             channel = "%s@%s" % (channel, self.server)
+
+    #         jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
+
+    #         if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
+    #             user = create_user_object(jabber_id.bare, name, None)
+
+    #     if user is not None:
+    #         return user
+    #     else:
+    #         return None
+
+    # def get_users_in_channel(self, channel, event=None, **kwargs):
+    #     result_list = []
+
+    #     if event is not None and event == 'groupchat':
+    #         roster = self.client.plugin['xep_0045'].getRoster(channel)
+    #         if roster is not None and roster:
+    #             for roster_item in roster:
+    #                 user = self.get_user_by_name(roster_item, channel=channel)
+    #                 if user is not None and user:
+    #                     result_list.append(user)
+
+    #     return result_list
 
 
 class HipMUCBot(sleekxmpp.ClientXMPP):
@@ -296,6 +527,8 @@ class HipChatUser(User):
 # Returns a newly created user from a json source
 def create_user_object(jabber_id, name, email):
     user = HipChatUser(jabber_id, name, email)
+    user.username = jabber_id.resource if isinstance(jabber_id, sleekxmpp.jid.JID) else None
+    user.client = 'hipchat'
 
     logger.debug("create_user_object - user is '%s'" % (user))
     return user
@@ -303,16 +536,21 @@ def create_user_object(jabber_id, name, email):
 
 # Returns a newly created user from a json source
 def create_user_object_from_jid_and_vcard(jabber_id, vcard):
-    jabber_id_full = jabber_id.full if isinstance(jabber_id, sleekxmpp.jid.JID) else jabber_id
-
     # get_payload() returns the xml for the Iq() as a Element object
     payload = vcard.get_payload()
     vcard_xml = payload[0]
+
+    jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
+    username = jabber_id.resource if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.resource is not None and jabber_id.resource else None
     # first_name = vcard_xml.findtext('.//{vcard-temp}FN')
     name = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
     email = vcard_xml.findtext('.//{vcard-temp}USERID')
+    client = 'hipchat'
 
-    user = HipChatUser(jabber_id_full, name, email)
+    # Create the user
+    user = HipChatUser(jabber_id_bare, name, email)
+    user.username = username
+    user.client = client
 
     logger.debug("create_user_object_from_jid_and_vcard - user is '%s'" % (user))
     return user
