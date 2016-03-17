@@ -218,11 +218,12 @@ class Slack(Client):
 
 
 class SlackMessage(Message):
-    def __init__(self, text, sender, to, event, team, reply_to, timestamp):
+    def __init__(self, text, sender, to, event, client, team, reply_to, timestamp):
         self.text = text
         self.sender = sender
         self.to = to
         self.event = event
+        self.client = client
         self.team = team
         self.reply_to = reply_to
         self.timestamp = timestamp
@@ -252,7 +253,7 @@ def create_message_object_from_json(json_data):
     reply_to = json_data['reply_to'] if 'reply_to' in json_data else None
     timestamp = json_data['ts'] if 'ts' in json_data else None
 
-    message = SlackMessage(text, sender, to, event, team, reply_to, timestamp)
+    message = SlackMessage(text, sender, to, event, 'slack', team, reply_to, timestamp)
 
     return message
 

@@ -23,8 +23,8 @@ class QuoterPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            ("!quote <username>", "!quote markaperdue", "get a quote said by a user"),
-            ("!addquote <username>", "!addquote markaperdue", "add the last message said by the user to the database"),
+            ("!quote <name>", "!quote markaperdue", "get a quote said by a user"),
+            ("!addquote <name>", "!addquote markaperdue", "add the last message said by the user to the database"),
         ]
 
     @property
@@ -83,31 +83,31 @@ class QuoterPlugin(HavocBotPlugin):
     def get_recent_messages(self, callback, message, **kwargs):
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
-        captured_username = capture[0]
+        captured_name = capture[0]
 
-        if message.to and captured_username is not None:
-            for (username, client, text, channel, timestamp) in self.recent_messages:
-                if captured_username == username:
-                    text = "%s said '%s' on '%s' in channel '%s' on client '%s'" % (username, text, str(timestamp), channel, client)
+        if message.to and captured_name is not None:
+            for (message_sender, message_text, integration_name, message_to, timestamp) in self.recent_messages:
+                if captured_name == message_sender:
+                    text = "%s said '%s' on '%s' in '%s' on client '%s'" % (message_sender, text, str(timestamp), message_to, integration_name)
                     callback.send_message(text, message.to, event=message.event)
 
     def get_quote(self, callback, message, **kwargs):
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
-        captured_usernames = capture[0]
-        words = captured_usernames.split()
+        captured_names = capture[0]
+        words = captured_names.split()
 
         if len(words) <= 5:
             stasher = StasherQuote.getInstance()
             temp_list = []
             for word in words:
                 logger.info("Looking for quotes for '%s'" % (word))
-                result = stasher.get_quote_from_username(word)
+                result = stasher.get_quote_from_user_id(word)
 
-                if result is not None and 'username' in result and 'quote' in result:
+                if result is not None and 'user_id' in result and 'quote' in result:
                     if 'timestamp' in result:
                         date = parser.parse(result['timestamp'])
-                    temp_list.append("%s said '%s' on %s" % (result['username'], result['quote'], format_datetime_for_display(date)))
+                    temp_list.append("%s said '%s' on %s" % (result['user_id'], result['quote'], format_datetime_for_display(date)))
                 else:
                     temp_list.append("No quotes found from user %s" % (word))
             callback.send_messages_from_list(temp_list, message.to, event=message.event)
@@ -118,16 +118,16 @@ class QuoterPlugin(HavocBotPlugin):
     def add_quote(self, callback, message, **kwargs):
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
-        captured_username = capture[0]
+        captured_name = capture[0]
 
         stasher = StasherQuote.getInstance()
 
-        # logger.info("captured_username is '%s', integration_name is '%s', channel is '%s'" % (captured_username, callback.integration_name, message.to))
+        # logger.info("captured_name is '%s', integration_name is '%s', channel is '%s'" % (captured_name, callback.integration_name, message.to))
 
-        if message.to and captured_username is not None:
+        if message.to and captured_name is not None:
             found_message = next((
                 x for x in reversed(self.recent_messages)
-                if x[0].lower() == captured_username.lower()
+                if x[0].lower() == captured_name.lower()
                 and x[2].lower() == callback.integration_name.lower()
                 and x[3].lower() == message.to.lower()
             ), None)
@@ -139,13 +139,13 @@ class QuoterPlugin(HavocBotPlugin):
                 users = callback.get_users_by_name(name, channel=message.to)
                 if users is not None and len(users) == 1:
                     stasher.add_quote(users[0].user_id, found_message[1], found_message[2], found_message[3], found_message[4])
-                    text = "%s said something ridiculous. Archiving it" % (captured_username)
+                    text = "%s said something ridiculous. Archiving it" % (captured_name)
                     callback.send_message(text, message.to, event=message.event)
                 else:
-                    text = "Unable to fetch user id for %s" % (captured_username)
+                    text = "Unable to fetch user id for %s" % (captured_name)
                     callback.send_message(text, message.to, event=message.event)
             else:
-                text = "No recent messages found for user %s" % (captured_username)
+                text = "No recent messages found for user %s" % (captured_name)
                 callback.send_message(text, message.to, event=message.event)
 
     def debug_quote(self, callback, message, **kwargs):
@@ -177,15 +177,15 @@ class StasherQuote(Stasher):
             self.data['quotes'] = [{'user_id': user_id, 'quote': quote, 'client': client, 'channel': channel, 'timestamp': timestamp}]
             self.write_db()
 
-    def get_quote_from_username(self, username):
+    def get_quote_from_user_id(self, user_id):
         quote = None
         if self.data is not None:
             if 'quotes' in self.data:
-                results = [x for x in self.data['quotes'] if x['username'] == username]
+                results = [x for x in self.data['quotes'] if x['user_id'] == user_id]
                 if results is not None and len(results) > 0:
                     quote = random.choice(results)
 
-        logger.debug("StasherQuote.get_quote_from_username() returning with '%s'" % (quote))
+        logger.debug("StasherQuote.get_quote_from_user_id() returning with '%s'" % (quote))
         return quote
 
     def get_quotes(self):

@@ -92,7 +92,7 @@ class UserPlugin(HavocBotPlugin):
                         if user_result is not None:
                             stasher_results = [user_result]
                     else:
-                        stasher_results = stasher.get_users_by_name(word, channel=message.to, event=message.event)
+                        stasher_results = stasher.get_users_by_name(word, message.client)
 
                     if stasher_results:
                         matched_users.extend(stasher_results)

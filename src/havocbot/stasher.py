@@ -140,7 +140,7 @@ class Stasher(Singleton):
         logger.debug("get_users_by_id returning with '%s'" % (result))
         return result
 
-    def get_users_by_name(self, name):
+    def get_users_by_name(self, name, client):
         results = []
 
         if self.data is not None:
@@ -149,27 +149,38 @@ class Stasher(Singleton):
                 matched_users = [
                     x for x in users
                     if (
-                        'username' in x
-                        and x['username'] is not None
-                        and x['username'].lower() == name.lower()
+                        'client' in x
+                        and x['client'] is not None
+                        and x['client'].lower() == client.lower()
                     )
-                    or (
-                        'name' in x
-                        and x['name'] is not None
-                        and x['name'].lower() == name.lower()
-                    )
-                    or (
-                        'aliases' in x
-                        and x['aliases']
-                        and name.lower() in x['aliases']
+                    and (
+                        (
+                            'username' in x
+                            and x['username'] is not None
+                            and x['username'].lower() == name.lower()
+                        )
+                        or (
+                            'name' in x
+                            and x['name'] is not None
+                            and x['name'].lower() == name.lower()
+                        )
+                        or (
+                            'aliases' in x
+                            and x['aliases']
+                            and name.lower() in x['aliases']
+                        )
                     )
                 ]
+
                 if matched_users:
+                    logger.info("matcher users set to '%s'" % (matched_users))
                     for user_json in matched_users:
                         a_user = user.user_object_from_stasher_json(user_json)
                         if a_user.is_valid():
                             logger.debug("Found user object - %s" % (a_user))
                             results.append(a_user)
+                else:
+                    logger.info('No matched users')
 
         logger.debug("get_users_by_name returning with '%s'" % (results))
         return results

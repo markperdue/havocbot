@@ -328,7 +328,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
     def message(self, msg):
         if msg['type'] == 'groupchat':
             if msg['mucnick'] != self.nick:
-                message_object = Message(msg['body'], msg['mucnick'], msg['mucroom'], msg['type'], datetime.utcnow().replace(tzinfo=tz.tzutc()))
+                message_object = Message(msg['body'], msg['mucnick'], msg['mucroom'], msg['type'], 'xmpp', datetime.utcnow().replace(tzinfo=tz.tzutc()))
                 logger.info("Processed %s - %s" % (msg['type'], message_object))
 
                 try:
@@ -337,7 +337,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
                     logger.error(e)
         elif msg['type'] in ('normal', 'chat'):
             if msg['from'].bare != self.boundjid.bare:
-                message_object = Message(msg['body'], msg['from'], msg['from'], msg['type'], datetime.utcnow().replace(tzinfo=tz.tzutc()))
+                message_object = Message(msg['body'], msg['from'], msg['from'], msg['type'], 'xmpp', datetime.utcnow().replace(tzinfo=tz.tzutc()))
                 logger.info("Processed %s - %s" % (msg['type'], message_object))
 
                 try:
