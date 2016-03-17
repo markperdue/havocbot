@@ -85,7 +85,7 @@ class Skype(Client):
     def process_message(self, msg, status):
         # Ignore messages originating from havocbot
         if msg.FromHandle is not None and msg.FromHandle != self.user_id:
-            message_object = Message(msg.Body, msg.FromHandle, msg.ChatName, msg.Type, msg.Timestamp)
+            message_object = Message(msg.Body, msg.FromHandle, msg.ChatName, msg.Type, 'skype', msg.Timestamp)
             logger.info("Received - %s" % (message_object))
 
             try:
@@ -95,6 +95,14 @@ class Skype(Client):
                 logger.error(e)
         else:
             logger.info('Ignoring message from self')
+            # message_object = Message(msg.Body, msg.FromHandle, msg.ChatName, msg.Type, 'skype', msg.Timestamp)
+            # logger.info("Received - %s" % (message_object))
+
+            # try:
+            #     self.handle_message(message_object=message_object)
+            # except Exception as e:
+            #     logger.error("Unable to handle the message")
+            #     logger.error(e)
 
     def handle_message(self, **kwargs):
         if kwargs is not None:
@@ -170,43 +178,107 @@ class Skype(Client):
     def get_user_by_id(self, user_id, **kwargs):
         user = None
 
-        if self.client:
-            user_object = next((obj for obj in self.client.SearchForUsers(user_id) if user_id == obj.Handle), None)
-            if user_object is not None:
-                user = create_user_object_from_json(user_object.FullName, user_object.Handle)
+        api_result = self.client.User(user_id)
+        user = create_user_object_from_skype_user_object(api_result)
 
-        logger.debug("Returning user '%s'" % (user))
-        return user
+        logger.debug("get_user_by_id - user is '%s'" % (user))
+        if user is not None and user:
+            return user
+        else:
+            return None
 
     def get_users_by_name(self, name, channel=None, event=None, **kwargs):
         results = []
 
-        # TODO
-        logger.info("Channel is '%s', name is '%s', event is '%s'" % (channel, name, event))
+        # # This will search for users only in the provided channel
+        # if channel is not None and channel:
+        #     skype_chat_object = self.client.Chat(channel)
+        #     if skype_chat_object is not None and skype_chat_object:
+        #         results = self._get_matching_users_from_chat_for_name(skype_chat_object, name)
+
+        # This will search all chats that Skype is connected with
+        chats = self.client.Chats
+        if chats is not None and chats:
+            for chat in chats:
+                chat_result_list = self._get_matching_users_from_chat_for_name(chat, name)
+                results.extend(chat_result_list)
 
         logger.debug("get_users_by_name returning with '%s'" % (results))
         return results
 
+    def _get_matching_users_from_chat_for_name(self, skype_chat_object, name):
+        results = []
+
+        if skype_chat_object is not None and skype_chat_object:
+            members = skype_chat_object.Members
+            if members is not None and members:
+                for member in members:
+                    # logger.debug(member)
+                    user = create_user_object_from_skype_user_object(member)
+                    if user is not None:
+                        if user.is_like_user(name):
+                            results.append(user)
+
+        return results
+
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
-        user = None
-
-        # TODO
-        logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
-
-        return user
+        user = self.get_user_by_id(message_sender)
+        if user is not None and user:
+            return user
+        else:
+            return None
 
     def get_users_in_channel(self, channel, event=None, **kwargs):
         result_list = []
 
-        # TODO
-        logger.info("Channel is '%s', event is '%s'" % (channel, event))
+        if channel is not None and channel:
+            skype_chat_object = self.client.Chat(channel)
+            if skype_chat_object is not None and skype_chat_object:
+                members = skype_chat_object.Members
+                if members is not None and members:
+                    for member in members:
+                        # logger.debug(member)
+                        user = create_user_object_from_skype_user_object(member)
+                        if user is not None:
+                            result_list.append(user)
 
         return result_list
 
 
-# Returns a newly created user from a json source
-def create_user_object_from_json(name, handle):
-    user = User(handle)
-    logger.debug(user)
+def create_user_object_from_skype_user_object(skype_user_object):
+    user = None
 
+    if skype_user_object is not None:
+        handle = None
+        full_name = None
+        aliases = None
+
+        aliases_temp = skype_user_object.Aliases
+        if aliases_temp is not None and aliases_temp:
+            aliases = aliases_temp
+
+        handle_temp = skype_user_object.Handle
+        if handle_temp is not None and len(handle_temp) > 0:
+            handle = handle_temp
+
+        full_name_temp = skype_user_object.FullName
+        if full_name_temp is not None and len(full_name_temp) > 0:
+            full_name = full_name_temp
+
+        if handle is not None and handle:
+            user = create_user_object(handle, full_name, aliases)
+
+    return user
+
+
+# Returns a newly created user from a json source
+def create_user_object(handle, name, aliases):
+    client = 'skype'
+
+    user = User(handle)
+    user.aliases = aliases
+    user.client = client
+    user.name = name
+
+    logger.debug("create_user_object - user is '%s'" % (user))
     return user

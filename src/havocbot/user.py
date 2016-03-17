@@ -106,6 +106,23 @@ class User(object):
 
         return False
 
+    def is_like_user(self, name_or_username_or_alias):
+        if self.user_id is not None and name_or_username_or_alias.lower() in self.user_id.lower():
+            return True
+
+        if self.name is not None and name_or_username_or_alias.lower() in self.name.lower():
+            return True
+
+        if self.username is not None and name_or_username_or_alias.lower() in self.username.lower():
+            return True
+
+        if self.aliases is not None and self.aliases:
+            result = any(name_or_username_or_alias.lower() in alias.lower() for alias in self.aliases)
+            if result is True:
+                return True
+
+        return False
+
 
 def user_object_from_stasher_json(json):
     user = User(json['user_id'])
