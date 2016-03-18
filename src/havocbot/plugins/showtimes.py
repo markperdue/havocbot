@@ -109,7 +109,7 @@ class Showtimes(object):
         print(self.return_showtimes())
 
     def return_showtimes(self):
-        if self.count and self.count > 0 and self.showtimes and len(self.showtimes) > 0:
+        if self.count and self.count > 0 and self.showtimes:
             showtime_string = '(' + '), ('.join(showtime.return_basic() for showtime in self.showtimes) + ')'
             return 'There are %d showtimes - %s' % (self.count, showtime_string)
         else:
@@ -119,7 +119,7 @@ class Showtimes(object):
     def get_nearest_showtimes_to_datetime(self, dt, max):
         nearest_showtimes = []
 
-        if self.count and self.count > 0 and self.showtimes and len(self.showtimes) > 0:
+        if self.count and self.count > 0 and self.showtimes:
             sorted_list = sorted(self.showtimes, key=lambda x: timedelta_total_seconds(dt - x.get_showtime_as_datetime()))
             # sorted_list = sorted(self.showtimes, key=lambda x: (dt - x.get_showtime_as_datetime()).total_seconds())
 

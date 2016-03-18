@@ -73,7 +73,7 @@ class WeatherPlugin(HavocBotPlugin):
                 zip_codes.append(word)
 
         # Run only if there is at least one zip code
-        if len(zip_codes) > 0:
+        if zip_codes:
             logger.debug("start - words are %s" % words)
             # Branch if the user wants the warmest weather
             if any(x in ['warmest', 'hottest'] for x in words):

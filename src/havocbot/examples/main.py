@@ -95,6 +95,6 @@ if __name__ == '__main__':
         main()
     except (KeyboardInterrupt, SystemExit):
         print("Exiting HavocBot. Come again.")
-        if _havocbot.clients is not None and len(_havocbot.clients) > 0:
+        if _havocbot.clients is not None and _havocbot.clients:
             _havocbot.shutdown()
         sys.exit(0)

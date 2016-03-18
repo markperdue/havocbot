@@ -211,7 +211,7 @@ class Stasher(Singleton):
 
     def display_aliases_for_username(self, username):
         aliases = self.get_aliases_for_username(username)
-        if len(aliases) > 0:
+        if aliases:
             logger.debug("There are %d known aliases for %s"
                          % (len(aliases), username))
             for alias in aliases:
@@ -221,7 +221,7 @@ class Stasher(Singleton):
 
     def display_users(self):
         users = self.get_users()
-        if len(users) > 0:
+        if users:
             logger.debug("There are %d known users" % (len(users)))
             for user_object in users:
                 logger.debug(user_object)

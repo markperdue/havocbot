@@ -182,7 +182,7 @@ class StasherQuote(Stasher):
         if self.data is not None:
             if 'quotes' in self.data:
                 results = [x for x in self.data['quotes'] if x['user_id'] == user_id]
-                if results is not None and len(results) > 0:
+                if results is not None and results:
                     quote = random.choice(results)
 
         logger.debug("StasherQuote.get_quote_from_user_id() returning with '%s'" % (quote))
@@ -199,7 +199,7 @@ class StasherQuote(Stasher):
 
     def display_quotes(self):
         quotes = self.get_quotes()
-        if len(quotes) > 0:
+        if quotes:
             print("There are %d known quotes" % (len(quotes)))
             for quote in quotes:
                 print(quote)

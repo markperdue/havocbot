@@ -80,7 +80,7 @@ def did_process_dependencies_for_plugin(plugin_name, dependencies_string, havocb
     if dependencies_string is not None:
         dependency_tuple_list = [(x[0], x[1]) for x in (x.split(':') for x in dependencies_string.split(','))]
 
-        if dependency_tuple_list is not None and len(dependency_tuple_list) > 0:
+        if dependency_tuple_list is not None and dependency_tuple_list:
             dependencies_formatted = ', '.join("%s (%s)" % (t[0], t[1]) for t in dependency_tuple_list)
             logger.info("%s plugin requires third party dependencies prior to startup - %s" % (plugin_name, dependencies_formatted))
 
@@ -97,7 +97,7 @@ def did_process_dependencies_for_plugin(plugin_name, dependencies_string, havocb
 
 
 def install_dependencies(plugin_name, dependency_tuple_list, havocbot):
-    if dependency_tuple_list is not None and len(dependency_tuple_list) > 0:
+    if dependency_tuple_list is not None and dependency_tuple_list:
         import pip
 
         arg_list = ['install']

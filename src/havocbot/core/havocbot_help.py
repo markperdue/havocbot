@@ -77,7 +77,7 @@ class HelpPlugin(HavocBotPlugin):
             temp_list = []
             for word in words[2:]:
                 temp_list += [item for item in tuples_list if word in [item[0], item[1]]]
-            if temp_list is not None and len(temp_list) > 0:
+            if temp_list is not None and temp_list:
                 callback_message_list = self.get_plugin_help_matching_list(temp_list)
             else:
                 callback_message_list.append("No matching plugins were found. Plugin names are listed at !help plugins")

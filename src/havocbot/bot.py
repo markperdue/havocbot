@@ -206,7 +206,7 @@ class HavocBot:
         else:
             logger.info("Starting HavocBot")
 
-        if self.clients is not None and len(self.clients) > 0:
+        if self.clients is not None and self.clients:
             logger.debug("Setting should_shutdown to False")
             self.should_shutdown = False
 

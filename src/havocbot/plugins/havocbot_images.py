@@ -97,7 +97,7 @@ class ImagesPlugin(HavocBotPlugin):
                 for item in r2.json()['items']:
                     image_urls.append(item['link'])
 
-        if len(image_urls) > 0:
+        if image_urls:
             shuffle(image_urls)
             return image_urls[0]
         else:
