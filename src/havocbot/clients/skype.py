@@ -84,7 +84,7 @@ class Skype(Client):
 
     def process_message(self, msg, status):
         # Ignore messages originating from havocbot
-        if msg.FromHandle is not None and msg.FromHandle != self.user_id:
+        if msg.FromHandle is not None and msg.FromHandle != self.user_id and status == 'RECEIVED':
             message_object = Message(msg.Body, msg.FromHandle, msg.ChatName, msg.Type, 'skype', msg.Timestamp)
             logger.info("Received - %s" % (message_object))
 
