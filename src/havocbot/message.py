@@ -1,10 +1,10 @@
 class Message(object):
     def __init__(self, text, sender, to, event, client, timestamp):
-        self.text = text
-        self.sender = sender
-        self.to = to
-        self.event = event
-        self.client = client
+        self.text = str(text)
+        self.sender = str(sender)
+        self.to = str(to)
+        self.event = str(event)
+        self.client = str(client)
         self.timestamp = timestamp
 
     def __str__(self):

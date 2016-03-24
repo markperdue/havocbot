@@ -164,13 +164,12 @@ class QuoterPlugin(HavocBotPlugin):
             # message_list = list(reversed(message_list))  # Another approach
 
         for message in message_list:
-            if message[0].lower() == user_object.user_id.lower():
+            if message[0].lower() in [user_object.user_id.lower(), user_object.name.lower(), user_object.username.lower()]:
                 return message
-            elif message[0].lower() == user_object.name.lower():
+            elif user_object.aliases is not None and user_object.aliases and message[0].lower() in user_object.aliases:
                 return message
-            elif message[0].lower() == user_object.username.lower():
-                return message
-            elif user_object.aliases is not None and user_object.aliases and message[0].lower() in user_object.aliases.lower():
+            # XMPP messages include a resource after the JID so need to capture case where the sender includes the resource but the user_id does not
+            elif user_object.user_id.lower() in message[0].lower():
                 return message
 
         return None
@@ -179,11 +178,18 @@ class QuoterPlugin(HavocBotPlugin):
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
         captured_name = capture[0]
+        user = havocbot.user.find_user_by_id_or_name(captured_name, message.client, callback)
+        user_that_typed_command = callback.get_user_from_message(message.sender, message.to, message.event)
+
+        if user_that_typed_command is not None and user_that_typed_command:
+            if user_that_typed_command.user_id == user.user_id or user.user_id in user_that_typed_command.user_id:
+                text = 'You think you are that noteworthy and can quote yourself? Get outta here'
+                callback.send_message(text, message.to, event=message.event)
+                return
 
         stasher = StasherQuote.getInstance()
         stasher.plugin_data = stasher.get_plugin_data('havocbot_quoter')
 
-        user = havocbot.user.find_user_by_id_or_name(captured_name, message.client, callback)
         if user is not None and user and user.is_valid() is True:
             # !addquote bossman
             found_message = self.search_messages_for_user_match(self.recent_messages, user, reverse=True)
@@ -215,7 +221,6 @@ class StasherQuote(Stasher):
         logger.info("Adding new quote - user_id '%s', client '%s', channel '%s', timestamp '%s', quote '%s'" % (user_id, client, channel, timestamp, quote))
 
         self.plugin_data = self.get_plugin_data('havocbot_quoter')
-        logger.info("stasher_data is '%s'" % (self.plugin_data))
 
         if self.plugin_data is not None:
             if 'quotes' in self.plugin_data:

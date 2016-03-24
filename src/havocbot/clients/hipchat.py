@@ -208,12 +208,12 @@ class HipChat(Client):
         if event is not None and event:
             if event in ['chat', 'normal']:
                 # Get users from private message
-                logger.info('CHAT FOUND')
+                # logger.info('CHAT FOUND')
                 user = self._get_user_from_private_chat(message_sender)
 
             elif event in ['groupchat']:
                 # Get users from groupchat
-                logger.info('GROUPCHAT FOUND')
+                # logger.info('GROUPCHAT FOUND')
                 user = self._get_user_from_groupchat(message_sender, channel)
 
         return user
@@ -244,17 +244,18 @@ class HipChat(Client):
 
             jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
 
-            if isinstance(jabber_id, sleekxmpp.jid.JID):
-                logger.info('IT IS A JID INSTANCE')
-            else:
-                logger.info('IT IS NOT A JID INSTANCE')
+            # if isinstance(jabber_id, sleekxmpp.jid.JID):
+            #     logger.info('IT IS A JID INSTANCE')
+            # else:
+            #     logger.info('IT IS NOT A JID INSTANCE')
 
             if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
                 vcard = self._get_vcard_by_jabber_id(jabber_id)
                 if vcard is not None:
                     user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
                 else:
-                    user = create_user_object(jabber_id.bare, name, None)
+                    # user = create_user_object(jabber_id.bare, name, None)
+                    user = create_user_object(jabber_id, name, None)
 
                 logger.info(repr(user))
 
@@ -265,11 +266,11 @@ class HipChat(Client):
 
         if name is not None:
             if isinstance(name, sleekxmpp.jid.JID):
-                logger.info('IT IS A JID INSTANCE')
+                # logger.info('IT IS A JID INSTANCE')
                 jabber_id = name
                 # bare_jid = name.bare
             else:
-                logger.info('IT IS NOT A JID INSTANCE')
+                # logger.info('IT IS NOT A JID INSTANCE')
                 jabber_id = name
                 # bare_jid = name
 
@@ -277,7 +278,8 @@ class HipChat(Client):
             if vcard is not None:
                 user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
             else:
-                user = create_user_object(jabber_id.bare, name, None)
+                # user = create_user_object(jabber_id.bare, name, None)
+                user = create_user_object(jabber_id, name, None)
 
             logger.info(repr(user))
 
