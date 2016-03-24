@@ -4,7 +4,7 @@ import logging
 import os
 import havocbot.exceptions as exceptions
 from havocbot.singletonmixin import Singleton
-import havocbot.user as user
+import havocbot.user
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +13,7 @@ class Stasher(Singleton):
     def __init__(self):
         self.filename = 'stasher.json'
         self.data = self.load_db()
+        self.plugin_data = None
 
     def load_db(self):
         logger.info("Reloading from db")
@@ -132,7 +133,7 @@ class Stasher(Singleton):
 
                 if matched_users:
                     for user_json in matched_users:
-                        a_user = user.user_object_from_stasher_json(user_json)
+                        a_user = havocbot.user.user_object_from_stasher_json(user_json)
                         if a_user.is_valid():
                             logger.debug("Found user object - %s" % (a_user))
                             result = a_user
@@ -175,7 +176,7 @@ class Stasher(Singleton):
                 if matched_users:
                     logger.info("matcher users set to '%s'" % (matched_users))
                     for user_json in matched_users:
-                        a_user = user.user_object_from_stasher_json(user_json)
+                        a_user = havocbot.user.user_object_from_stasher_json(user_json)
                         if a_user.is_valid():
                             logger.debug("Found user object - %s" % (a_user))
                             results.append(a_user)
@@ -227,3 +228,29 @@ class Stasher(Singleton):
                 logger.debug(user_object)
         else:
             logger.debug("There are no known users")
+
+    def get_plugin_data(self, plugin_name):
+        data = {}
+
+        plugin_file = "stasher/%s.json" % (plugin_name)
+
+        with open(plugin_file) as data_file:
+            try:
+                data = jsonpickle.decode(json.dumps(json.load(data_file)))
+            except ValueError as e:
+                logger.debug(e)
+                pass
+
+        return data
+
+    def write_plugin_data(self, plugin_name):
+        plugin_file = "stasher/%s.json" % (plugin_name)
+
+        logger.info("Writing plugin data to '%s'" % (plugin_file))
+        logger.info(self.plugin_data)
+
+        with open(plugin_file, 'wt') as outfile:
+            json.dump(json.loads(
+                      jsonpickle.encode(self.plugin_data, unpicklable=False)),
+                      outfile, indent=2, sort_keys=True)
+        self.plugin_data = self.get_plugin_data(plugin_name)

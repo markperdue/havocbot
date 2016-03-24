@@ -160,9 +160,9 @@ class XMPP(Client):
             if vcard is not None:
                 user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
         # Arrive here commonly through group messages
-        else:
-            # Fallback to trying to get a user object from a name
-            user = self._get_user_from_groupchat(jabber_id, **kwargs)
+        # else:
+        #     # Fallback to trying to get a user object from a name
+        #     user = self._get_user_from_groupchat(jabber_id, **kwargs)
 
         logger.debug("get_user_by_id - user is '%s'" % (user))
         if user is not None:

@@ -1,5 +1,6 @@
 from dateutil import tz
 from datetime import datetime
+from havocbot.stasher import Stasher
 import logging
 
 logger = logging.getLogger(__name__)
@@ -151,3 +152,72 @@ def user_object_from_stasher_json(json):
     user.username = json['username'] if 'username' in json else None
 
     return user
+
+
+def find_user_by_id_or_name(user_id_or_name, client, callback):
+    logger.debug("Searching for user matching user id or name '%s'" % (user_id_or_name))
+
+    # LOCAL FIRST
+    stasher = Stasher.getInstance()
+
+    # Look in stasher users to see if user_id_or_name matches a user_id
+    user_result = stasher.get_user_by_id(user_id_or_name)
+    if user_result is not None and user_result:
+        return user_result
+
+    # Look in stasher users to see if user_id_or_name matches a name
+    user_results = stasher.get_users_by_name(user_id_or_name, client)
+    if user_results is not None and user_results:
+        # TODO - Fix this. It is returning first result for now
+        return user_results[0]
+
+    # Look in stasher users to see if user_id_or_name matches an alias
+    # TODO - get_user_by_aliases
+    user_results = stasher.get_users_by_name(user_id_or_name, client)
+    if user_results is not None and user_results:
+        # TODO - Fix this. It is returning first result for now
+        return user_results[0]
+
+    # CLIENT SECOND
+    # Look in client users to see if user_id_or_name matches a user_id
+    user_result = callback.get_user_by_id(user_id_or_name)
+    if user_result is not None and user_result:
+        return user_result
+
+    return None
+
+
+def find_user_by_id(user_id, callback):
+    logger.debug("Searching for user matching user id '%s'" % (user_id))
+
+    # LOCAL FIRST
+    stasher = Stasher.getInstance()
+
+    # Look in stasher users to see if user_id_or_name matches a user_id
+    user_result = stasher.get_user_by_id(user_id)
+    if user_result is not None and user_result:
+        return user_result
+
+    # CLIENT SECOND
+    # Look in callback users to see if user_id_or_name matches a user_id
+    user_result = callback.get_user_by_id(user_id)
+    if user_result is not None and user_result:
+        return user_result
+
+    return None
+
+
+def find_users_by_name(name, client):
+    logger.debug("Searching for user matching name '%s'" % (name))
+
+    results = []
+
+    # LOCAL FIRST
+    stasher = Stasher.getInstance()
+
+    # Look in stasher users to see if user_id_or_name matches a name
+    user_results = stasher.get_users_by_name(name, client)
+    if user_results is not None and user_results:
+        results.extend(user_results)
+
+    return results
