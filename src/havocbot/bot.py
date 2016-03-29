@@ -5,6 +5,7 @@ import logging
 import sys
 import threading
 import time
+from havocbot import httpserver
 
 # Python2/3 compat
 try:
@@ -14,9 +15,9 @@ except ImportError:
 
 # Python2/3 compat
 try:
-    from configparser import SafeConfigParser
-except ImportError:
     from ConfigParser import SafeConfigParser
+except ImportError:
+    from configparser import SafeConfigParser
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class HavocBot:
         self.processing_threads = []
         self.should_shutdown = False
         self.should_restart = False
+        self.http_server = None
 
     def configure(self, settings_file):
         self.load_settings_from_file(settings_file)
@@ -98,6 +100,10 @@ class HavocBot:
             for (key, value) in settings_dict['havocbot']:
                 if key == 'plugin_dirs':
                     self.plugin_dirs = value.strip().split(",")
+                elif key == 'http_server_enabled':
+                    if value.lower() == 'true':
+                        self.http_server = httpserver.ListenServer(self)
+                        self.http_server.configure(settings_dict['havocbot'])
 
     def configure_clients(self, clients_dict):
         """ Configures a client integration prior to starting up.
@@ -205,6 +211,10 @@ class HavocBot:
                       'Please configure the bot and try again'))
         else:
             logger.info("Starting HavocBot")
+
+        # Start HTTP server if enabled
+        if self.http_server is not None and self.http_server.is_enabled is True:
+            self.http_server.start()
 
         if self.clients is not None and self.clients:
             logger.debug("Setting should_shutdown to False")
@@ -393,6 +403,9 @@ class HavocBot:
         self.triggers = []
         self.is_configured = False
 
+        if self.http_server is not None and self.http_server:
+            self.http_server.stop()
+
     def disconnect(self):
         self.should_shutdown = True
         for client in self.clients:
@@ -467,6 +480,14 @@ class HavocBot:
             return method.im_class.__name__
         else:
             return method.__self__.__class__.__name__
+
+    def process_callback(self, message_object):
+        logger.info("Received callback - '%s'" % (message_object))
+        if self.clients is not None and self.clients:
+            for client in self.clients:
+                if client.integration_name == message_object.client:
+                    client.send_message(message_object.text, message_object.to, event=message_object.event)
+                    break
 
 
 class ClientThread(threading.Thread):
