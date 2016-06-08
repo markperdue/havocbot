@@ -16,7 +16,7 @@ Features
 - Plugin system designed to work across all integrated chat clients
 - New chat integrations can be dropped into file system for new functionality
 - Plugin focus will be on helpful DevOps integrations and work distractions
-- More coming soon...
+- More coming soon..
 
 
 
