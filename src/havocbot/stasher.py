@@ -127,7 +127,7 @@ class Stasher(Singleton):
                     if (
                         'user_id' in x
                         and x['user_id'] is not None
-                        and x['user_id'].lower() == user_id.lower()
+                        and x['user_id'] == user_id
                     )
                 ]
 
@@ -140,94 +140,6 @@ class Stasher(Singleton):
 
         logger.debug("get_users_by_id returning with '%s'" % (result))
         return result
-
-    def get_users_by_name(self, name, client):
-        results = []
-
-        if self.data is not None:
-            if 'users' in self.data:
-                users = self.data['users']
-                matched_users = [
-                    x for x in users
-                    if (
-                        'client' in x
-                        and x['client'] is not None
-                        and x['client'].lower() == client.lower()
-                    )
-                    and (
-                        (
-                            'username' in x
-                            and x['username'] is not None
-                            and x['username'].lower() == name.lower()
-                        )
-                        or (
-                            'name' in x
-                            and x['name'] is not None
-                            and x['name'].lower() == name.lower()
-                        )
-                        or (
-                            'aliases' in x
-                            and x['aliases']
-                            and name.lower() in x['aliases']
-                        )
-                    )
-                ]
-
-                if matched_users:
-                    logger.info("matcher users set to '%s'" % (matched_users))
-                    for user_json in matched_users:
-                        a_user = havocbot.user.user_object_from_stasher_json(user_json)
-                        if a_user.is_valid():
-                            logger.debug("Found user object - %s" % (a_user))
-                            results.append(a_user)
-                else:
-                    logger.info('No matched users')
-
-        logger.debug("get_users_by_name returning with '%s'" % (results))
-        return results
-
-    def get_users(self):
-        results = []
-
-        if self.data is not None:
-            if 'users' in self.data:
-                for user_object in self.data['users']:
-                    results.append(user_object)
-
-        return results
-
-    def get_aliases_for_username(self, username):
-        results = []
-
-        if self.data is not None:
-            if 'user_aliases' in self.data:
-                for user_alias in self.data['user_aliases']:
-                    if user_alias['username'] == username:
-                        logger.debug("Found alias %s for %s"
-                                     % (user_alias['alias'],
-                                        user_alias['username']))
-                        results.append(user_alias)
-
-        return results
-
-    def display_aliases_for_username(self, username):
-        aliases = self.get_aliases_for_username(username)
-        if aliases:
-            logger.debug("There are %d known aliases for %s"
-                         % (len(aliases), username))
-            for alias in aliases:
-                logger.debug(alias)
-        else:
-            logger.debug("There are no known aliases for %s" % (username))
-
-    def display_users(self):
-        users = self.get_users()
-        if users:
-            logger.debug("There are %d known users" % (len(users)))
-            for user_object in users:
-                logger.debug(user_object)
-        else:
-            logger.debug("There are no known users")
 
     def get_plugin_data(self, plugin_name):
         data = {}

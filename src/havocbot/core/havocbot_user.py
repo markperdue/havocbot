@@ -63,9 +63,33 @@ class UserPlugin(HavocBotPlugin):
         pass
 
     def trigger_get_sender(self, callback, message, **kwargs):
-        user = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
+        user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
+        logger.debug(user_object)
 
-        callback.send_message(repr(user), message.to, event=message.event)
+        username = user_object.usernames[callback.integration_name][0]
+
+        if user_object is not None and user_object:
+            message_list = []
+
+            user_temp_list = havocbot.user.get_users_by_username(username, callback.integration_name)
+            if user_temp_list is not None and user_temp_list:
+                for user in user_temp_list:
+                    logger.debug(user)
+                    # Update the user to have the previous username set
+                    user.current_username = username
+                    message_list.extend(user.get_user_info_as_list())
+            else:
+                message_list.extend(user_object.get_user_info_as_list())
+
+        if message_list is not None and message_list:
+            callback.send_messages_from_list(
+                message_list,
+                message.to,
+                event=message.event
+            )
+        else:
+            text = 'No matches found'
+            callback.send_message(text, message.to, event=message.event)
 
     def trigger_get_user(self, callback, message, **kwargs):
         # Get the results of the capture
@@ -77,56 +101,26 @@ class UserPlugin(HavocBotPlugin):
         # use_id = kwargs.get('id', None)
 
         matched_users = []
+        matched_users_other_client = []
         message_list = []
 
         if len(words) <= 3:
             for word in words:
                 is_user_found = False
-                user = havocbot.user.find_user_by_id(word, callback)
-                if user is not None and user:
-                    matched_users.append(user)
-                    is_user_found = True
 
-                users = havocbot.user.find_users_by_name(word, message.client)
-                if users:
+                # user = havocbot.user.find_user_by_id_or_name(word, None, callback)
+                # if user is not None and user:
+                #     matched_users.append(user)
+                #     is_user_found = True
+
+                users = havocbot.user.find_users_matching_client(word, callback.integration_name)
+                if users is not None and users:
                     matched_users.extend(users)
                     is_user_found = True
 
                 if not is_user_found:
                     text = "User %s was not found" % (word)
                     callback.send_message(text, message.to, event=message.event)
-
-                # if use_stasher is True:
-                #     stasher = Stasher.getInstance()
-                #     stasher_results = []
-
-                #     if use_id is True:
-                #         user_result = stasher.get_user_by_id(word)
-                #         if user_result is not None:
-                #             stasher_results = [user_result]
-                #     else:
-                #         stasher_results = stasher.get_users_by_name(word, message.client)
-
-                #     if stasher_results:
-                #         matched_users.extend(stasher_results)
-                #         user_found = True
-                # if use_client is True:
-                #     callback_results = []
-
-                #     if use_id is True:
-                #         user_result = callback.get_user_by_id(word)
-                #         if user_result is not None:
-                #             callback_results = [user_result]
-                #     else:
-                #         callback_results = callback.get_users_by_name(word, channel=message.to, event=message.event)
-
-                #     if callback_results:
-                #         matched_users.extend(callback_results)
-                #         user_found = True
-
-                # if not user_found:
-                #     text = "User %s was not found" % (word)
-                #     callback.send_message(text, message.to, event=message.event)
         else:
             text = 'Too many parameters. What are you trying to do?'
             callback.send_message(text, message.to, event=message.event)
@@ -138,80 +132,11 @@ class UserPlugin(HavocBotPlugin):
                     "Found %d matching users" % (len(set_users))
                 )
             for user_object in set_users:
-                message_list.append(user_object.pprint())
-                message_list.extend(
-                    user_object.get_plugin_data_strings_as_list()
-                )
-
-        if message_list:
-            callback.send_messages_from_list(
-                message_list,
-                message.to,
-                event=message.event
-            )
-
-    def trigger_get_user_orig(self, callback, message, **kwargs):
-        # Get the results of the capture
-        capture = kwargs.get('capture_groups', None)
-        captured_usernames = capture[0]
-        words = captured_usernames.split()
-        use_stasher = kwargs.get('stasher', None)
-        use_client = kwargs.get('client', None)
-        use_id = kwargs.get('id', None)
-
-        matched_users = []
-        message_list = []
-
-        if len(words) <= 3:
-            for word in words:
-                user_found = False
-
-                if use_stasher is True:
-                    stasher = Stasher.getInstance()
-                    stasher_results = []
-
-                    if use_id is True:
-                        user_result = stasher.get_user_by_id(word)
-                        if user_result is not None:
-                            stasher_results = [user_result]
-                    else:
-                        stasher_results = stasher.get_users_by_name(word, message.client)
-
-                    if stasher_results:
-                        matched_users.extend(stasher_results)
-                        user_found = True
-                if use_client is True:
-                    callback_results = []
-
-                    if use_id is True:
-                        user_result = callback.get_user_by_id(word)
-                        if user_result is not None:
-                            callback_results = [user_result]
-                    else:
-                        callback_results = callback.get_users_by_name(word, channel=message.to, event=message.event)
-
-                    if callback_results:
-                        matched_users.extend(callback_results)
-                        user_found = True
-
-                if not user_found:
-                    text = "User %s was not found" % (word)
-                    callback.send_message(text, message.to, event=message.event)
-        else:
-            text = 'Too many parameters. What are you trying to do?'
-            callback.send_message(text, message.to, event=message.event)
-
-        if matched_users:
-            set_users = set(matched_users)
-            if len(set_users) > 1:
-                message_list.append(
-                    "Found %d matching users" % (len(set_users))
-                )
-            for user_object in set_users:
-                message_list.append(user_object.pprint())
-                message_list.extend(
-                    user_object.get_plugin_data_strings_as_list()
-                )
+                message_list.extend(user_object.get_user_info_as_list())
+                # message_list.extend(user_object.get_usernames_as_list())
+                # message_list.extend(
+                #     user_object.get_plugin_data_strings_as_list()
+                # )
 
         if message_list:
             callback.send_messages_from_list(
@@ -234,7 +159,8 @@ class UserPlugin(HavocBotPlugin):
             if len(set_users) > 1:
                 message_list.append("Found %d users" % (len(set_users)))
             for user_object in set_users:
-                message_list.append(user_object.pprint())
+                message_list.extend(user_object.get_user_info_as_list())
+                # message_list.append(user_object.pprint())
 
         if message_list:
             callback.send_messages_from_list(
@@ -252,7 +178,7 @@ class UserPlugin(HavocBotPlugin):
         captured_values = capture[0].split()
 
         if captured_values:
-            stasher = havocbot.Stasher.getInstance()
+            stasher = Stasher.getInstance()
             logger.info("values are '%s'" % (captured_values))
             try:
                 logger.info(
@@ -275,6 +201,172 @@ class UserPlugin(HavocBotPlugin):
         else:
             text = 'Invalid parameters. Check the help option for usage'
             callback.send_message(text, message.to, event=message.event)
+
+    # def trigger_get_user(self, callback, message, **kwargs):
+    #     # Get the results of the capture
+    #     capture = kwargs.get('capture_groups', None)
+    #     captured_usernames = capture[0]
+    #     words = captured_usernames.split()
+    #     # use_stasher = kwargs.get('stasher', None)
+    #     # use_client = kwargs.get('client', None)
+    #     # use_id = kwargs.get('id', None)
+
+    #     matched_users = []
+    #     message_list = []
+
+    #     if len(words) <= 3:
+    #         for word in words:
+    #             is_user_found = False
+
+    #             user = havocbot.user.find_user_by_id_or_name(word, None, callback)
+    #             if user is not None and user:
+    #                 matched_users.append(user)
+    #                 is_user_found = True
+
+    #             # user = havocbot.user.find_user_by_usernames(word, callback)
+    #             # if user is not None and user:
+    #             #     matched_users.append(user)
+    #             #     is_user_found = True
+
+    #             # user = havocbot.user.find_user_by_id(word, callback)
+    #             # if user is not None and user:
+    #             #     matched_users.append(user)
+    #             #     is_user_found = True
+
+    #             # users = havocbot.user.find_users_by_name(word, message.client)
+    #             # if users:
+    #             #     matched_users.extend(users)
+    #             #     is_user_found = True
+
+    #             if not is_user_found:
+    #                 text = "User %s was not found" % (word)
+    #                 callback.send_message(text, message.to, event=message.event)
+
+    #             # if use_stasher is True:
+    #             #     stasher = Stasher.getInstance()
+    #             #     stasher_results = []
+
+    #             #     if use_id is True:
+    #             #         user_result = stasher.get_user_by_id(word)
+    #             #         if user_result is not None:
+    #             #             stasher_results = [user_result]
+    #             #     else:
+    #             #         stasher_results = stasher.get_users_by_name(word, message.client)
+
+    #             #     if stasher_results:
+    #             #         matched_users.extend(stasher_results)
+    #             #         user_found = True
+    #             # if use_client is True:
+    #             #     callback_results = []
+
+    #             #     if use_id is True:
+    #             #         user_result = callback.get_user_by_id(word)
+    #             #         if user_result is not None:
+    #             #             callback_results = [user_result]
+    #             #     else:
+    #             #         callback_results = callback.get_users_by_name(word, channel=message.to, event=message.event)
+
+    #             #     if callback_results:
+    #             #         matched_users.extend(callback_results)
+    #             #         user_found = True
+
+    #             # if not user_found:
+    #             #     text = "User %s was not found" % (word)
+    #             #     callback.send_message(text, message.to, event=message.event)
+    #     else:
+    #         text = 'Too many parameters. What are you trying to do?'
+    #         callback.send_message(text, message.to, event=message.event)
+
+    #     if matched_users:
+    #         set_users = set(matched_users)
+    #         if len(set_users) > 1:
+    #             message_list.append(
+    #                 "Found %d matching users" % (len(set_users))
+    #             )
+    #         for user_object in set_users:
+    #             message_list.append(user_object.pprint())
+    #             message_list.extend(user_object.get_usernames_as_list())
+    #             message_list.extend(
+    #                 user_object.get_plugin_data_strings_as_list()
+    #             )
+
+    #     if message_list:
+    #         callback.send_messages_from_list(
+    #             message_list,
+    #             message.to,
+    #             event=message.event
+    #         )
+
+    # def trigger_get_user_orig(self, callback, message, **kwargs):
+    #     # Get the results of the capture
+    #     capture = kwargs.get('capture_groups', None)
+    #     captured_usernames = capture[0]
+    #     words = captured_usernames.split()
+    #     use_stasher = kwargs.get('stasher', None)
+    #     use_client = kwargs.get('client', None)
+    #     use_id = kwargs.get('id', None)
+
+    #     matched_users = []
+    #     message_list = []
+
+    #     if len(words) <= 3:
+    #         for word in words:
+    #             user_found = False
+
+    #             if use_stasher is True:
+    #                 stasher = Stasher.getInstance()
+    #                 stasher_results = []
+
+    #                 if use_id is True:
+    #                     user_result = stasher.get_user_by_id(word)
+    #                     if user_result is not None:
+    #                         stasher_results = [user_result]
+    #                 else:
+    #                     stasher_results = stasher.get_users_by_name(word, message.client)
+
+    #                 if stasher_results:
+    #                     matched_users.extend(stasher_results)
+    #                     user_found = True
+    #             if use_client is True:
+    #                 callback_results = []
+
+    #                 if use_id is True:
+    #                     user_result = callback.get_user_by_id(word)
+    #                     if user_result is not None:
+    #                         callback_results = [user_result]
+    #                 else:
+    #                     callback_results = callback.get_users_by_name(word, channel=message.to, event=message.event)
+
+    #                 if callback_results:
+    #                     matched_users.extend(callback_results)
+    #                     user_found = True
+
+    #             if not user_found:
+    #                 text = "User %s was not found" % (word)
+    #                 callback.send_message(text, message.to, event=message.event)
+    #     else:
+    #         text = 'Too many parameters. What are you trying to do?'
+    #         callback.send_message(text, message.to, event=message.event)
+
+    #     if matched_users:
+    #         set_users = set(matched_users)
+    #         if len(set_users) > 1:
+    #             message_list.append(
+    #                 "Found %d matching users" % (len(set_users))
+    #             )
+    #         for user_object in set_users:
+    #             message_list.append(user_object.pprint())
+    #             message_list.extend(user_object.get_usernames_as_list())
+    #             message_list.extend(
+    #                 user_object.get_plugin_data_strings_as_list()
+    #             )
+
+    #     if message_list:
+    #         callback.send_messages_from_list(
+    #             message_list,
+    #             message.to,
+    #             event=message.event
+    #         )
 
 # Make this plugin available to HavocBot
 havocbot_handler = UserPlugin()

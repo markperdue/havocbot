@@ -4,7 +4,6 @@ from havocbot.user import User
 import logging
 import re
 from slackclient import SlackClient
-import socket
 
 logger = logging.getLogger(__name__)
 
@@ -107,8 +106,6 @@ class Slack(Client):
             except AttributeError as e:
                 logger.error("We have a problem! Is there a client?")
                 logger.error(e)
-            except socket.error as e:
-                logger.debug("socket error '%s'" % (e))
 
     def handle_message(self, **kwargs):
         if kwargs is not None:
@@ -153,8 +150,6 @@ class Slack(Client):
             logger.info("Sending text '%s' to '%s'" % (text, to))
             try:
                 self.client.rtm_send_message(to, text)
-            # except socket.error as ex:
-            #     logger.error("WHAT THE - %s" % (ex))
             except AttributeError:
                 logger.error("Unable to send message. Are you connected?")
             except Exception as e:

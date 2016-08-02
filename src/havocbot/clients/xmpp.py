@@ -78,8 +78,8 @@ class XMPP(Client):
 
         # self.client.ssl_version = ssl.PROTOCOL_SSLv23
 
-        # if self.client.connect(address=(self.server, 5223), use_ssl=True):
-        if self.client.connect():
+        if self.client.connect(address=(self.server, 5223), use_ssl=True):
+        #if self.client.connect():
             logger.info("I am.. %s! (%s)" % (self.nickname, self.username))
             return True
         else:

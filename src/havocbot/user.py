@@ -15,8 +15,6 @@ class User(object):
         )
 
         self.aliases = []
-        self.client = None
-        self.email = None
         self.is_stashed = False
         self.last_modified = timestamp
         self.name = None
@@ -24,24 +22,29 @@ class User(object):
         self.points = 0
         self.timestamp = timestamp
         self.user_id = user_id
-        self.username = None
+        self.usernames = {}
+        self.current_username = None
 
     def __repr__(self):
-        return ("User(%s, %s, %s, %s, %s, %s, %s, %s, %d, %s, %s)"
-                % (self.user_id, self.name, self.username, self.aliases,
-                   self.email, self.client, self.plugin_data, self.is_stashed,
+        return ("User(%s, %s, %s, %s, %d, %s, %s)"
+                % (self.name, self.aliases,
+                   self.plugin_data, self.is_stashed,
                    self.points, self.timestamp, self.last_modified))
 
     def __str__(self):
         if self.aliases:
-            return ("User(User ID: '%s', Name: '%s', Aliases: %s,"
+            return ("User(User ID: '%s', Name: '%s', Aliases: %s, "
+                    "Username %s, "
                     "Points: %d, Is Stashed: %s)"
                     % (self.user_id, self.name, self.get_aliases_as_string(),
+                       self.current_username,
                        self.points, self.is_stashed))
         else:
-            return ("User(User ID: '%s', Name: '%s',"
+            return ("User(User ID: '%d', Name: '%s', "
+                    "Username %s, "
                     "Points: %d, Is Stashed: %s)"
                     % (self.user_id, self.name,
+                       self.current_username,
                        self.points, self.is_stashed))
 
     def __eq__(self, other):
@@ -50,34 +53,70 @@ class User(object):
     def __hash__(self):
         return hash((self.user_id))
 
-    def pprint(self):
+    def get_user_info_as_list(self):
+        results = []
+
+        results.append(self.get_user_header())
+
+        if self.aliases is not None and self.aliases:
+            results.append(self.get_user_aliases())
+
+        if self.current_username is not None and self.current_username:
+            results.append(self.get_user_client_info_current())
+
+        if self.usernames is not None and self.usernames:
+            results.append(self.get_user_client_info_other())
+
+        if self.plugin_data is not None and self.plugin_data:
+            results.extend(self.get_plugin_data())
+
+        return results
+
+    def get_user_header(self):
         if self.is_stashed:
-            if self.aliases:
-                return ("User %s (%s) has aliases '%s' and %d points"
-                        % (self.name, self.user_id,
-                           self.get_aliases_as_string(), self.points))
-            else:
-                return ("User %s (%s) has %d points"
-                        % (self.name, self.user_id, self.points))
+            return "User %s (%d) has %d points" % (self.name, self.user_id, self.points)
         else:
-            return "Untracked user %s (%s)" % (self.name, self.user_id)
+            return "User %s" % (self.name)
 
-    def to_json(self):
-        json = {
-            'name': self.name,
-            'username': self.username,
-            'aliases': self.aliases,
-            'points': self.points,
-            'plugin_data': self.plugin_data
-        }
+    def get_user_aliases(self):
+        if self.aliases is not None and self.aliases:
+            return "    Aliases: %s" % (self.get_aliases_as_string())
 
-        return json
+    def get_user_client_info_current(self):
+        if self.current_username is not None and self.current_username:
+            return "    Username: %s" % (self.current_username)
+
+    def get_user_client_info_other(self):
+        other_usernames_list = self.get_other_usernames_as_list()
+        if other_usernames_list is not None and other_usernames_list:
+            return "    Other usernames: %s" % (', '.join(other_usernames_list))
+
+    def get_plugin_data(self):
+        if self.plugin_data is not None and self.plugin_data:
+            return self.get_plugin_data_strings_as_list()
 
     def get_aliases_as_string(self):
         if self.aliases is not None and self.aliases:
-            return '\', \''.join(self.aliases)
+            return ', '.join(self.aliases)
         else:
             return None
+
+    def get_usernames_as_list(self):
+        usernames_list = []
+
+        if self.usernames is not None and self.usernames:
+            for (client_name, value) in self.usernames.items():
+                usernames_list.extend(value)
+
+        return usernames_list
+
+    def get_other_usernames_as_list(self):
+        cleaned_list = []
+
+        usernames_list = self.get_usernames_as_list()
+        cleaned_list = [x for x in usernames_list if x != self.current_username]
+
+        return cleaned_list
 
     def get_plugin_data_strings_as_list(self):
         results = []
@@ -96,20 +135,15 @@ class User(object):
 
         return results
 
-    def print_plugin_data(self):
-        if self.plugin_data is not None:
-            for (key, value) in self.plugin_data.items():
-                logger.info("%s: %s" % (key, value))
-
     def is_valid(self):
-        if self.user_id is not None and len(self.user_id) > 0:
+        if self.user_id is not None and self.user_id > 0:
             return True
 
         return False
 
     def is_like_user(self, name_or_username_or_alias):
-        if self.user_id is not None and name_or_username_or_alias.lower() in self.user_id.lower():
-            return True
+        # if self.user_id is not None and name_or_username_or_alias.lower() in self.user_id.lower():
+        #     return True
 
         if self.name is not None and name_or_username_or_alias.lower() in self.name.lower():
             return True
@@ -124,13 +158,42 @@ class User(object):
 
         return False
 
+    # def to_json(self):
+    #     json = {
+    #         'name': self.name,
+    #         'aliases': self.aliases,
+    #         'points': self.points,
+    #         'plugin_data': self.plugin_data
+    #     }
+    #     # json = {
+    #     #     'name': self.name,
+    #     #     'username': self.username,
+    #     #     'aliases': self.aliases,
+    #     #     'points': self.points,
+    #     #     'plugin_data': self.plugin_data
+    #     # }
+
+    #     return json
+
+
+class ClientUser(object):
+    def __init__(self, username, client):
+        timestamp = (
+            datetime.utcnow()
+            .replace(tzinfo=tz.tzutc())
+            .isoformat()
+        )
+
+        self.client = client
+        self.last_modified = timestamp
+        self.timestamp = timestamp
+        self.username = username
+
 
 def user_object_from_stasher_json(json):
     user = User(json['user_id'])
 
     user.aliases = json['aliases'] if 'aliases' in json else None
-    user.client = json['client'] if 'client' in json else None
-    user.email = json['email'] if 'email' in json else None
     user.is_stashed = True
     user.last_modified = (
         json['last_modified']
@@ -149,75 +212,340 @@ def user_object_from_stasher_json(json):
         else 0
     )
     user.timestamp = json['timestamp'] if 'timestamp' in json else None
-    user.username = json['username'] if 'username' in json else None
+    user.usernames = (
+        json['usernames']
+        if 'usernames' in json and isinstance(json['usernames'], dict)
+        else None
+    )
 
     return user
 
 
-def find_user_by_id_or_name(user_id_or_name, client, callback):
-    logger.debug("Searching for user matching user id or name '%s'" % (user_id_or_name))
-
-    # LOCAL FIRST
-    stasher = Stasher.getInstance()
-
-    # Look in stasher users to see if user_id_or_name matches a user_id
-    user_result = stasher.get_user_by_id(user_id_or_name)
-    if user_result is not None and user_result:
-        return user_result
-
-    # Look in stasher users to see if user_id_or_name matches a name
-    user_results = stasher.get_users_by_name(user_id_or_name, client)
-    if user_results is not None and user_results:
-        # TODO - Fix this. It is returning first result for now
-        return user_results[0]
-
-    # Look in stasher users to see if user_id_or_name matches an alias
-    # TODO - get_user_by_aliases
-    user_results = stasher.get_users_by_name(user_id_or_name, client)
-    if user_results is not None and user_results:
-        # TODO - Fix this. It is returning first result for now
-        return user_results[0]
-
-    # CLIENT SECOND
-    # Look in client users to see if user_id_or_name matches a user_id
-    user_result = callback.get_user_by_id(user_id_or_name)
-    if user_result is not None and user_result:
-        return user_result
-
-    return None
-
-
-def find_user_by_id(user_id, callback):
-    logger.debug("Searching for user matching user id '%s'" % (user_id))
-
-    # LOCAL FIRST
-    stasher = Stasher.getInstance()
-
-    # Look in stasher users to see if user_id_or_name matches a user_id
-    user_result = stasher.get_user_by_id(user_id)
-    if user_result is not None and user_result:
-        return user_result
-
-    # CLIENT SECOND
-    # Look in callback users to see if user_id_or_name matches a user_id
-    user_result = callback.get_user_by_id(user_id)
-    if user_result is not None and user_result:
-        return user_result
-
-    return None
-
-
-def find_users_by_name(name, client):
-    logger.debug("Searching for user matching name '%s'" % (name))
+def find_users_matching_client(search_string, client_integration_name):
+    logger.debug("Searching for users matching search string '%s' on client '%s'" % (search_string, client_integration_name))
 
     results = []
 
-    # LOCAL FIRST
-    stasher = Stasher.getInstance()
-
-    # Look in stasher users to see if user_id_or_name matches a name
-    user_results = stasher.get_users_by_name(name, client)
-    if user_results is not None and user_results:
-        results.extend(user_results)
+    results.extend(get_users_by_name(search_string, client_integration_name))
+    results.extend(get_users_by_username(search_string, client_integration_name))
+    results.extend(get_users_by_alias(search_string, client_integration_name))
 
     return results
+
+
+def find_users_not_matching_client(search_string, client_integration_name):
+    logger.debug("Searching for users matching search string '%s' not on client '%s'" % (search_string, client_integration_name))
+
+
+def get_users_by_alias(search_string, client_integration_name):
+    results = []
+
+    stasher = Stasher.getInstance()
+
+    if stasher.data is not None:
+        if 'users' in stasher.data:
+            users = stasher.data['users']
+            matched_users = [
+                x for x in users
+                if (
+                    (
+                        'aliases' in x
+                        and x['aliases']
+                        and search_string.lower() in x['aliases']
+                    )
+                    and ('usernames' in x and x['usernames'] is not None and x['usernames'] and client_integration_name in x['usernames'])
+                )
+            ]
+
+            if matched_users:
+                for user_json in matched_users:
+                    a_user = user_object_from_stasher_json(user_json)
+                    if a_user.is_valid():
+                        results.append(a_user)
+
+    logger.debug("get_users_by_alias() returning with '[%s]'" % (', '.join(map(str, results))))
+    return results
+
+
+def get_users_by_name(search_string, client_integration_name):
+    results = []
+
+    stasher = Stasher.getInstance()
+
+    if stasher.data is not None:
+        if 'users' in stasher.data:
+            users = stasher.data['users']
+            matched_users = [
+                x for x in users
+                if (
+                    (
+                        'name' in x
+                        and x['name'] is not None
+                        and search_string.lower() in x['name'].lower()
+                    )
+                    and ('usernames' in x and x['usernames'] is not None and x['usernames'] and client_integration_name in x['usernames'])
+                )
+            ]
+
+            if matched_users:
+                for user_json in matched_users:
+                    a_user = user_object_from_stasher_json(user_json)
+                    if a_user.is_valid():
+                        results.append(a_user)
+
+    logger.debug("get_users_by_name() returning with '[%s]'" % (', '.join(map(str, results))))
+    return results
+
+
+def get_users_by_username(search_string, client_integration_name):
+    results = []
+
+    stasher = Stasher.getInstance()
+
+    if stasher.data is not None:
+        if 'users' in stasher.data:
+            users = stasher.data['users']
+
+            matched_users = []
+            for x in users:
+                if ('usernames' in x and x['usernames'] is not None and x['usernames']):
+                    for (key, value) in x['usernames'].items():
+                        if key == client_integration_name:
+                            for username_string in value:
+                                if search_string in username_string:
+                                    logger.debug("MATCH of '%s' against '%s" % (search_string, username_string))
+                                    matched_users.append(x)
+                                    break
+
+            if matched_users:
+                for user_json in matched_users:
+                    a_user = user_object_from_stasher_json(user_json)
+                    if a_user.is_valid():
+                        results.append(a_user)
+
+    logger.debug("get_users_by_username() returning with '[%s]'" % (', '.join(map(str, results))))
+
+    return results
+
+
+def get_user_by_id(user_id, stasher):
+    result = None
+
+    if stasher.data is not None:
+        if 'users' in stasher.data:
+            users = stasher.data['users']
+            matched_users = [
+                x for x in users
+                if (
+                    'user_id' in x
+                    and x['user_id'] is not None
+                    and x['user_id'] == user_id
+                )
+            ]
+
+            if matched_users:
+                for user_json in matched_users:
+                    a_user = user_object_from_stasher_json(user_json)
+                    if a_user.is_valid():
+                        logger.debug("Found user object - %s" % (a_user))
+                        result = a_user
+
+    logger.debug("get_users_by_id returning with '%s'" % (result))
+    return result
+
+
+def get_user_by_username(username, stasher):
+    logger.debug("get_user_by_username() triggered in user.py")
+    result = None
+
+    if stasher.data is not None:
+        if 'users' in stasher.data:
+            users = stasher.data['users']
+            # matched_users = [
+            #     x for x in users
+            #     if (
+            #         'usernames' in x
+            #         and x['usernames'] is not None
+            #         and x['usernames'].lower() == user_id.lower()
+            #     )
+            # ]
+
+            logger.info("Searching for users...")
+            # matched_users = [x for x in users if ('usernames' in x and x['usernames'] is not None and x['usernames']) for item in x['usernames']]
+
+            matched_users = []
+            for x in users:
+                if ('usernames' in x and x['usernames'] is not None and x['usernames']):
+                    for (key, value) in x['usernames'].items():
+                        for username_string in value:
+                            logger.info("Found username '%s' for '%s'" % (username_string, key))
+                            if username in username_string:
+                                logger.info("MATCH of '%s' against '%s" % (username, username_string))
+                                matched_users.append(x)
+                                break
+
+            if matched_users is not None and matched_users:
+                logger.info("Found %d matching users - %s" % (len(matched_users), matched_users))
+            logger.info("Done with searching for users")
+
+            if matched_users:
+                for user_json in matched_users:
+                    a_user = user_object_from_stasher_json(user_json)
+                    if a_user.is_valid():
+                        logger.debug("Found user object - %s" % (a_user))
+                        result = a_user
+
+    logger.debug("get_user_by_username returning with '%s'" % (result))
+    return result
+
+
+def get_users(stasher):
+    results = []
+
+    if stasher.data is not None:
+        if 'users' in stasher.data:
+            for user_object in stasher.data['users']:
+                results.append(user_object)
+
+    return results
+
+
+def get_aliases_for_username(username, stasher):
+    results = []
+
+    if stasher.data is not None:
+        if 'user_aliases' in stasher.data:
+            for user_alias in stasher.data['user_aliases']:
+                if user_alias['username'] == username:
+                    logger.debug("Found alias %s for %s"
+                                 % (user_alias['alias'],
+                                    user_alias['username']))
+                    results.append(user_alias)
+
+    return results
+
+
+def display_aliases_for_username(username, stasher):
+    aliases = stasher.get_aliases_for_username(username)
+    if aliases:
+        logger.debug("There are %d known aliases for %s"
+                     % (len(aliases), username))
+        for alias in aliases:
+            logger.debug(alias)
+    else:
+        logger.debug("There are no known aliases for %s" % (username))
+
+
+def display_users(stasher):
+    users = stasher.get_users()
+    if users:
+        logger.debug("There are %d known users" % (len(users)))
+        for user_object in users:
+            logger.debug(user_object)
+    else:
+        logger.debug("There are no known users")
+
+
+# def find_user_by_id_or_name(user_id_or_name, client, callback):
+#     logger.debug("Searching for user matching user id or name '%s'" % (user_id_or_name))
+
+#     # LOCAL FIRST
+#     stasher = Stasher.getInstance()
+
+#     # Look in stasher users to see if user_id_or_name matches a username
+#     user_result = get_user_by_username(user_id_or_name, stasher)
+#     if user_result is not None and user_result:
+#         return user_result
+
+#     # # Look in stasher users to see if user_id_or_name matches a name
+#     # user_results = get_users_by_name(user_id_or_name, client, stasher)
+#     # if user_results is not None and user_results:
+#     #     # TODO - Fix this. It is returning first result for now
+#     #     return user_results[0]
+
+#     # CLIENT SECOND
+#     # Look in client users to see if user_id_or_name matches a user_id
+#     user_result = callback.get_user_by_id(user_id_or_name)
+#     if user_result is not None and user_result:
+#         return user_result
+
+#     return None
+
+
+# def find_user_by_id_or_name(user_id_or_name, client, callback):
+#     logger.debug("Searching for user matching user id or name '%s'" % (user_id_or_name))
+
+#     # LOCAL FIRST
+#     stasher = Stasher.getInstance()
+
+#     # Look in stasher users to see if user_id_or_name matches a username
+#     user_result = get_user_by_username(user_id_or_name, stasher)
+#     if user_result is not None and user_result:
+#         return user_result
+
+#     # # Look in stasher users to see if user_id_or_name matches a username
+#     # user_result = stasher.get_user_by_username(user_id_or_name)
+#     # if user_result is not None and user_result:
+#     #     return user_result
+
+#     # Look in stasher users to see if user_id_or_name matches a user_id
+#     user_result = stasher.get_user_by_id(user_id_or_name)
+#     if user_result is not None and user_result:
+#         return user_result
+
+#     # Look in stasher users to see if user_id_or_name matches a name
+#     user_results = stasher.get_users_by_name(user_id_or_name, client)
+#     if user_results is not None and user_results:
+#         # TODO - Fix this. It is returning first result for now
+#         return user_results[0]
+
+#     # Look in stasher users to see if user_id_or_name matches an alias
+#     # TODO - get_user_by_aliases
+#     user_results = stasher.get_users_by_name(user_id_or_name, client)
+#     if user_results is not None and user_results:
+#         # TODO - Fix this. It is returning first result for now
+#         return user_results[0]
+
+#     # CLIENT SECOND
+#     # Look in client users to see if user_id_or_name matches a user_id
+#     user_result = callback.get_user_by_id(user_id_or_name)
+#     if user_result is not None and user_result:
+#         return user_result
+
+#     return None
+
+
+# def find_user_by_id(user_id, callback):
+#     logger.debug("Searching for user matching user id '%s'" % (user_id))
+
+#     # LOCAL FIRST
+#     stasher = Stasher.getInstance()
+
+#     # Look in stasher users to see if user_id_or_name matches a user_id
+#     user_result = stasher.get_user_by_id(user_id)
+#     if user_result is not None and user_result:
+#         return user_result
+
+#     # CLIENT SECOND
+#     # Look in callback users to see if user_id_or_name matches a user_id
+#     user_result = callback.get_user_by_id(user_id)
+#     if user_result is not None and user_result:
+#         return user_result
+
+#     return None
+
+
+# def find_users_by_name(name, client):
+#     logger.debug("Searching for user matching name '%s'" % (name))
+
+#     results = []
+
+#     # LOCAL FIRST
+#     stasher = Stasher.getInstance()
+
+#     # Look in stasher users to see if user_id_or_name matches a name
+#     user_results = stasher.get_users_by_name(name, client)
+#     if user_results is not None and user_results:
+#         results.extend(user_results)
+
+#     return results

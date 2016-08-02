@@ -59,25 +59,29 @@ class RollPlugin(HavocBotPlugin):
         self.havocbot = None
 
     def start(self, callback, message, **kwargs):
-        user = callback.get_user_by_id(message.sender, channel=message.to)
+        # user = callback.get_user_by_id(message.sender, channel=message.to)
+        user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
 
         if message.to:
             roll_result = self.get_roll(100)
-            if user is not None:
-                text = "%s rolled a %s" % (user.name, roll_result)
+            # if user is not None:
+            #     text = "%s rolled a %s" % (user.name, roll_result)
+            if user_object is not None:
+                text = "%s rolled a %s!" % (user_object.name, roll_result)
             else:
                 text = "%s rolled a %s" % (message.sender, roll_result)
             callback.send_message(text, message.to, event=message.event)
 
     def high_roll(self, callback, message, **kwargs):
-        user = callback.get_user_by_id(message.sender, channel=message.to)
+        # user = callback.get_user_by_id(message.sender, channel=message.to)
+        user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
 
         if message.to:
             roll_result = self.get_roll(100000000000)
             roll_value_formatted = "{:,}".format(roll_result)  # Format large numbers for Americans
 
-            if user is not None:
-                text = "%s rolled %s" % (user.name, roll_value_formatted)
+            if user_object is not None:
+                text = "%s rolled %s" % (user_object.name, roll_value_formatted)
             else:
                 text = "%s rolled %s" % (message.sender, roll_value_formatted)
             callback.send_message(text, message.to, event=message.event)
@@ -86,15 +90,16 @@ class RollPlugin(HavocBotPlugin):
         return random.SystemRandom().randrange(1, max_roll + 1)
 
     def rolloff(self, callback, message, **kwargs):
-        user = callback.get_user_by_id(message.sender, channel=message.to)
+        # user = callback.get_user_by_id(message.sender, channel=message.to)
+        user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
 
         if self.rolloff_in_process:
             # Join an existing rolloff if not already in the list
-            self.add_user_to_rolloff(callback, message, user)
+            self.add_user_to_rolloff(callback, message, user_object)
         else:
             # Start a new rolloff
             self.new_rolloff(callback, message)
-            self.add_user_to_rolloff(callback, message, user)
+            self.add_user_to_rolloff(callback, message, user_object)
 
             bg_thread = threading.Thread(target=self.background_thread, args=[callback, message])
             bg_thread.start()
