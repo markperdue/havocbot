@@ -64,7 +64,7 @@ class QuoterPlugin(HavocBotPlugin):
         # logger.info(message_string)
 
         timestamp = datetime.utcnow().replace(tzinfo=tz.tzutc())
-        a_message_tuple = (message.sender, message.text, callback.integration_name, message.to, timestamp.isoformat())
+        a_message_tuple = (message.sender, message.text, message.to, message.event, callback.integration_name, timestamp.isoformat())
 
         # Count occurences of messages by a user in a client integration
         previous_messages = [x for x in self.recent_messages if x[0] == message.sender and x[2] == callback.integration_name and x[3] == message.to]
@@ -124,13 +124,20 @@ class QuoterPlugin(HavocBotPlugin):
             temp_list = []
             for word in words:
                 is_quote_found_for_user = False
-                user = havocbot.user.find_user_by_id_or_name(word, message.client, callback)
-                if user is not None and user:
-                    quote = stasher.get_quote_from_user_id(user.user_id)
-                    if quote is not None:
-                        display_quote = self.quote_as_string(quote, user)
-                        temp_list.append(display_quote)
-                        is_quote_found_for_user = True
+
+                users = havocbot.user.find_users_matching_client(word, callback.integration_name)
+                # logger.debug(users)
+
+                if users is not None and users:
+                    for user in users:
+                        # is_quote_found_for_user = False
+
+                        if user is not None and user:
+                            quote = stasher.get_quote_from_user_id(user.user_id)
+                            if quote is not None:
+                                display_quote = self.quote_as_string(quote, user)
+                                temp_list.append(display_quote)
+                                is_quote_found_for_user = True
 
                 if not is_quote_found_for_user:
                     temp_list.append("No quotes found from user %s" % (word))
@@ -149,62 +156,147 @@ class QuoterPlugin(HavocBotPlugin):
         quotes = stasher.get_quotes()
         if quotes is not None and quotes:
             message_list.append("There are %d known quotes" % (len(quotes)))
-            for quote in quotes:
-                display_quote = self.quote_as_string(quote)
-                if display_quote is not None:
-                    message_list.append(display_quote)
+
+            # TEMPORARILY DISABLED
+            # for quote in quotes:
+            #     display_quote = self.quote_as_string(quote)
+            #     if display_quote is not None:
+            #         message_list.append(display_quote)
         else:
             message_list.append("There are no known quote")
 
         callback.send_messages_from_list(message_list, message.to, event=message.event)
 
-    def search_messages_for_user_match(self, message_list, user_object, reverse=None):
+    def search_messages_for_user_match(self, message_list, user_object, callback, reverse=None):
         if reverse is True:
             message_list = message_list[::-1]
             # message_list = list(reversed(message_list))  # Another approach
 
         for message in message_list:
-            if message[0].lower() in [user_object.user_id.lower(), user_object.name.lower(), user_object.username.lower()]:
+            logger.info("message 0 index is '%s'" % (message[0]))
+            logger.info("message 1 index is '%s'" % (message[1]))
+            logger.info("message 2 index is '%s'" % (message[2]))
+            logger.info("message 3 index is '%s'" % (message[3]))
+            logger.info("message 4 index is '%s'" % (message[4]))
+            logger.info("message 5 index is '%s'" % (message[5]))
+            new_user_object = callback.get_user_from_message(message[0], channel=message[2], event=message[3])
+            logger.info(new_user_object)
+
+            if new_user_object is not None and new_user_object:
+                username = new_user_object.usernames[callback.integration_name][0]
+
+                user_temp_list = havocbot.user.get_users_by_username(username, callback.integration_name)
+                if user_temp_list is not None and user_temp_list:
+                    for user in user_temp_list:
+                        logger.debug(user)
+                        # Update the user to have the previous username set
+                        user.current_username = username
+
+
+
+            if user_object.name is not None and user_object.name and message[0].lower() in user_object.name.lower():
                 return message
-            elif user_object.aliases is not None and user_object.aliases and message[0].lower() in user_object.aliases:
+            elif user_object.current_username is not None and user_object.current_username and message[0].lower() in user_object.current_username.lower():
                 return message
+            # elif user_object.aliases is not None and user_object.aliases and message[0].lower() in user_object.aliases:
+            #     return message
             # XMPP messages include a resource after the JID so need to capture case where the sender includes the resource but the user_id does not
-            elif user_object.user_id.lower() in message[0].lower():
-                return message
+            # elif user_object.user_id.lower() in message[0].lower():
+            #     return message
+
+        # for message in message_list:
+        #     if message[0].lower() in [user_object.user_id.lower(), user_object.name.lower(), user_object.username.lower()]:
+        #         return message
+        #     elif user_object.aliases is not None and user_object.aliases and message[0].lower() in user_object.aliases:
+        #         return message
+        #     # XMPP messages include a resource after the JID so need to capture case where the sender includes the resource but the user_id does not
+        #     elif user_object.user_id.lower() in message[0].lower():
+        #         return message
 
         return None
 
     def add_quote(self, callback, message, **kwargs):
-        # Get the results of the capture
-        capture = kwargs.get('capture_groups', None)
-        captured_name = capture[0]
-        user = havocbot.user.find_user_by_id_or_name(captured_name, message.client, callback)
-        user_that_typed_command = callback.get_user_from_message(message.sender, message.to, message.event)
+        text = "Coming soon"
+        callback.send_message(text, message.to, event=message.event)
+        # # Get the results of the capture
+        # capture = kwargs.get('capture_groups', None)
+        # captured_name = capture[0]
+        # users = havocbot.user.find_users_matching_client(captured_name, callback.integration_name)
+        # logger.info("users are...")
+        # logger.info(users)
+        # user_that_typed_command = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
+        # logger.info("users that typed the command is...")
+        # logger.info(user_that_typed_command)
 
-        if user_that_typed_command is not None and user_that_typed_command:
-            if user_that_typed_command.user_id == user.user_id or user.user_id in user_that_typed_command.user_id:
-                text = 'You think you are that noteworthy and can quote yourself? Get outta here'
-                callback.send_message(text, message.to, event=message.event)
-                return
+        # if users is not None and users:
+        #     for user in users:
+        #         if user_that_typed_command is not None and user_that_typed_command:
+        #             if user_that_typed_command.user_id == user.user_id:
+        #                 text = 'You think you are that noteworthy and can quote yourself? Get outta here'
+        #                 callback.send_message(text, message.to, event=message.event)
+        #                 return
 
-        stasher = StasherQuote.getInstance()
-        stasher.plugin_data = stasher.get_plugin_data('havocbot_quoter')
+        # stasher = StasherQuote.getInstance()
+        # stasher.plugin_data = stasher.get_plugin_data('havocbot_quoter')
 
-        if user is not None and user and user.is_valid() is True:
-            # !addquote bossman
-            found_message = self.search_messages_for_user_match(self.recent_messages, user, reverse=True)
-            logger.info("found_message is '%s'" % (str(found_message)))
+        # is_quote_found_for_user = False
 
-            if found_message is not None and found_message:
-                stasher.add_quote(user.user_id, found_message[1], found_message[2], found_message[3], found_message[4])
-                text = "%s said something ridiculous. Archived it" % (user.name)
-                callback.send_message(text, message.to, event=message.event)
-            else:
-                text = "No recent messages found from %s" % (user.name)
-                callback.send_message(text, message.to, event=message.event)
-        else:
-            text = "Unable to find a user matching %s" % (captured_name)
-            callback.send_message(text, message.to, event=message.event)
+        # if users is not None and users:
+        #     for user in users:
+        #         if user is not None and user and user.is_valid() is True:
+        #             # !addquote bossman
+        #             logger.info("about to search messages for user match...")
+        #             found_message = self.search_messages_for_user_match(self.recent_messages, user, callback, reverse=True)
+        #             logger.info("found_message is '%s'" % (str(found_message)))
+
+        #             if found_message is not None and found_message:
+        #                 stasher.add_quote(user.user_id, found_message[1], found_message[2], found_message[3], found_message[4])
+        #                 text = "%s said something ridiculous. Archived it" % (user.name)
+        #                 callback.send_message(text, message.to, event=message.event)
+        #                 is_quote_found_for_user = True
+        #             # else:
+        #             #     text = "No recent messages found from %s" % (user.name)
+        #             #     callback.send_message(text, message.to, event=message.event)
+        #         else:
+        #             text = "Unable to find a user matching %s" % (captured_name)
+        #             callback.send_message(text, message.to, event=message.event)
+
+        # if not is_quote_found_for_user:
+        #     text = "No recent messages found from %s" % (captured_name)
+        #     callback.send_message(text, message.to, event=message.event)
+
+    # def add_quote(self, callback, message, **kwargs):
+    #     # Get the results of the capture
+    #     capture = kwargs.get('capture_groups', None)
+    #     captured_name = capture[0]
+    #     user = havocbot.user.find_user_by_id_or_name(captured_name, message.client, callback)
+
+    #     user_that_typed_command = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
+
+    #     if user_that_typed_command is not None and user_that_typed_command:
+    #         if user_that_typed_command.user_id == user.user_id or user.user_id in user_that_typed_command.user_id:
+    #             text = 'You think you are that noteworthy and can quote yourself? Get outta here'
+    #             callback.send_message(text, message.to, event=message.event)
+    #             return
+
+    #     stasher = StasherQuote.getInstance()
+    #     stasher.plugin_data = stasher.get_plugin_data('havocbot_quoter')
+
+    #     if user is not None and user and user.is_valid() is True:
+    #         # !addquote bossman
+    #         found_message = self.search_messages_for_user_match(self.recent_messages, user, reverse=True)
+    #         logger.info("found_message is '%s'" % (str(found_message)))
+
+    #         if found_message is not None and found_message:
+    #             stasher.add_quote(user.user_id, found_message[1], found_message[2], found_message[3], found_message[4])
+    #             text = "%s said something ridiculous. Archived it" % (user.name)
+    #             callback.send_message(text, message.to, event=message.event)
+    #         else:
+    #             text = "No recent messages found from %s" % (user.name)
+    #             callback.send_message(text, message.to, event=message.event)
+    #     else:
+    #         text = "Unable to find a user matching %s" % (captured_name)
+    #         callback.send_message(text, message.to, event=message.event)
 
     def debug_quote(self, callback, message, **kwargs):
         for message in self.recent_messages:

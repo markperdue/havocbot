@@ -180,24 +180,24 @@ class UserPlugin(HavocBotPlugin):
         if captured_values:
             stasher = Stasher.getInstance()
             logger.info("values are '%s'" % (captured_values))
-            try:
-                logger.info(
-                    "about to get user by id '%s'" % (captured_values[0])
-                )
-                a_user = callback.get_user_by_id(captured_values[0])
-                logger.info("a_user is '%s'" % (a_user))
-                if a_user is not None and a_user.is_valid():
-                    stasher.add_user(a_user)
+            # try:
+            #     logger.info(
+            #         "about to get user by id '%s'" % (captured_values[0])
+            #     )
+            #     a_user = callback.get_user_by_id(captured_values[0])
+            #     logger.info("a_user is '%s'" % (a_user))
+            #     if a_user is not None and a_user.is_valid():
+            #         stasher.add_user(a_user)
 
-                text = 'User added'
-                callback.send_message(text, message.to, event=message.event)
-            except exceptions.StasherEntryAlreadyExistsError as e:
-                logger.error(
-                    "User alread exists - Existing user json is '%s'" % (e)
-                )
+            #     text = 'User added'
+            #     callback.send_message(text, message.to, event=message.event)
+            # except exceptions.StasherEntryAlreadyExistsError as e:
+            #     logger.error(
+            #         "User alread exists - Existing user json is '%s'" % (e)
+            #     )
 
-                text = 'That user already exists!'
-                callback.send_message(text, message.to, event=message.event)
+            #     text = 'That user already exists!'
+            #     callback.send_message(text, message.to, event=message.event)
         else:
             text = 'Invalid parameters. Check the help option for usage'
             callback.send_message(text, message.to, event=message.event)
