@@ -42,10 +42,17 @@ class QuoterPlugin(HavocBotPlugin):
         self.havocbot = havocbot
         self.recent_messages = []
         self.max_messages_per_user_per_channel = 5
+        self.same_channel_only = False
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
         requirements_met = True
+
+        if settings is not None and settings:
+            for item in settings:
+                # Switch on the key
+                if item[0] == 'same_channel_only':
+                    self.same_channel_only = item[1]
 
         # Return true if this plugin has the information required to work
         if requirements_met:
@@ -133,7 +140,7 @@ class QuoterPlugin(HavocBotPlugin):
                         # is_quote_found_for_user = False
 
                         if user is not None and user:
-                            quote = stasher.get_quote_from_user_id(user.user_id)
+                            quote = stasher.get_quote_from_user_id(user.user_id, message.to, self.same_channel_only)
                             if quote is not None:
                                 display_quote = self.quote_as_string(quote, user)
                                 temp_list.append(display_quote)
@@ -330,11 +337,22 @@ class StasherQuote(Stasher):
             self.plugin_data['quotes'] = [{'user_id': user_id, 'quote': quote, 'client': client, 'channel': channel, 'timestamp': timestamp}]
             self.write_plugin_data('havocbot_quoter')
 
-    def get_quote_from_user_id(self, user_id):
+    def get_quote_from_user_id(self, user_id, channel, same_channel_only):
         quote = None
+
+        logger.info("user_id is '%s'" % (user_id))
+        logger.info("channel is '%s'" % (channel))
+        logger.info("same_channel_only is '%s'" % (same_channel_only))
+
         if self.plugin_data is not None:
             if 'quotes' in self.plugin_data:
-                results = [x for x in self.plugin_data['quotes'] if x['user_id'] == user_id]
+                if same_channel_only:
+                    logger.info("we're up here")
+                    results = [x for x in self.plugin_data['quotes'] if x['user_id'] == user_id and x['channel'] == channel]
+                else:
+                    logger.info("we're down here")
+                    results = [x for x in self.plugin_data['quotes'] if x['user_id'] == user_id]
+
                 if results is not None and results:
                     quote = random.choice(results)
 
