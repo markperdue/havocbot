@@ -166,25 +166,6 @@ class HipChat(Client):
 
             return vcard
 
-    # def get_user_by_id(self, jabber_id, **kwargs):
-    #     user = None
-
-    #     # Arrive here commonly through private messages
-    #     if isinstance(jabber_id, sleekxmpp.jid.JID):
-    #         vcard = self._get_vcard_by_jabber_id(jabber_id)
-    #         if vcard is not None:
-    #             user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
-    #     # Arrive here commonly through group messages
-    #     else:
-    #         # Fallback to trying to get a user object from a name
-    #         user = self._get_user_from_groupchat(jabber_id, **kwargs)
-
-    #     logger.debug("get_user_by_id - user is '%s'" % (user))
-    #     if user is not None:
-    #         return user
-    #     else:
-    #         return None
-
     def get_user_by_username(self, jabber_id, **kwargs):
         user = self._get_user_from_private_chat(jabber_id)
 
@@ -258,11 +239,13 @@ class HipChat(Client):
 
             if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
                 vcard = self._get_vcard_by_jabber_id(jabber_id)
-                if vcard is not None:
-                    user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
-                else:
-                    # user = create_user_object(jabber_id.bare, name, None)
-                    user = create_user_object(jabber_id, name, None)
+                user = create_user_object(jabber_id, name, vcard)
+                # if vcard is not None:
+                #     user = create_user_object(jabber_id, name, vcard)
+                #     # user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
+                # else:
+                #     # user = create_user_object(jabber_id.bare, name, None)
+                #     user = create_user_object(jabber_id, name, None)
 
                 logger.info(repr(user))
 
@@ -282,10 +265,12 @@ class HipChat(Client):
                 # bare_jid = name
 
             vcard = self._get_vcard_by_jabber_id(jabber_id)
-            if vcard is not None:
-                user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
-            else:
-                user = create_user_object(jabber_id, name, None)
+            user = create_user_object(jabber_id, name, vcard)
+            # if vcard is not None:
+            #     user = create_user_object(jabber_id, name, vcard)
+            #     # user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
+            # else:
+            #     user = create_user_object(jabber_id, name, None)
 
             logger.info(repr(user))
 
@@ -308,6 +293,25 @@ class HipChat(Client):
                 logger.error('IqTimeOut')
 
             return vcard
+
+    # def get_user_by_id(self, jabber_id, **kwargs):
+    #     user = None
+
+    #     # Arrive here commonly through private messages
+    #     if isinstance(jabber_id, sleekxmpp.jid.JID):
+    #         vcard = self._get_vcard_by_jabber_id(jabber_id)
+    #         if vcard is not None:
+    #             user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
+    #     # Arrive here commonly through group messages
+    #     else:
+    #         # Fallback to trying to get a user object from a name
+    #         user = self._get_user_from_groupchat(jabber_id, **kwargs)
+
+    #     logger.debug("get_user_by_id - user is '%s'" % (user))
+    #     if user is not None:
+    #         return user
+    #     else:
+    #         return None
 
 
 class HipMUCBot(sleekxmpp.ClientXMPP):
@@ -389,47 +393,27 @@ class HipChatUser(ClientUser):
         return json
 
 
-# class HipChatUser(User):
-#     def __init__(self, username, name, email):
-#         super(HipChatUser, self).__init__(0)
-#         self.name = name
-#         self.username = username
-#         self.email = email
-
-#     def __str__(self):
-#         return "HipChatUser(Username: '%s', Name: '%s', Email: '%s')" % (self.username, self.name, self.email)
-
-
 # Returns a newly created user from a json source
-def create_user_object(jabber_id, name, email):
-    user = HipChatUser(jabber_id, name, email)
-    # user.username = jabber_id.resource if isinstance(jabber_id, sleekxmpp.jid.JID) else None
-
-    logger.debug("create_user_object - user is '%s'" % (user))
-    return user
-
-
-# Returns a newly created user from a json source
-def create_user_object_from_jid_and_vcard(jabber_id, vcard):
-    # get_payload() returns the xml for the Iq() as a Element object
-    payload = vcard.get_payload()
-    vcard_xml = payload[0]
-
+def create_user_object(jabber_id, name, vcard):
     jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
-    # username = jabber_id.resource if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.resource is not None and jabber_id.resource else None
-    # first_name = vcard_xml.findtext('.//{vcard-temp}FN')
-    name = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
-    email = vcard_xml.findtext('.//{vcard-temp}USERID')
-    # client = 'hipchat'
 
-    # Create the user
-    client_user = HipChatUser(jabber_id_bare, name, email)
+    if vcard is not None:
+        # get_payload() returns the xml for the Iq() as a Element object
+        payload = vcard.get_payload()
+        vcard_xml = payload[0]
+        # vcard_full_name = vcard_xml.findtext('.//{vcard-temp}FN')
+        vcard_nickname = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
+        vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
 
+    client_user = HipChatUser(jabber_id_bare, vcard_nickname if vcard_nickname is not None and vcard_nickname else name, vcard_email if vcard_email is not None and vcard_email else None)
+
+    # Create a User object
     user_object = User(0)
     user_object.name = name
     user_object.points = 0
     json_data = client_user.to_json()
     user_object.usernames = {json_data['client']: [json_data['username']]}
+    user_object.current_username = json_data['username']
 
-    logger.debug("create_user_object_from_jid_and_vcard - client_user is '%s'" % (client_user))
-    return user_object
+    logger.debug("create_user_object - client_user is '%s'" % (client_user))
+    return client_user
