@@ -59,56 +59,48 @@ class RollPlugin(HavocBotPlugin):
         self.havocbot = None
 
     def start(self, callback, message, **kwargs):
-        # user = callback.get_user_by_id(message.sender, channel=message.to)
-        user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
-
         if message.to:
             roll_result = self.get_roll(100)
-            # if user is not None:
-            #     text = "%s rolled a %s" % (user.name, roll_result)
-            if user_object is not None:
-                text = "%s rolled a %s!" % (user_object.name, roll_result)
-            else:
-                text = "%s rolled a %s" % (message.sender, roll_result)
-            callback.send_message(text, message.to, event=message.event)
+            user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
+            self.display_roll(callback, message, user_object, roll_result)
 
     def high_roll(self, callback, message, **kwargs):
-        # user = callback.get_user_by_id(message.sender, channel=message.to)
-        user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
-
         if message.to:
             roll_result = self.get_roll(100000000000)
-            roll_value_formatted = "{:,}".format(roll_result)  # Format large numbers for Americans
-
-            if user_object is not None:
-                text = "%s rolled %s" % (user_object.name, roll_value_formatted)
-            else:
-                text = "%s rolled %s" % (message.sender, roll_value_formatted)
-            callback.send_message(text, message.to, event=message.event)
+            user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
+            self.display_roll(callback, message, user_object, roll_result)
 
     def get_roll(self, max_roll):
         return random.SystemRandom().randrange(1, max_roll + 1)
+
+    def display_roll(self, callback, message, user_object, roll):
+        roll_formatted = "{:,}".format(roll)  # Format large numbers for Americans
+
+        if user_object is not None:
+            text = "%s rolled %s" % (user_object.name, roll_formatted)
+        else:
+            text = "%s rolled %s" % (message.sender, roll_formatted)
+
+        callback.send_message(text, message.to, event=message.event)
 
     def rolloff(self, callback, message, **kwargs):
         # user = callback.get_user_by_id(message.sender, channel=message.to)
         user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
 
-        if self.rolloff_in_process:
-            # Join an existing rolloff if not already in the list
-            self.add_user_to_rolloff(callback, message, user_object)
-        else:
+        if not self.rolloff_in_process:
             # Start a new rolloff
             self.new_rolloff(callback, message)
-            self.add_user_to_rolloff(callback, message, user_object)
 
-            bg_thread = threading.Thread(target=self.background_thread, args=[callback, message])
-            bg_thread.start()
+        self.add_user_to_rolloff(callback, message, user_object)
 
     def new_rolloff(self, callback, message):
         text = "Time to throw it down. A %s rolloff has been called. Join the rolloff in the next %s seconds by typing '!rolloff'" % ('regular', self.rolloff_join_window)
         callback.send_message(text, message.to, event=message.event)
 
         self.rolloff_enable()
+
+        bg_thread = threading.Thread(target=self.background_thread, args=[callback, message])
+        bg_thread.start()
 
     def rolloff_enable(self):
         logger.debug("rolloff_enable() triggered")
@@ -127,14 +119,17 @@ class RollPlugin(HavocBotPlugin):
     def add_user_to_rolloff(self, callback, message, user):
         if self.rolloff_in_process:
             elapsed_time = time.time() - self.rolloff_start_time
+
             if elapsed_time > 0 and elapsed_time < self.rolloff_join_window:
-                if user not in self.rolloff_rollers_initial:
-                    text = "Added user '%s'" % (user.user_id)
-                    logger.debug(text)
-                    self.rolloff_rollers_initial.append(user)
-                else:
+                logger.info("Checking on adding user '%s' to list '%s'" % (user, self.rolloff_rollers_initial))
+
+                if any(x.username == user.username for x in self.rolloff_rollers_initial):
                     text = "You are already in this round %s" % (user.name)
                     callback.send_message(text, message.to, event=message.event)
+                else:
+                    text = "Added user '%s'" % (user.name)
+                    logger.debug(text)
+                    self.rolloff_rollers_initial.append(user)
             else:
                 text = "Entries for this round has ended"
                 callback.send_message(text, message.to, event=message.event)
@@ -200,7 +195,7 @@ class RollPlugin(HavocBotPlugin):
 
     def background_thread(self, callback, message):
         time.sleep(self.rolloff_join_window)
-        logger.debug("background_thread - triggered")
+        logger.debug("background_thread() - triggered")
         self.run_rolloff(callback, message, self.rolloff_rollers_initial)
 
 
