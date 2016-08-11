@@ -63,12 +63,12 @@ class UserPlugin(HavocBotPlugin):
         pass
 
     def trigger_get_sender(self, callback, message, **kwargs):
-        user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
-        logger.debug(user_object)
+        client_user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
+        logger.debug(client_user_object)
 
-        username = user_object.usernames[callback.integration_name][0]
+        username = client_user_object.username
 
-        if user_object is not None and user_object:
+        if client_user_object is not None and client_user_object:
             message_list = []
 
             user_temp_list = havocbot.user.get_users_by_username(username, callback.integration_name)
@@ -79,7 +79,7 @@ class UserPlugin(HavocBotPlugin):
                     user.current_username = username
                     message_list.extend(user.get_user_info_as_list())
             else:
-                message_list.extend(user_object.get_user_info_as_list())
+                message_list.extend(client_user_object.get_user_info_as_list())
 
         if message_list is not None and message_list:
             callback.send_messages_from_list(
