@@ -8,4 +8,4 @@ class Message(object):
         self.timestamp = timestamp
 
     def __str__(self):
-        return "Message(Text: '%s', Sender: '%s', To: '%s', Type: '%s')" % (self.text, self.sender, self.to, self.event)
+        return "Message(Text: '%s', Sender: '%s', To: '%s', Event: '%s', Client: '%s')" % (self.text, self.sender, self.to, self.event, self.client)

@@ -1,11 +1,13 @@
 import copy
-from havocbot import pluginmanager
 import inspect
 import logging
+import re
 import sys
 import threading
 import time
+from havocbot import pluginmanager
 from havocbot import httpserver
+import havocbot.user
 
 # Python2/3 compat
 try:
@@ -37,6 +39,7 @@ class HavocBot:
         self.should_shutdown = False
         self.should_restart = False
         self.http_server = None
+        self.exact_match_one_word_triggers = False
 
     def configure(self, settings_file):
         self.load_settings_from_file(settings_file)
@@ -104,6 +107,11 @@ class HavocBot:
                     if value.lower() == 'true':
                         self.http_server = httpserver.ListenServer(self)
                         self.http_server.configure(settings_dict['havocbot'])
+                elif key == 'exact_match_one_word_triggers':
+                    if value.lower() == 'true':
+                        self.exact_match_one_word_triggers = True
+                    else:
+                        self.exact_match_one_word_triggers = False
 
     def configure_clients(self, clients_dict):
         """ Configures a client integration prior to starting up.
@@ -320,6 +328,58 @@ class HavocBot:
             # Cleanup before finally exiting
             self.should_shutdown = True
             self.exit()
+
+    def handle_message(self, client, message_object):
+        for tuple_item in self.triggers:
+            trigger = tuple_item[0]
+            triggered_function = tuple_item[1]
+
+            # Add exact regex match if user defined
+            if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
+                if not trigger.startswith('^') and not trigger.endswith('$'):
+                    # logger.debug("Converting trigger to a line exact match requirement")
+                    trigger = "^" + trigger + "$"
+
+            # Use trigger as regex pattern and then search the message for a match
+            regex = re.compile(trigger)
+
+            match = regex.search(message_object.text)
+            if match is not None:
+                logger.info("%s - Matched message against trigger '%s'" % (self.get_method_class_name(triggered_function), trigger))
+
+                # Pass the message to the function associated with the trigger
+                try:
+                    if hasattr(tuple_item, 'requires') and tuple_item.requires:
+                        logger.info("This trigger requires permission '%s'" % (tuple_item.requires))
+
+                        # Check if user has this permission
+                        # user = self.get_user_from_message(message_object.sender, channel=message_object.sender, event=message_object.event)
+                        user = havocbot.user.get_user_by_username_for_client(message_object.sender, message_object.client)
+
+                        if user is not None and user:
+                            if user.has_permission(tuple_item.requires):
+                                logger.info("permission '%s' found for user %s" % (tuple_item.requires, user.user_id))
+
+                                if hasattr(tuple_item, 'param_dict') and tuple_item.param_dict:
+                                    triggered_function(client, message_object, capture_groups=match.groups(), **tuple_item.param_dict)
+                                else:
+                                    triggered_function(client, message_object, capture_groups=match.groups())
+                            else:
+                                logger.info("permission '%s' not found for user %s" % (tuple_item.requires, user.user_id))
+                                text = 'You do not have permission to do that. Permission required: %s' % (tuple_item.requires)
+                                client.send_message(text, message_object.to, event=message_object.event)
+                        else:
+                            text = 'That can only be run by users registered with me'
+                            client.send_message(text, message_object.to, event=message_object.event)
+
+                    else:
+                        logger.info("This trigger does not require permission")
+                        if hasattr(tuple_item, 'param_dict') and tuple_item.param_dict:
+                            triggered_function(client, message_object, capture_groups=match.groups(), **tuple_item.param_dict)
+                        else:
+                            triggered_function(client, message_object, capture_groups=match.groups())
+                except Exception as e:
+                    logger.error(e)
 
     def register_triggers(self, trigger_tuple_list):
         if trigger_tuple_list:

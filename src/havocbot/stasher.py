@@ -155,6 +155,37 @@ class Stasher(Singleton):
 
         return data
 
+    def add_points(self, user_id, points):
+        if isinstance(points, (int, long)):
+            stashed_user = self.get_user_by_id(user_id)
+            if stashed_user is not None and stashed_user:
+                logger.info("Users existing points set to %d. Adding %d points" % (stashed_user.points, points))
+
+                if isinstance(stashed_user.points, (int, long)):
+                    logger.debug("Users existing points set to %d. Adding %d points" % (stashed_user.points, points))
+                    stashed_user.points += points
+                    # self.write_db()
+                else:
+                    logger.debug("Adding initial points of %d" % (points))
+                    stashed_user.points = points
+                    # self.write_db()
+        else:
+            logger.error('Points must be an integer')
+
+    def subtract_points(self, user_id, points):
+        if isinstance(points, (int, long)):
+            if self.data is not None:
+                if 'points' in self.data:
+                    logger.debug("Users existing points set to %d. Subtracting %d points" % (self.data['points'], points))
+                    self.data['points'] -= points
+                    self.write_db()
+                else:
+                    logger.debug("Adding initial points of %d" % (points))
+                    self.data['points'] = points * -1
+                    self.write_db()
+        else:
+            logger.error('Points must be an integer')
+
     def write_plugin_data(self, plugin_name):
         plugin_file = "stasher/%s.json" % (plugin_name)
 

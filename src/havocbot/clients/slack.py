@@ -1,9 +1,8 @@
+import logging
+from slackclient import SlackClient
 from havocbot.client import Client
 from havocbot.message import Message
 from havocbot.user import User
-import logging
-import re
-from slackclient import SlackClient
 
 logger = logging.getLogger(__name__)
 
@@ -113,35 +112,7 @@ class Slack(Client):
                 message_object = kwargs.get('message_object')
 
             if message_object.event == 'message':
-                for tuple_item in self.havocbot.triggers:
-                    trigger = tuple_item[0]
-                    triggered_function = tuple_item[1]
-
-                    # Add exact regex match if user defined
-                    if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
-                        if not trigger.startswith('^') and not trigger.endswith('$'):
-                            # logger.debug("Converting trigger to a line exact match requirement")
-                            trigger = "^" + trigger + "$"
-
-                    # Use trigger as regex pattern and then search the message for a match
-                    regex = re.compile(trigger)
-
-                    match = regex.search(message_object.text)
-                    if match is not None:
-                        logger.info("%s - Matched message against trigger '%s'" % (self.havocbot.get_method_class_name(triggered_function), trigger))
-
-                        # Pass the message to the function associated with the trigger
-                        try:
-                            if len(tuple_item) == 2:
-                                triggered_function(self, message_object, capture_groups=match.groups())
-                            elif len(tuple_item) == 3:
-                                additional_args = tuple_item[2]
-                                triggered_function(self, message_object, capture_groups=match.groups(), **additional_args)
-                        except Exception as e:
-                            logger.error(e)
-                    else:
-                        logger.debug("Message did not match trigger '%s'" % (trigger))
-                        pass
+                self.havocbot.handle_message(self, message_object)
             else:
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 

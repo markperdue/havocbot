@@ -1,11 +1,12 @@
 #!/havocbot
 
-from havocbot.plugin import HavocBotPlugin
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 import logging
 import os.path
 import random
 import threading
 import time
+# from collections import namedtuple
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +25,17 @@ class ScramblePlugin(HavocBotPlugin):
     def plugin_usages(self):
         return [
             ("!scramble", None, "start a round of scramble"),
+            Usage(command="!ascramble", example=None, description="start a round of scramble"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            ("!scramble", self.start_scramble),
+            Trigger(match='!ascramble', function=self.start_scramble, param_dict={'permissions': 'scramble:start'}, requires='scramble:start'),
+            Trigger(match='!bscramble', function=self.start_scramble, param_dict={'permissions': 'scramble:start'}),
+            Trigger(match='!cscramble', function=self.start_scramble, requires='scramble:start'),
+            Trigger(match='!dscramble', function=self.start_scramble),
+            ("!scramble", self.start_scramble, {'permissions': 'scramble:start'}),
             ("(.*)", self.start),
         ]
 

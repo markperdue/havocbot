@@ -1,6 +1,8 @@
 #!/havocbot
 
 from havocbot.plugin import HavocBotPlugin
+from havocbot.stasher import Stasher
+import havocbot.user
 import logging
 import random
 from random import choice
@@ -38,12 +40,13 @@ class RollPlugin(HavocBotPlugin):
 
     def init(self, havocbot):
         self.havocbot = havocbot
-        self.rolloff_join_window = 45
+        self.rolloff_join_window = 10
         self.rolloff_in_process = False
         self.rolloff_start_time = None
         self.rolloff_rollers_current = None
         self.rolloff_rollers_initial = None
-        self.rolloff_minimum_players = 2
+        self.rolloff_minimum_players = 1
+        self.should_award_points = True
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
@@ -58,22 +61,26 @@ class RollPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, callback, message, **kwargs):
+    def start(self, client, message, **kwargs):
         if message.to:
             roll_result = self.get_roll(100)
-            user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
-            self.display_roll(callback, message, user_object, roll_result)
 
-    def high_roll(self, callback, message, **kwargs):
+            user_object = havocbot.user.create_user(client, message)
+            # user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
+            self.display_roll(client, message, user_object, roll_result)
+
+    def high_roll(self, client, message, **kwargs):
         if message.to:
             roll_result = self.get_roll(100000000000)
-            user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
-            self.display_roll(callback, message, user_object, roll_result)
+
+            user_object = havocbot.user.create_user(client, message)
+            # user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
+            self.display_roll(client, message, user_object, roll_result)
 
     def get_roll(self, max_roll):
         return random.SystemRandom().randrange(1, max_roll + 1)
 
-    def display_roll(self, callback, message, user_object, roll):
+    def display_roll(self, client, message, user_object, roll):
         roll_formatted = "{:,}".format(roll)  # Format large numbers for Americans
 
         if user_object is not None:
@@ -81,25 +88,25 @@ class RollPlugin(HavocBotPlugin):
         else:
             text = "%s rolled %s" % (message.sender, roll_formatted)
 
-        callback.send_message(text, message.to, event=message.event)
+        client.send_message(text, message.to, event=message.event)
 
-    def rolloff(self, callback, message, **kwargs):
-        # user = callback.get_user_by_id(message.sender, channel=message.to)
-        user_object = callback.get_user_from_message(message.sender, channel=message.to, event=message.event)
+    def rolloff(self, client, message, **kwargs):
+        user_object = havocbot.user.create_user(client, message)
+        # user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
 
         if not self.rolloff_in_process:
             # Start a new rolloff
-            self.new_rolloff(callback, message)
+            self.new_rolloff(client, message)
 
-        self.add_user_to_rolloff(callback, message, user_object)
+        self.add_user_to_rolloff(client, message, user_object)
 
-    def new_rolloff(self, callback, message):
+    def new_rolloff(self, client, message):
         text = "Time to throw it down. A %s rolloff has been called. Join the rolloff in the next %s seconds by typing '!rolloff'" % ('regular', self.rolloff_join_window)
-        callback.send_message(text, message.to, event=message.event)
+        client.send_message(text, message.to, event=message.event)
 
         self.rolloff_enable()
 
-        bg_thread = threading.Thread(target=self.background_thread, args=[callback, message])
+        bg_thread = threading.Thread(target=self.background_thread, args=[client, message])
         bg_thread.start()
 
     def rolloff_enable(self):
@@ -116,28 +123,28 @@ class RollPlugin(HavocBotPlugin):
         self.rolloff_rollers_current = []
         self.rolloff_rollers_initial = []
 
-    def add_user_to_rolloff(self, callback, message, user):
+    def add_user_to_rolloff(self, client, message, user):
         if self.rolloff_in_process:
             elapsed_time = time.time() - self.rolloff_start_time
 
             if elapsed_time > 0 and elapsed_time < self.rolloff_join_window:
                 logger.info("Checking on adding user '%s' to list '%s'" % (user, self.rolloff_rollers_initial))
 
-                if any(x.username == user.username for x in self.rolloff_rollers_initial):
+                if any(x.current_username == user.current_username for x in self.rolloff_rollers_initial):
                     text = "You are already in this round %s" % (user.name)
-                    callback.send_message(text, message.to, event=message.event)
+                    client.send_message(text, message.to, event=message.event)
                 else:
                     text = "Added user '%s'" % (user.name)
                     logger.debug(text)
                     self.rolloff_rollers_initial.append(user)
             else:
                 text = "Entries for this round has ended"
-                callback.send_message(text, message.to, event=message.event)
+                client.send_message(text, message.to, event=message.event)
         else:
             text = "There is no rolloff to join. Aww, nice try"
-            callback.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.to, event=message.event)
 
-    def run_rolloff_round(self, callback, message, round_participants):
+    def run_rolloff_round(self, client, message, round_participants):
         round_winners_dict = {'users': [], 'roll': 0}
 
         for user in round_participants:
@@ -148,7 +155,7 @@ class RollPlugin(HavocBotPlugin):
             roll_value_formatted = "{:,}".format(roll_result)  # Format large numbers for Americans
 
             text = "%s rolled %s" % (user.name, roll_value_formatted)
-            callback.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.to, event=message.event)
 
             if roll_result > round_winners_dict['roll']:
                 round_winners_dict['users'] = [user]
@@ -169,12 +176,12 @@ class RollPlugin(HavocBotPlugin):
                 'Everyone is out except for the people tied!'
             ]
             text = "%s" % (choice(tie_phrases))
-            callback.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.to, event=message.event)
             self.rolloff_winner_found = False
 
         return round_winners_dict
 
-    def run_rolloff(self, callback, message, initial_participants):
+    def run_rolloff(self, client, message, initial_participants):
         # Create a copy of the original list
         round_participants = list(initial_participants)
 
@@ -183,20 +190,44 @@ class RollPlugin(HavocBotPlugin):
 
             self.rolloff_winner_found = False
             while not self.rolloff_winner_found:
-                winners = self.run_rolloff_round(callback, message, round_participants)
+                winners = self.run_rolloff_round(client, message, round_participants)
 
             text = "%s wins with %s" % (winners['users'][0].name, winners['roll'])
-            callback.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.to, event=message.event)
+
+            if self.should_award_points:
+                self.award_points(winners['users'][0], initial_participants, client, message)
         else:
             text = "Not enough players"
-            callback.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.to, event=message.event)
 
         self.rolloff_disable()
 
-    def background_thread(self, callback, message):
+    def award_points(self, winner_user_object, initial_participants, client, message):
+        logger.info('award_points() - triggered')
+
+        logger.info('award_points() - there were %s initial participants' % (len(initial_participants)))
+
+        stasher = Stasher.getInstance()
+
+        matching_users = havocbot.user.get_users_by_username(winner_user_object.current_username, client.integration_name)
+        if matching_users is not None and matching_users:
+            if len(matching_users) == 1:
+                logger.info('award_points() - adding %d points to \'%s\' (id \'%s\')' % (len(initial_participants), winner_user_object.current_username, matching_users[0].user_id))
+                stasher.add_points(matching_users[0].user_id, len(initial_participants))
+            else:
+                logger.info('award_points() - more than 1 user match found')
+        else:
+            logger.info('award_points() - no stashed user found. cannot award points to winner')
+
+        for user in initial_participants:
+            if winner_user_object.current_username != user.current_username:
+                logger.info('award_points() - \'%s\' lost 1 point' % (user.current_username))
+
+    def background_thread(self, client, message):
         time.sleep(self.rolloff_join_window)
         logger.debug("background_thread() - triggered")
-        self.run_rolloff(callback, message, self.rolloff_rollers_initial)
+        self.run_rolloff(client, message, self.rolloff_rollers_initial)
 
 
 # Make this plugin available to HavocBot
