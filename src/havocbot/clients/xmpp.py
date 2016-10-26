@@ -1,11 +1,10 @@
 from dateutil import tz
 from datetime import datetime
+import logging
+import sleekxmpp
 from havocbot.client import Client
 from havocbot.message import Message
-from havocbot.user import User
-import logging
-import re
-import sleekxmpp
+from havocbot.user import ClientUser
 # import ssl
 
 logger = logging.getLogger(__name__)
@@ -26,7 +25,6 @@ class XMPP(Client):
         self.room_names = None
         self.nickname = None
         self.server = None
-        self.exact_match_one_word_triggers = False
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
@@ -44,11 +42,6 @@ class XMPP(Client):
                 self.server = item[1]
             elif item[0] == 'chat_server':
                 self.chat_server = item[1]
-
-        # Set exact_match_one_word_triggers based off of value in havocbot if it is set
-        settings_value = self.havocbot.get_havocbot_setting_by_name('exact_match_one_word_triggers')
-        if settings_value is not None and settings_value.lower() == 'true':
-            self.exact_match_one_word_triggers = True
 
         # Return true if this integrations has the information required to connect
         if self.username is not None and self.password is not None and self.room_names is not None and self.nickname is not None and self.server is not None and self.chat_server is not None:
@@ -98,37 +91,9 @@ class XMPP(Client):
                 message_object = kwargs.get('message_object')
 
             if message_object.event in ('groupchat', 'chat', 'normal'):
-                for tuple_item in self.havocbot.triggers:
-                    trigger = tuple_item[0]
-                    triggered_function = tuple_item[1]
-
-                    # Add exact regex match if user defined
-                    if len(trigger.split()) == 1 and self.exact_match_one_word_triggers is True:
-                        if not trigger.startswith('^') and not trigger.endswith('$'):
-                            # logger.debug("Converting trigger to a line exact match requirement")
-                            trigger = "^" + trigger + "$"
-
-                    # Use trigger as regex pattern and then search the message for a match
-                    regex = re.compile(trigger)
-
-                    match = regex.search(message_object.text)
-                    if match is not None:
-                        logger.info("%s - Matched message against trigger '%s'" % (self.havocbot.get_method_class_name(triggered_function), trigger))
-
-                        # Pass the message to the function associated with the trigger
-                        try:
-                            if len(tuple_item) == 2:
-                                triggered_function(self, message_object, capture_groups=match.groups())
-                            elif len(tuple_item) == 3:
-                                additional_args = tuple_item[2]
-                                triggered_function(self, message_object, capture_groups=match.groups(), **additional_args)
-                        except Exception as e:
-                            logger.error(e)
-                    else:
-                        logger.debug("Message did not match trigger '%s'" % (trigger))
-                        pass
+                self.havocbot.handle_message(self, message_object)
             else:
-                logger.debug("Ignoring non text event of type '%s'" % (message_object.event))
+                logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 
     def send_message(self, text, channel, event=None, **kwargs):
         if channel and text and event:
@@ -293,11 +258,11 @@ class XMPP(Client):
 
 
 class MUCBot(sleekxmpp.ClientXMPP):
-    def __init__(self, callback, havocbot, jid, password, rooms_list, server_host, nick, chat_server):
+    def __init__(self, client, havocbot, jid, password, rooms_list, server_host, nick, chat_server):
         sleekxmpp.ClientXMPP.__init__(self, jid, password)
 
         self.havocbot = havocbot
-        self.parent = callback
+        self.parent = client
         self.rooms = rooms_list
         self.nick = nick
         self.server_host = server_host
