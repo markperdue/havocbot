@@ -122,12 +122,12 @@ class HavocBotPlugin(object):
         pass
 
     @abstractmethod
-    def start(self, callback, message, **kwargs):
+    def start(self, client, message, **kwargs):
         """ Must deal with the default entry point for an activated plugin.
 
         Args:
             self (HavocBotPlugin): The HavocBotPlugin subclass
-            callback (Client): A havocbot client instance
+            client (Client): A havocbot client instance
             message (Message): A havocbot message subclass instance
             **kwargs: any addional keyword arguments supplied by the client instance
         """
