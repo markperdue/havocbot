@@ -78,17 +78,17 @@ class ScramblePlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, callback, message, **kwargs):
+    def start(self, client, message, **kwargs):
         if self.in_process is True:
             if self.does_guess_match_scrambled_word(message.text, self.original_word):
                 if message.to:
                     text = "%s got it correct. The answer was '%s'" % (message.sender, self.original_word)
-                    callback.send_message(text, message.to, event=message.event)
+                    client.send_message(text, message.to, event=message.event)
                     self.reset_scramble()
         else:
             return
 
-    def start_scramble(self, callback, message, **kwargs):
+    def start_scramble(self, client, message, **kwargs):
         # Check to see if a scramble has already been started
         if not self.in_process:
 
@@ -105,43 +105,43 @@ class ScramblePlugin(HavocBotPlugin):
 
                     if message.to:
                         text = "Unscramble the letters to form the word. Guessing is open for %d seconds - '%s'" % (self.scramble_duration, self.scrambled_word)
-                        callback.send_message(text, message.to, event=message.event)
+                        client.send_message(text, message.to, event=message.event)
 
                     verify_original_word = self.original_word
 
-                    helper = RepeatedTimer(self.hint_interval, self.print_letter_of_word, callback, message, word)
+                    helper = RepeatedTimer(self.hint_interval, self.print_letter_of_word, client, message, word)
                     helper.start()
-                    bg_thread = threading.Thread(target=self.background_thread, args=[callback, message, verify_original_word, helper])
+                    bg_thread = threading.Thread(target=self.background_thread, args=[client, message, verify_original_word, helper])
                     bg_thread.start()
 
                 else:
                     text = 'There was an error fetching a scrambled word'
-                    callback.send_message(text, message.to, event=message.event)
+                    client.send_message(text, message.to, event=message.event)
             else:
                 text = 'There was an error fetching a scrambled word'
-                callback.send_message(text, message.to, event=message.event)
+                client.send_message(text, message.to, event=message.event)
         else:
             text = 'Scramble is already running'
-            callback.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.to, event=message.event)
 
     def random_line(self, afile):
         return random.choice(open(afile).readlines()).strip()
 
-    def background_thread(self, callback, message, verify_original_word, timer):
+    def background_thread(self, client, message, verify_original_word, timer):
         time.sleep(self.scramble_duration)
         logger.debug("background_thread - original_word is '%s' and verify_original_word is '%s'" % (self.original_word, verify_original_word))
         if self.in_process and self.original_word == verify_original_word:
             text = "Time's up! The answer was '%s'" % (self.original_word)
-            callback.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.to, event=message.event)
             self.reset_scramble()
             timer.stop()
 
-    def print_letter_of_word(self, timer, callback, message, word, index):
+    def print_letter_of_word(self, timer, client, message, word, index):
         if timer.is_running and self.in_process:
             if (len(word) > index + 1):
                 if word == self.original_word:
                     text = "Hint: Character at position %s is '%s'" % (index + 1, word[index])
-                    callback.send_message(text, message.to, event=message.event)
+                    client.send_message(text, message.to, event=message.event)
                 else:
                     timer.stop()
 
@@ -182,11 +182,11 @@ class ScramblePlugin(HavocBotPlugin):
 
 
 class RepeatedTimer(object):
-    def __init__(self, interval, function, callback, message, word):
+    def __init__(self, interval, function, client, message, word):
         self._timer = None
         self.interval = interval
         self.function = function
-        self.callback = callback
+        self.client = client
         self.message = message
         self.word = word
         self.is_running = False
@@ -195,7 +195,7 @@ class RepeatedTimer(object):
     def _run(self):
         self.is_running = False
         self.start()
-        self.function(self, self.callback, self.message, self.word, self.index)
+        self.function(self, self.client, self.message, self.word, self.index)
         self.index += 1
 
     def start(self):

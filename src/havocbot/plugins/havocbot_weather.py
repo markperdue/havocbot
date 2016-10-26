@@ -62,7 +62,7 @@ class WeatherPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, callback, message, **kwargs):
+    def start(self, client, message, **kwargs):
         words = message.text.split()
 
         # Capture args that look like zip codes
@@ -82,17 +82,17 @@ class WeatherPlugin(HavocBotPlugin):
                 if message.to:
                     if warmest_weather:
                         text = "%s (%s) has the warmest weather of %sF" % (warmest_weather.city, warmest_weather.zip_code, warmest_weather.temperature)
-                        callback.send_message(text, message.to, event=message.event)
+                        client.send_message(text, message.to, event=message.event)
             else:
                 weather_list = weather.return_temperatures_list(zip_codes, self.api_key_weatherunderground, self.api_key_openweathermap, self.max_zip_codes_per_query)
                 if message.to:
                     if weather_list:
                         for weather_object in weather_list:
                             text = weather_object.return_weather()
-                            callback.send_message(text, message.to, event=message.event)
+                            client.send_message(text, message.to, event=message.event)
                     else:
                         text = 'No weather data found'
-                        callback.send_message(text, message.to, event=message.event)
+                        client.send_message(text, message.to, event=message.event)
 
 
 # Make this plugin available to HavocBot

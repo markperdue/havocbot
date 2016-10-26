@@ -61,7 +61,7 @@ class ImagesPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, callback, message, **kwargs):
+    def start(self, client, message, **kwargs):
         if len(message.text.split()) >= 2:
             capture = kwargs.get('capture_groups', None)
             search_string = '+'.join(capture[0].split())
@@ -74,7 +74,7 @@ class ImagesPlugin(HavocBotPlugin):
             response = 'Need to provide a search query'
 
         if message.to:
-            callback.send_message(response, message.to, event=message.event)
+            client.send_message(response, message.to, event=message.event)
 
     def get_image(self, search_terms):
         search_terms = search_terms.replace(" ", "+")

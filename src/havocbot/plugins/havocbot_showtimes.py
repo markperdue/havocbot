@@ -70,7 +70,7 @@ class ShowtimesPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, callback, message, **kwargs):
+    def start(self, client, message, **kwargs):
         # Capture the zip code
         capture = kwargs.get('capture_groups', None)
         zip_code = capture[0]
@@ -78,10 +78,10 @@ class ShowtimesPlugin(HavocBotPlugin):
         showtimes_object = showtimes.get_showtimes_for_zip_on_date(zip_code, datetime.now().strftime("%m-%d-%Y"), self.api_key_amc, self.max_distance_in_miles, self.max_upcoming_showtimes_to_display)
         if message.to:
             if showtimes_object:
-                callback.send_messages_from_list(showtimes_object, message.to, event=message.event)
+                client.send_messages_from_list(showtimes_object, message.to, event=message.event)
             else:
                 text = 'No showtime data found'
-                callback.send_message(text, message.to, event=message.event)
+                client.send_message(text, message.to, event=message.event)
 
 
 # Make this plugin available to HavocBot
