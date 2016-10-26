@@ -1,7 +1,7 @@
 #!/havocbot
 
-from havocbot.plugin import HavocBotPlugin
 import logging
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 
 logger = logging.getLogger(__name__)
 
@@ -19,17 +19,17 @@ class HelpPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            ("!help", None, "display basic help information"),
-            ("!help plugins", None, "list the enabled plugins"),
-            ("!help plugin <plugin>", None, "display detailed information about a specific plugin"),
+            Usage(command="!help", example=None, description="display basic help information"),
+            Usage(command="!help plugins", example=None, description="list the enabled plugins"),
+            Usage(command="!help plugin <plugin>", example=None, description="display detailed information about a specific plugin"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            ("!help", self.start),
-            ("!help plugins", self.help_plugins),
-            ("!help plugin\s", self.help_plugin),
+            Trigger(match="!help", function=self.start, param_dict=None, requires=None),
+            Trigger(match="!help plugins", function=self.help_plugins, param_dict=None, requires=None),
+            Trigger(match="!help plugin\s", function=self.help_plugin, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -48,27 +48,27 @@ class HelpPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, callback, message, **kwargs):
-        callback_message_list = ["HavocBot can help you with the following."]
+    def start(self, client, message, **kwargs):
+        client_message_list = ["HavocBot can help you with the following."]
         for usage_message in self.get_usage_lines_from_plugin_as_list(self.plugin_usages):
-            callback_message_list.append(usage_message)
+            client_message_list.append(usage_message)
 
         if message.to:
-            callback.send_messages_from_list(callback_message_list, message.to, event=message.event)
+            client.send_messages_from_list(client_message_list, message.to, event=message.event)
 
-    def help_plugins(self, callback, message, **kwargs):
-        callback_message_list = []
+    def help_plugins(self, client, message, **kwargs):
+        client_message_list = []
 
         tuples_list = self.get_help_list_sorted()
 
-        callback_message_list.append("Loaded Plugins - " + ", ".join([("%s (%s)" % (i[1], i[0])) for i in tuples_list]))
-        callback_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
+        client_message_list.append("Loaded Plugins - " + ", ".join([("%s (%s)" % (i[1], i[0])) for i in tuples_list]))
+        client_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
 
         if message.to:
-            callback.send_messages_from_list(callback_message_list, message.to, event=message.event)
+            client.send_messages_from_list(client_message_list, message.to, event=message.event)
 
-    def help_plugin(self, callback, message, **kwargs):
-        callback_message_list = []
+    def help_plugin(self, client, message, **kwargs):
+        client_message_list = []
 
         tuples_list = self.get_help_list_sorted()
         words = message.text.split()
@@ -78,16 +78,16 @@ class HelpPlugin(HavocBotPlugin):
             for word in words[2:]:
                 temp_list += [item for item in tuples_list if word in [item[0], item[1]]]
             if temp_list is not None and temp_list:
-                callback_message_list = self.get_plugin_help_matching_list(temp_list)
+                client_message_list = self.get_plugin_help_matching_list(temp_list)
             else:
-                callback_message_list.append("No matching plugins were found. Plugin names are listed at !help plugins")
+                client_message_list.append("No matching plugins were found. Plugin names are listed at !help plugins")
         else:
             # Print the plugin short name with the regular name in parenthesis as a joined string
-            callback_message_list.append("Loaded Plugins - " + ", ".join([("%s (%s)" % (i[1], i[0])) for i in tuples_list]))
-            callback_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
+            client_message_list.append("Loaded Plugins - " + ", ".join([("%s (%s)" % (i[1], i[0])) for i in tuples_list]))
+            client_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
 
         if message.to:
-            callback.send_messages_from_list(callback_message_list, message.to, event=message.event)
+            client.send_messages_from_list(client_message_list, message.to, event=message.event)
 
     def get_plugin_help_matching_list(self, tuples_list):
         new_list = []

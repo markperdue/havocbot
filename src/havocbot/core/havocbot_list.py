@@ -1,7 +1,7 @@
 #!/havocbot
 
-from havocbot.plugin import HavocBotPlugin
 import logging
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +19,13 @@ class ListPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            ("!list", None, "list available commands"),
+            Usage(command="!list", example=None, description="list available commands"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            ("!list", self.start),
+            Trigger(match="!list", function=self.start, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -44,10 +44,10 @@ class ListPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, callback, message, **kwargs):
+    def start(self, client, message, **kwargs):
         if message.to:
             text = "Available Commands: '" + "', '".join([(i[0]) for i in self.havocbot.triggers]) + "'"
-            callback.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.to, event=message.event)
 
 
 # Make this plugin available to HavocBot

@@ -1,7 +1,7 @@
 #!/havocbot
 
-from havocbot.plugin import HavocBotPlugin
 import logging
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +19,13 @@ class RestartPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            ("!restart", None, "shut it down!"),
+            Usage(command="!restart", example=None, description="shut it down!"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            ("!restart", self.start),
+            Trigger(match="!restart", function=self.start, param_dict=None, requires="bot:admin"),
         ]
 
     def init(self, havocbot):
@@ -44,10 +44,10 @@ class RestartPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, callback, message, **kwargs):
+    def start(self, client, message, **kwargs):
         if message.to:
             text = 'Restarting the bot. Hang tight'
-            callback.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.to, event=message.event)
 
         self.havocbot.restart()
 

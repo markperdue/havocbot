@@ -1,7 +1,7 @@
 #!/havocbot
 
-from havocbot.plugin import HavocBotPlugin
 import logging
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +19,13 @@ class ReloadPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            ("!reload", None, "shutdown and start all the plugins"),
+            Usage(command="!reload", example=None, description="shutdown and start all the plugins"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            ("!reload", self.start),
+            Trigger(match="!reload", function=self.start, param_dict=None, requires="bot:admin"),
         ]
 
     def init(self, havocbot):
@@ -45,7 +45,7 @@ class ReloadPlugin(HavocBotPlugin):
         # self.havocbot = None  # start() still needs the reference to self.havocbot
         pass
 
-    def start(self, callback, message, **kwargs):
+    def start(self, client, message, **kwargs):
         self.havocbot.reload_plugins()
         logger.info("Done with trigger reload_plugins()")
         if message.to:
@@ -53,7 +53,7 @@ class ReloadPlugin(HavocBotPlugin):
                 len(self.havocbot.plugins_core) + len(self.havocbot.plugins_custom),
                 len(self.havocbot.triggers)
             )
-            callback.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.to, event=message.event)
 
 
 # Make this plugin available to HavocBot
