@@ -43,15 +43,19 @@ class UserPlugin(HavocBotPlugin):
     #         ("!me", None, "get information on you"),
     #     ]
 
+
+
+            # Trigger(match="!user\s(.*)", function=self.trigger_get_user, param_dict={'stasher': True, 'client': True}, requires=None),
+
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!user\s(.*)", function=self.trigger_get_user, param_dict={'stasher': True, 'client': True}, requires=None),
-            Trigger(match="!userid\s(.*)", function=self.trigger_get_user, param_dict={'stasher': True, 'client': True, 'id': True}, requires=None),
+            Trigger(match="!user\s(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True}, requires=None),
+            Trigger(match="!userid\s(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True, 'id': True}, requires=None),
             Trigger(match="!users", function=self.trigger_get_users, param_dict=None, requires=None),
             Trigger(match="!adduser\s(.*)", function=self.trigger_add_user, param_dict=None, requires="bot:admin"),
-            Trigger(match="!clientuser\s(.*)", function=self.trigger_get_user, param_dict={'client': True}, requires=None),
-            Trigger(match="!stasheruser\s(.*)", function=self.trigger_get_user, param_dict={'stasher': True}, requires=None),
+            Trigger(match="!clientuser\s(.*)", function=self.trigger_get_user, param_dict={'use_client': True}, requires=None),
+            Trigger(match="!stasheruser\s(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True}, requires=None),
             Trigger(match="!me", function=self.trigger_get_sender, param_dict=None, requires=None),
         ]
 
@@ -116,6 +120,7 @@ class UserPlugin(HavocBotPlugin):
             client.send_message(text, message.to, event=message.event)
 
     def trigger_get_user(self, client, message, **kwargs):
+        logger.info('HERE')
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
         captured_usernames = capture[0]
