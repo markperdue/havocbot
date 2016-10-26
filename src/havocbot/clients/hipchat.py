@@ -24,7 +24,6 @@ class HipChat(Client):
         self.room_names = None
         self.nickname = None
         self.server = None
-        self.exact_match_one_word_triggers = False
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
@@ -42,11 +41,6 @@ class HipChat(Client):
                 self.server = item[1]
             elif item[0] == 'chat_server':
                 self.chat_server = item[1]
-
-        # Set exact_match_one_word_triggers based off of value in havocbot if it is set
-        settings_value = self.havocbot.get_havocbot_setting_by_name('exact_match_one_word_triggers')
-        if settings_value is not None and settings_value.lower() == 'true':
-            self.exact_match_one_word_triggers = True
 
         # Return true if this integrations has the information required to connect
         if self.username is not None and self.password is not None and self.room_names is not None and self.nickname is not None and self.server is not None and self.chat_server is not None:
@@ -374,11 +368,11 @@ class HipChat(Client):
 
 
 class HipMUCBot(sleekxmpp.ClientXMPP):
-    def __init__(self, callback, havocbot, jid, password, rooms_list, server_host, nick, chat_server):
+    def __init__(self, client, havocbot, jid, password, rooms_list, server_host, nick, chat_server):
         sleekxmpp.ClientXMPP.__init__(self, jid + '/bot', password)
 
         self.havocbot = havocbot
-        self.parent = callback
+        self.parent = client
         self.rooms = rooms_list
         self.nick = nick
         self.server_host = server_host
