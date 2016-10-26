@@ -2,11 +2,11 @@
 
 from dateutil import tz, parser
 from datetime import datetime
-from havocbot.plugin import HavocBotPlugin
-from havocbot.stasher import Stasher
-import havocbot.user
 import logging
 import random
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
+from havocbot.stasher import Stasher
+import havocbot.user
 
 logger = logging.getLogger(__name__)
 
@@ -24,18 +24,18 @@ class QuoterPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            ("!quote <name>", "!quote markaperdue", "get a quote said by a user"),
-            ("!addquote <name>", "!addquote markaperdue", "add the last message said by the user to the database"),
+            Usage(command="!quote <name>", example="!quote markaperdue", description="get a quote said by a user"),
+            Usage(command="!addquote <name>", example="!addquote markaperdue", description="add the last message said by the user to storage"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            ("!quote\s(.*)", self.get_quote),
-            ("!addquote\s(.*)", self.add_quote),
-            ("!debugquote", self.debug_quote),
-            ("!quotes", self.get_quotes),
-            ("(.*)", self.start),
+            Trigger(match="!quote\s(.*)", function=self.get_quote, param_dict=None, requires=None),
+            Trigger(match="!addquote\s(.*)", function=self.add_quote, param_dict=None, requires=None),
+            Trigger(match="!debugquote", function=self.debug_quote, param_dict=None, requires=None),
+            Trigger(match="!quotes", function=self.get_quotes, param_dict=None, requires=None),
+            Trigger(match="(.*)", function=self.start, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):

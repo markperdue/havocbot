@@ -1,13 +1,13 @@
 #!/havocbot
 
-from havocbot.plugin import HavocBotPlugin
-from havocbot.stasher import Stasher
-import havocbot.user
 import logging
 import random
 from random import choice
 import threading
 import time
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
+from havocbot.stasher import Stasher
+import havocbot.user
 
 logger = logging.getLogger(__name__)
 
@@ -25,17 +25,17 @@ class RollPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            ("!roll", None, "roll a 100 side dice "),
-            ("!highroll", None, "roll a much larger dice"),
-            ("!rolloff", None, "start a rolloff if one is not started or join a rolloff if one is in process"),
+            Usage(command="!roll", example=None, description="roll a 100 side dice"),
+            Usage(command="!highroll", example=None, description="roll a much larger dice"),
+            Usage(command="!rolloff", example=None, description="start a rolloff if one is not started or join a rolloff if one is in process"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            ("!roll", self.start),
-            ("!highroll", self.high_roll),
-            ("!rolloff", self.rolloff),
+            Trigger(match="!roll", function=self.start, param_dict=None, requires=None),
+            Trigger(match="!highroll", function=self.high_roll, param_dict=None, requires=None),
+            Trigger(match="!rolloff", function=self.rolloff, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):

@@ -1,8 +1,8 @@
 #!/havocbot
 
-from havocbot.plugin import HavocBotPlugin
-from plugins import weather
 import logging
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
+from plugins import weather
 
 logger = logging.getLogger(__name__)
 
@@ -20,14 +20,14 @@ class WeatherPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            ("weather <zip code>", "what is the weather in 94110", "display the current weather for one or more zip codes"),
-            ("warmest weather <zip code> <zip code> [<zip code>]", "does 92104 or 10005 have the warmest weather", "find the warmest zip code from a list"),
+            Usage(command="weather <zip code>", example="what is the weather in 94110", description="display the current weather for one or more zip codes"),
+            Usage(command="warmest weather <zip code> <zip code> [<zip code>]", example="does 92104 or 10005 have the warmest weather", description="find the warmest zip code from a list"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            (".*\d{5}.*weather|weather.*\d{5}", self.start),
+            Trigger(match=".*\d{5}.*weather|weather.*\d{5}", function=self.start, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):

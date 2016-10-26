@@ -1,9 +1,9 @@
 #!/havocbot
 
-from havocbot.plugin import HavocBotPlugin
 import logging
 from random import shuffle
 import requests
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +21,13 @@ class ImagesPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            ("!image", "!image golden gate bridge", "get an image from google images"),
+            Usage(command="!image", example="!image golden gate bridge", description="get an image from google images"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            ("!image\s*(.*)", self.start),
+            Trigger(match="!image\s*(.*)", function=self.start, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):

@@ -1,9 +1,9 @@
 #!/havocbot
 
-from havocbot.plugin import HavocBotPlugin
-from plugins import showtimes
 from datetime import datetime
 import logging
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
+from plugins import showtimes
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +21,13 @@ class ShowtimesPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            ("movies in <zip code>", "movies in 94110", "displays the earliest upcoming movie showtimes in a zip code (AMC only)"),
+            Usage(command="movies in <zip code>", example="movies in 94110", description="displays the earliest upcoming movie showtimes in a zip code (AMC only)"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            (".*movies in\s*(\d{5})", self.start),
+            Trigger(match=".*movies in\s*(\d{5})", function=self.start, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
