@@ -24,7 +24,7 @@ class User(object):
         self.user_id = user_id
         self.usernames = {}
         self.current_username = None
-        self.permissions = []
+        self.permissions = None
 
     def __repr__(self):
         return ("User(%s, %s, %s, %s, %d, %s, %s)"
@@ -157,10 +157,13 @@ class User(object):
         return results
 
     def has_permission(self, permission):
-        if permission in self.permissions:
-            return True
+        if self.permissions is not None and self.permissions:
+            if permission in self.permissions:
+                return True
+            else:
+                return False
         else:
-            return False;
+            return False
 
     def is_valid(self):
         if self.user_id is not None and self.user_id > 0:

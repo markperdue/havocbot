@@ -35,11 +35,11 @@ class UserPlugin(HavocBotPlugin):
     def plugin_triggers(self):
         return [
             Trigger(match="!user\s(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True}, requires=None),
-            Trigger(match="!userid\s(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True, 'id': True}, requires=None),
+            Trigger(match="!userid\s(.*)", function=self.trigger_coming_soon, param_dict={'use_stasher': True, 'use_client': True, 'id': True}, requires=None),
             Trigger(match="!users", function=self.trigger_get_users, param_dict=None, requires=None),
-            Trigger(match="!adduser\s(.*)", function=self.trigger_add_user, param_dict=None, requires="bot:admin"),
-            Trigger(match="!clientuser\s(.*)", function=self.trigger_get_user, param_dict={'use_client': True}, requires=None),
-            Trigger(match="!stasheruser\s(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True}, requires=None),
+            Trigger(match="!adduser\s(.*)", function=self.trigger_coming_soon, param_dict=None, requires="bot:admin"),
+            Trigger(match="!clientuser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_client': True}, requires=None),
+            Trigger(match="!stasheruser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_stasher': True}, requires=None),
             Trigger(match="!me", function=self.trigger_get_sender, param_dict=None, requires=None),
         ]
 
@@ -61,6 +61,10 @@ class UserPlugin(HavocBotPlugin):
 
     def start(self, client, message, **kwargs):
         pass
+
+    def trigger_coming_soon(self, client, message, **kwargs):
+        text = 'This feature is coming soon'
+        client.send_message(text, message.reply(), event=message.event)
 
     def trigger_get_sender(self, client, message, **kwargs):
         client_user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)

@@ -367,10 +367,10 @@ class HavocBot:
                             else:
                                 logger.info("permission '%s' not found for user %s" % (tuple_item.requires, user.user_id))
                                 text = 'You do not have permission to do that. Permission required: %s' % (tuple_item.requires)
-                                client.send_message(text, message_object.to, event=message_object.event)
+                                client.send_message(text, message_object.reply(), event=message_object.event)
                         else:
                             text = 'That can only be run by users registered with me'
-                            client.send_message(text, message_object.to, event=message_object.event)
+                            client.send_message(text, message_object.reply(), event=message_object.event)
 
                     else:
                         logger.info("This trigger does not require permission")
@@ -546,7 +546,7 @@ class HavocBot:
         if self.clients is not None and self.clients:
             for client in self.clients:
                 if client.integration_name == message_object.client:
-                    client.send_message(message_object.text, message_object.to, event=message_object.event)
+                    client.send_message(message_object.text, message_object.reply(), event=message_object.event)
                     break
 
 
