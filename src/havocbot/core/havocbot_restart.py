@@ -47,7 +47,7 @@ class RestartPlugin(HavocBotPlugin):
     def start(self, client, message, **kwargs):
         if message.to:
             text = 'Restarting the bot. Hang tight'
-            client.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.reply(), event=message.event)
 
         self.havocbot.restart()
 

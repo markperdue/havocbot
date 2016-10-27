@@ -74,7 +74,7 @@ class ImagesPlugin(HavocBotPlugin):
             response = 'Need to provide a search query'
 
         if message.to:
-            client.send_message(response, message.to, event=message.event)
+            client.send_message(response, message.reply(), event=message.event)
 
     def get_image(self, search_terms):
         search_terms = search_terms.replace(" ", "+")

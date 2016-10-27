@@ -86,11 +86,11 @@ class InfoPlugin(HavocBotPlugin):
             if found_category is not None and found_category:
                 client_message_list.extend(self.get_category_for_printing(found_category[captured_category]))
 
-                client.send_messages_from_list(client_message_list, message.to, event=message.event)
+                client.send_messages_from_list(client_message_list, message.reply(), event=message.event)
             else:
-                client.send_message("Unable to find info category '%s'" % (captured_category), message.to, event=message.event)
+                client.send_message("Unable to find info category '%s'" % (captured_category), message.reply(), event=message.event)
         else:
-            client.send_message('Please provide an info category', message.to, event=message.event)
+            client.send_message('Please provide an info category', message.reply(), event=message.event)
 
     def info_list(self, client, message, **kwargs):
         logger.debug("start - message is '%s'" % (message))
@@ -111,9 +111,9 @@ class InfoPlugin(HavocBotPlugin):
             client_message_list.append("Info categories include %s" % (categories_as_string))
             client_message_list.append('To get more info use !info get <category name>')
 
-            client.send_messages_from_list(client_message_list, message.to, event=message.event)
+            client.send_messages_from_list(client_message_list, message.reply(), event=message.event)
         else:
-            client.send_message('No info categories exist', message.to, event=message.event)
+            client.send_message('No info categories exist', message.reply(), event=message.event)
 
 
 # Make this plugin available to HavocBot

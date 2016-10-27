@@ -88,7 +88,7 @@ class RollPlugin(HavocBotPlugin):
         else:
             text = "%s rolled %s" % (message.sender, roll_formatted)
 
-        client.send_message(text, message.to, event=message.event)
+        client.send_message(text, message.reply(), event=message.event)
 
     def rolloff(self, client, message, **kwargs):
         user_object = havocbot.user.create_user(client, message)
@@ -102,7 +102,7 @@ class RollPlugin(HavocBotPlugin):
 
     def new_rolloff(self, client, message):
         text = "Time to throw it down. A %s rolloff has been called. Join the rolloff in the next %s seconds by typing '!rolloff'" % ('regular', self.rolloff_join_window)
-        client.send_message(text, message.to, event=message.event)
+        client.send_message(text, message.reply(), event=message.event)
 
         self.rolloff_enable()
 
@@ -132,17 +132,17 @@ class RollPlugin(HavocBotPlugin):
 
                 if any(x.current_username == user.current_username for x in self.rolloff_rollers_initial):
                     text = "You are already in this round %s" % (user.name)
-                    client.send_message(text, message.to, event=message.event)
+                    client.send_message(text, message.reply(), event=message.event)
                 else:
                     text = "Added user '%s'" % (user.name)
                     logger.debug(text)
                     self.rolloff_rollers_initial.append(user)
             else:
                 text = "Entries for this round has ended"
-                client.send_message(text, message.to, event=message.event)
+                client.send_message(text, message.reply(), event=message.event)
         else:
             text = "There is no rolloff to join. Aww, nice try"
-            client.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.reply(), event=message.event)
 
     def run_rolloff_round(self, client, message, round_participants):
         round_winners_dict = {'users': [], 'roll': 0}
@@ -155,7 +155,7 @@ class RollPlugin(HavocBotPlugin):
             roll_value_formatted = "{:,}".format(roll_result)  # Format large numbers for Americans
 
             text = "%s rolled %s" % (user.name, roll_value_formatted)
-            client.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.reply(), event=message.event)
 
             if roll_result > round_winners_dict['roll']:
                 round_winners_dict['users'] = [user]
@@ -176,7 +176,7 @@ class RollPlugin(HavocBotPlugin):
                 'Everyone is out except for the people tied!'
             ]
             text = "%s" % (choice(tie_phrases))
-            client.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.reply(), event=message.event)
             self.rolloff_winner_found = False
 
         return round_winners_dict
@@ -193,13 +193,13 @@ class RollPlugin(HavocBotPlugin):
                 winners = self.run_rolloff_round(client, message, round_participants)
 
             text = "%s wins with %s" % (winners['users'][0].name, winners['roll'])
-            client.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.reply(), event=message.event)
 
             if self.should_award_points:
                 self.award_points(winners['users'][0], initial_participants, client, message)
         else:
             text = "Not enough players"
-            client.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.reply(), event=message.event)
 
         self.rolloff_disable()
 

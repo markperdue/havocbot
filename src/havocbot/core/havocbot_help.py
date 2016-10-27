@@ -54,7 +54,7 @@ class HelpPlugin(HavocBotPlugin):
             client_message_list.append(usage_message)
 
         if message.to:
-            client.send_messages_from_list(client_message_list, message.to, event=message.event)
+            client.send_messages_from_list(client_message_list, message.reply(), event=message.event)
 
     def help_plugins(self, client, message, **kwargs):
         client_message_list = []
@@ -65,7 +65,7 @@ class HelpPlugin(HavocBotPlugin):
         client_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
 
         if message.to:
-            client.send_messages_from_list(client_message_list, message.to, event=message.event)
+            client.send_messages_from_list(client_message_list, message.reply(), event=message.event)
 
     def help_plugin(self, client, message, **kwargs):
         client_message_list = []
@@ -87,7 +87,7 @@ class HelpPlugin(HavocBotPlugin):
             client_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
 
         if message.to:
-            client.send_messages_from_list(client_message_list, message.to, event=message.event)
+            client.send_messages_from_list(client_message_list, message.reply(), event=message.event)
 
     def get_plugin_help_matching_list(self, tuples_list):
         new_list = []

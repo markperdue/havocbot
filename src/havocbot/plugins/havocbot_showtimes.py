@@ -78,10 +78,10 @@ class ShowtimesPlugin(HavocBotPlugin):
         showtimes_object = showtimes.get_showtimes_for_zip_on_date(zip_code, datetime.now().strftime("%m-%d-%Y"), self.api_key_amc, self.max_distance_in_miles, self.max_upcoming_showtimes_to_display)
         if message.to:
             if showtimes_object:
-                client.send_messages_from_list(showtimes_object, message.to, event=message.event)
+                client.send_messages_from_list(showtimes_object, message.reply(), event=message.event)
             else:
                 text = 'No showtime data found'
-                client.send_message(text, message.to, event=message.event)
+                client.send_message(text, message.reply(), event=message.event)
 
 
 # Make this plugin available to HavocBot

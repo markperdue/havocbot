@@ -53,7 +53,7 @@ class ReloadPlugin(HavocBotPlugin):
                 len(self.havocbot.plugins_core) + len(self.havocbot.plugins_custom),
                 len(self.havocbot.triggers)
             )
-            client.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.reply(), event=message.event)
 
 
 # Make this plugin available to HavocBot

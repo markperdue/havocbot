@@ -82,17 +82,17 @@ class WeatherPlugin(HavocBotPlugin):
                 if message.to:
                     if warmest_weather:
                         text = "%s (%s) has the warmest weather of %sF" % (warmest_weather.city, warmest_weather.zip_code, warmest_weather.temperature)
-                        client.send_message(text, message.to, event=message.event)
+                        client.send_message(text, message.reply(), event=message.event)
             else:
                 weather_list = weather.return_temperatures_list(zip_codes, self.api_key_weatherunderground, self.api_key_openweathermap, self.max_zip_codes_per_query)
                 if message.to:
                     if weather_list:
                         for weather_object in weather_list:
                             text = weather_object.return_weather()
-                            client.send_message(text, message.to, event=message.event)
+                            client.send_message(text, message.reply(), event=message.event)
                     else:
                         text = 'No weather data found'
-                        client.send_message(text, message.to, event=message.event)
+                        client.send_message(text, message.reply(), event=message.event)
 
 
 # Make this plugin available to HavocBot

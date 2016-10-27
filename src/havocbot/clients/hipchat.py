@@ -1,10 +1,13 @@
 from dateutil import tz
 from datetime import datetime
 import logging
+import requests
 import sleekxmpp
+from sleekxmpp.xmlstream.stanzabase import ElementBase, register_stanza_plugin
+from sleekxmpp.stanza.message import Message as MessageStanza
 from havocbot.client import Client
 from havocbot.message import Message
-from havocbot.user import ClientUser
+from havocbot.user import User, ClientUser
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +23,7 @@ class HipChat(Client):
         self.havocbot = havocbot
 
         self.token = None
+        self.api_root_url = None
         self.username = None
         self.room_names = None
         self.nickname = None
@@ -41,6 +45,10 @@ class HipChat(Client):
                 self.server = item[1]
             elif item[0] == 'chat_server':
                 self.chat_server = item[1]
+            elif item[0] == 'api_root_url':
+                self.api_root_url = item[1]
+            elif item[0] == 'send_notification_token':
+                self.token = item[1]
 
         # Return true if this integrations has the information required to connect
         if self.username is not None and self.password is not None and self.room_names is not None and self.nickname is not None and self.server is not None and self.chat_server is not None:
@@ -68,7 +76,7 @@ class HipChat(Client):
         self.client.register_plugin('xep_0054')  # vCard
         self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # XMPP Ping set for a keepalive ping every 60 seconds
 
-        if self.client.connect():
+        if self.client.connect(address=(self.server, 5223), use_ssl=True):
         # if self.client.connect(address=(self.server, 5223), use_ssl=True):
             logger.info("I am.. %s! (%s)" % (self.nickname, self.username))
             return True
@@ -92,11 +100,71 @@ class HipChat(Client):
             else:
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 
+    def send_message_api_2(self, url, json_dict):
+        logger.debug("POSTING to '%s' with '%s'" % (url, json_dict))
+        requests.post(url, json=json_dict, verify=False)
+
+    def send_message_api(self, api_root_url, api_room_id, api_token, json_dict):
+        if api_room_id is not None:
+            url = '%s/v2/room/%s/notification?auth_token=%s' % (api_root_url, api_room_id, api_token)
+
+            self.send_message_api_2(url, json_dict)
+        else:
+            logger.info("Unable to get an api room id from a jabber room id")
+
+    def send_message_xmpp(self, message, channel):
+        new_test = X()
+        new_test.setBasics('system', '0', 'purple', 'text')
+
+        new_test.setNotificationSender('user', '1_422@chat.btf.hipchat.com')
+        logger.info(new_test.getNotificationSender())
+
+        json_obj = {}
+        json_obj['style'] = 'application'
+        json_obj['id'] = 'c253adc6-11fa-4941-ae26-7180d67e814a'
+        json_obj['title'] = 'Test'
+        json_obj['validation'] = {}
+        json_obj['validation']['safehtmls'] = ['activity.html']
+        json_obj['validation']['safeurls'] = ['url', 'images.image', 'images.image-small', 'images.image-big', 'icon.url', 'icon.url@2x', 'icon', 'thumbnail.url@2x', 'thumbnail.url']
+
+        new_test.setCard(json.dumps(json_obj))
+        logger.info(new_test.getCard())
+
+        # logger.info(dir(new_test))
+        # logger.info("Appending XML")
+        # message.append(new_test)
+        # logger.info(message._get_stanza_values())
+        # logger.info(message.values)
+        # logger.info(message['x']['color'])
+        # logger.info(message.get_payload())
+        message.reply('Test').set_payload([new_test.xml])
+        message['to'] = channel
+
     def send_message(self, text, channel, event=None, **kwargs):
         if channel and text and event:
-            logger.info("Sending %s text '%s' to channel '%s'" % (event, text, channel))
             try:
-                self.client.send_message(mto=channel, mbody=text, mtype=event)
+                used_notification_api = False
+
+                if kwargs is not None:
+                    if 'room_id' in kwargs and kwargs.get('room_id') is not None:
+                        api_room_id = kwargs.get('room_id')
+
+                        if 'json' in kwargs and kwargs.get('json') is not None:
+                            json_dict = kwargs.get('json')
+                            logger.info("Found room_id which is '%s' and json which is '%s'" % (api_room_id, json_dict))
+
+                            self.send_message_api(self.api_root_url, api_room_id, self.token, json_dict)
+                            used_notification_api = True
+
+                if not used_notification_api:
+                    logger.info("Sending %s text '%s' to channel '%s'" % (event, text, channel))
+                    self.client.send_message(mto=channel, mbody=text, mtype=event)
+
+                    # This was a test to try to send cards over xmpp but the required stanzas to send
+                    # to the server are not documented
+                    # message = self.client.make_message(mto=channel, mbody=text, mtype=event)
+                    # message.send()
+                    # self.send_message_xmpp(message, channel)
             except AttributeError:
                 logger.error('Unable to send message. Are you connected?')
             except Exception as e:
@@ -223,6 +291,8 @@ class HipChat(Client):
 
             if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
                 vcard = self._get_vcard_by_jabber_id(jabber_id)
+                logger.info('_get_user_from_groupchat() - Creating user')
+                logger.info("_get_user_from_groupchat() - jabber_id is '%s', name is '%s' and vcard is '%s'" % (jabber_id, name, vcard))
                 user = create_user_object(jabber_id, name, vcard)
 
                 logger.info('_get_user_from_groupchat() - Displaying user')
@@ -365,6 +435,78 @@ class HipChat(Client):
     #         return user
     #     else:
     #         return None
+
+
+class Card(ElementBase):
+    namespace = 'http://hipchat.com/protocol/muc#room'
+    name = 'card'
+    plugin_attrib = 'card'
+    interfaces = set(('raw',))
+    sub_interfaces = interfaces
+
+
+class NotificationSender(ElementBase):
+    namespace = 'http://hipchat.com/protocol/muc#room'
+    name = 'notification_sender'
+    plugin_attrib = 'notification_sender'
+    interfaces = set(('type', 'id',))
+    # sub_interfaces = interfaces
+
+
+class X(ElementBase):
+    namespace = 'http://hipchat.com/protocol/muc#room'
+    name = 'x'
+    plugin_attrib = 'x'
+    interfaces = set(('type', 'notify', 'color', 'message_format', 'card', 'notification_sender'))
+    sub_interfaces = set(('type', 'notify', 'color', 'message_format', 'card', 'notification_sender'))
+    subitem = (Card, NotificationSender,)
+
+    def setBasics(self, basic_type, notify, color, format):
+        logger.info("setting basics to '%s', '%s', '%s', and '%s'" % (basic_type, notify, color, format))
+
+        self['type'] = basic_type
+        self['notify'] = notify
+        self['color'] = color
+        self['message_format'] = format
+
+    def getCard(self):
+        raw = ''
+
+        result = self.xml.find('{%s}card' % Card.namespace)
+        if result:
+            card = Card(result)
+            raw = card['raw']
+
+        logger.info("returning with '%s'" % (raw))
+        return raw
+
+    def getNotificationSender(self):
+        logger.info("getting notification sender...")
+        results = {}
+
+        result = self.xml.find('{%s}notification_sender' % NotificationSender.namespace)
+        if result:
+            logger.info("GOT A RESULT OF '%s'" % (notification_sender['type']))
+            logger.info("GOT A RESULT OF '%s'" % (notification_sender['id']))
+            notification_sender = NotificationSender(result)
+            results['type'] = notification_sender['type']
+            results['id'] = notification_sender['id']
+
+        logger.info("returning with '%s'" % (results))
+        return results
+
+    def setCard(self, json_string):
+        logger.info("setting card to '%s'" % (json_string))
+
+        card_obj = Card(None, self)
+        card_obj['raw'] = json_string
+
+    def setNotificationSender(self, sender_type, sender_id):
+        logger.info("setting notification_sender to '%s' and '%s'" % (sender_type, sender_id))
+
+        notification_sender = NotificationSender(None, self)
+        notification_sender['type'] = sender_type
+        notification_sender['id'] = sender_id
 
 
 class HipMUCBot(sleekxmpp.ClientXMPP):

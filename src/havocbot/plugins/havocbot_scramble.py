@@ -83,7 +83,7 @@ class ScramblePlugin(HavocBotPlugin):
             if self.does_guess_match_scrambled_word(message.text, self.original_word):
                 if message.to:
                     text = "%s got it correct. The answer was '%s'" % (message.sender, self.original_word)
-                    client.send_message(text, message.to, event=message.event)
+                    client.send_message(text, message.reply(), event=message.event)
                     self.reset_scramble()
         else:
             return
@@ -105,7 +105,7 @@ class ScramblePlugin(HavocBotPlugin):
 
                     if message.to:
                         text = "Unscramble the letters to form the word. Guessing is open for %d seconds - '%s'" % (self.scramble_duration, self.scrambled_word)
-                        client.send_message(text, message.to, event=message.event)
+                        client.send_message(text, message.reply(), event=message.event)
 
                     verify_original_word = self.original_word
 
@@ -116,13 +116,13 @@ class ScramblePlugin(HavocBotPlugin):
 
                 else:
                     text = 'There was an error fetching a scrambled word'
-                    client.send_message(text, message.to, event=message.event)
+                    client.send_message(text, message.reply(), event=message.event)
             else:
                 text = 'There was an error fetching a scrambled word'
-                client.send_message(text, message.to, event=message.event)
+                client.send_message(text, message.reply(), event=message.event)
         else:
             text = 'Scramble is already running'
-            client.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.reply(), event=message.event)
 
     def random_line(self, afile):
         return random.choice(open(afile).readlines()).strip()
@@ -132,7 +132,7 @@ class ScramblePlugin(HavocBotPlugin):
         logger.debug("background_thread - original_word is '%s' and verify_original_word is '%s'" % (self.original_word, verify_original_word))
         if self.in_process and self.original_word == verify_original_word:
             text = "Time's up! The answer was '%s'" % (self.original_word)
-            client.send_message(text, message.to, event=message.event)
+            client.send_message(text, message.reply(), event=message.event)
             self.reset_scramble()
             timer.stop()
 
@@ -141,7 +141,7 @@ class ScramblePlugin(HavocBotPlugin):
             if (len(word) > index + 1):
                 if word == self.original_word:
                     text = "Hint: Character at position %s is '%s'" % (index + 1, word[index])
-                    client.send_message(text, message.to, event=message.event)
+                    client.send_message(text, message.reply(), event=message.event)
                 else:
                     timer.stop()
 
