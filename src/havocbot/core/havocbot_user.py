@@ -67,23 +67,41 @@ class UserPlugin(HavocBotPlugin):
         client.send_message(text, message.reply(), event=message.event)
 
     def trigger_get_sender(self, client, message, **kwargs):
-        client_user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
-        logger.debug(client_user_object)
+        message_list = []
+        
+        user = havocbot.user.get_user_by_username_for_client(message.sender, client.integration_name)
+        if user is not None and user:
+            logger.debug(user)
+            message_list.extend(user.get_user_info_as_list())
+        else:
+            message_list.extend(client_user_object.get_user_info_as_list())
 
-        username = client_user_object.username
+        # client_user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
+        # logger.debug(client_user_object)
 
-        if client_user_object is not None and client_user_object:
-            message_list = []
+        # if client_user_object is not None and client_user_object:
+        #     username = client_user_object.username
+        #     message_list = []
 
-            user_temp_list = havocbot.user.get_users_by_username(username, client.integration_name)
-            if user_temp_list is not None and user_temp_list:
-                for user in user_temp_list:
-                    logger.debug(user)
-                    # Update the user to have the previous username set
-                    user.current_username = username
-                    message_list.extend(user.get_user_info_as_list())
-            else:
-                message_list.extend(client_user_object.get_user_info_as_list())
+        #     # EDIT101
+        #     # user_temp_list = havocbot.user.get_users_by_username(username, client.integration_name)
+        #     # if user_temp_list is not None and user_temp_list:
+        #     #     for user in user_temp_list:
+        #     #         logger.debug(user)
+        #     #         # Update the user to have the previous username set
+        #     #         user.current_username = username
+        #     #         message_list.extend(user.get_user_info_as_list())
+        #     # else:
+        #     #     message_list.extend(client_user_object.get_user_info_as_list())
+
+        #     user = havocbot.user.get_user_by_username_for_client(username, client.integration_name)
+        #     if user is not None and user:
+        #         logger.debug(user)
+        #         # Update the user to have the previous username set
+        #         user.current_username = username
+        #         message_list.extend(user.get_user_info_as_list())
+        #     else:
+        #         message_list.extend(client_user_object.get_user_info_as_list())
 
         if message_list is not None and message_list:
             client.send_messages_from_list(

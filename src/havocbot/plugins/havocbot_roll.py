@@ -65,7 +65,8 @@ class RollPlugin(HavocBotPlugin):
         if message.to:
             roll_result = self.get_roll(100)
 
-            user_object = havocbot.user.create_user(client, message)
+            # user_object = havocbot.user.create_user(client, message)
+            user_object = havocbot.user.get_user_by_username_for_client(message.sender, client.integration_name)
             # user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
             self.display_roll(client, message, user_object, roll_result)
 
@@ -210,13 +211,21 @@ class RollPlugin(HavocBotPlugin):
 
         stasher = Stasher.getInstance()
 
-        matching_users = havocbot.user.get_users_by_username(winner_user_object.current_username, client.integration_name)
-        if matching_users is not None and matching_users:
-            if len(matching_users) == 1:
-                logger.info('award_points() - adding %d points to \'%s\' (id \'%s\')' % (len(initial_participants), winner_user_object.current_username, matching_users[0].user_id))
-                stasher.add_points(matching_users[0].user_id, len(initial_participants))
-            else:
-                logger.info('award_points() - more than 1 user match found')
+        # EDIT101
+        # matching_users = havocbot.user.get_users_by_username(winner_user_object.current_username, client.integration_name)
+        # if matching_users is not None and matching_users:
+        #     if len(matching_users) == 1:
+        #         logger.info('award_points() - adding %d points to \'%s\' (id \'%s\')' % (len(initial_participants), winner_user_object.current_username, matching_users[0].user_id))
+        #         stasher.add_points(matching_users[0].user_id, len(initial_participants))
+        #     else:
+        #         logger.info('award_points() - more than 1 user match found')
+        # else:
+        #     logger.info('award_points() - no stashed user found. cannot award points to winner')
+
+        matching_user = havocbot.user.get_user_by_username(winner_user_object.current_username, client.integration_name)
+        if matching_user is not None and matching_user:
+            logger.info('award_points() - adding %d points to \'%s\' (id \'%s\')' % (len(initial_participants), winner_user_object.current_username, matching_users.user_id))
+            stasher.add_points(matching_users.user_id, len(initial_participants))
         else:
             logger.info('award_points() - no stashed user found. cannot award points to winner')
 

@@ -192,12 +192,19 @@ class QuoterPlugin(HavocBotPlugin):
             if new_user_object is not None and new_user_object:
                 username = new_user_object.usernames[client.integration_name][0]
 
-                user_temp_list = havocbot.user.get_users_by_username(username, client.integration_name)
-                if user_temp_list is not None and user_temp_list:
-                    for user in user_temp_list:
-                        logger.debug(user)
-                        # Update the user to have the previous username set
-                        user.current_username = username
+                # EDIT101
+                # user_temp_list = havocbot.user.get_users_by_username(username, client.integration_name)
+                # if user_temp_list is not None and user_temp_list:
+                #     for user in user_temp_list:
+                #         logger.debug(user)
+                #         # Update the user to have the previous username set
+                #         user.current_username = username
+
+                user = havocbot.user.get_user_by_username(username, client.integration_name)
+                if user is not None and user:
+                    logger.debug(user)
+                    # Update the user to have the previous username set
+                    user.current_username = username
 
 
 

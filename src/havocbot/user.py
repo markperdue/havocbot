@@ -223,8 +223,8 @@ class ClientUser(object):
 def create_user(client, message):
     logger.info('create_user_from_callback_and_message() - triggered')
     a_user = User(0)
-    logger.info('create_user_from_callback_and_message() - adding in known info...')
     a_user.name = message.sender
+    a_user.username = message.sender
     a_user.is_stashed = False
     logger.info('create_user_from_callback_and_message() - user info is:')
     logger.info(a_user)
@@ -275,7 +275,8 @@ def find_users_matching_client(search_string, client_integration_name):
     results = []
 
     results.extend(get_users_by_name(search_string, client_integration_name))
-    results.extend(get_users_by_username(search_string, client_integration_name))
+    # results.extend(get_users_by_username(search_string, client_integration_name))  # EDIT101
+    results.append(get_user_by_username(search_string, client_integration_name))
     results.extend(get_users_by_alias(search_string, client_integration_name))
 
     return results
@@ -391,7 +392,6 @@ def get_user_by_username(username, stasher):
 
 
 def get_user_by_username_for_client(username, client_integration_name):
-    logger.debug("get_user_by_username_for_client() triggered in user.py")
     result = None
 
     stasher = Stasher.getInstance()
@@ -400,51 +400,52 @@ def get_user_by_username_for_client(username, client_integration_name):
         if 'users' in stasher.data:
             users = stasher.data['users']
 
-            logger.info("Searching for users...")
+            logger.debug("get_user_by_username_for_client - Searching for users...")
 
             for x in users:
                 if ('usernames' in x and x['usernames'] is not None and x['usernames']):
                     for (key, value) in x['usernames'].items():
                         if key == client_integration_name:
                             for username_string in value:
-                                if username in username_string:
-                                    logger.debug("MATCH of '%s' against '%s" % (username, username_string))
+                                if username == username_string:
                                     result = user_object_from_stasher_json(x)
-                                    break
+                                    result.current_username = username
+                                    logger.debug("get_user_by_username_for_client - returning with '%s'" % (result))
 
-    logger.debug("get_user_by_username returning with '%s'" % (result))
-    return result
+                                    return result
 
+    return None
 
-def get_users_by_username(search_string, client_integration_name):
-    results = []
+# # EDIT101
+# def get_users_by_username(search_string, client_integration_name):
+#     results = []
 
-    stasher = Stasher.getInstance()
+#     stasher = Stasher.getInstance()
 
-    if stasher.data is not None:
-        if 'users' in stasher.data:
-            users = stasher.data['users']
+#     if stasher.data is not None:
+#         if 'users' in stasher.data:
+#             users = stasher.data['users']
 
-            matched_users = []
-            for x in users:
-                if ('usernames' in x and x['usernames'] is not None and x['usernames']):
-                    for (key, value) in x['usernames'].items():
-                        if key == client_integration_name:
-                            for username_string in value:
-                                if search_string in username_string:
-                                    logger.debug("MATCH of '%s' against '%s" % (search_string, username_string))
-                                    matched_users.append(x)
-                                    break
+#             matched_users = []
+#             for x in users:
+#                 if ('usernames' in x and x['usernames'] is not None and x['usernames']):
+#                     for (key, value) in x['usernames'].items():
+#                         if key == client_integration_name:
+#                             for username_string in value:
+#                                 if search_string in username_string:
+#                                     logger.debug("MATCH of '%s' against '%s" % (search_string, username_string))
+#                                     matched_users.append(x)
+#                                     break
 
-            if matched_users:
-                for user_json in matched_users:
-                    a_user = user_object_from_stasher_json(user_json)
-                    if a_user.is_valid():
-                        results.append(a_user)
+#             if matched_users:
+#                 for user_json in matched_users:
+#                     a_user = user_object_from_stasher_json(user_json)
+#                     if a_user.is_valid():
+#                         results.append(a_user)
 
-    logger.debug("get_users_by_username() returning with '[%s]'" % (', '.join(map(str, results))))
+#     logger.debug("get_users_by_username() returning with '[%s]'" % (', '.join(map(str, results))))
 
-    return results
+#     return results
 
 
 def get_user_by_id(user_id, stasher):

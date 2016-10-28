@@ -340,29 +340,26 @@ class HipChat(Client):
             return vcard
 
     def update_user_object_from_message(self, user_object, message_object):
-        logger.info('update_user() - triggered')
+        logger.debug('update_user_object_from_message() - triggered')
 
         # Get client object information
         client_object = self.get_client_object_from_message_object(message_object.sender, channel=message_object.to, event=message_object.event)
 
         # user_object.add_client(client_object)
-        user_object.current_username = client_object.username
-        user_object.name = client_object.name
-
-        logger.info('update_user() - finished')
+        if client_object is not None:
+            if client_object.username is not None:
+                user_object.current_username = client_object.username
+            if client_object.name is not None:
+                user_object.name = client_object.name
 
     def get_client_object_from_message_object(self, message_sender, channel=None, event=None, **kwargs):
         user = None
 
-        logger.info("get_client_object_from_message_object() - channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
-
         if event is not None and event:
             if event in ['chat', 'normal']:
-                # Get users from private message
                 user = self._get_client_object_from_private_chat(message_sender)
 
             elif event in ['groupchat']:
-                # Get users from groupchat
                 user = self._get_user_from_jid(message_sender)
                 # user = self._get_client_object_from_groupchat(message_sender, channel)
 
@@ -384,22 +381,21 @@ class HipChat(Client):
 
         return user
 
-    def _get_client_object_from_private_chat(self, name):
+    def _get_client_object_from_private_chat(self, message_sender):
         user = None
 
-        if name is not None:
-            if isinstance(name, sleekxmpp.jid.JID):
-                jabber_id = name.bare
+        if message_sender is not None:
+            if isinstance(message_sender, sleekxmpp.jid.JID):
+                jabber_id = message_sender.bare
             else:
-                jabber_id = name
+                jabber_id = message_sender
 
             vcard = self._get_vcard_by_jabber_id(jabber_id)
-            user = self.create_client_object_object(jabber_id, name, vcard)
+            user = self.create_client_object_object(jabber_id, message_sender, vcard)
 
         return user
 
     def create_client_object_object(self, jabber_id, name, vcard):
-        logger.info('create_client_object_object() - triggered')
         jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
 
         if vcard is not None:
@@ -411,9 +407,7 @@ class HipChat(Client):
             vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
 
         client_user = HipChatUser(jabber_id_bare, vcard_nickname if vcard_nickname is not None and vcard_nickname else name, vcard_email if vcard_email is not None and vcard_email else None)
-        logger.info(client_user)
-
-        logger.info('create_client_object_object() - returning')
+        logger.debug("create_client_object_object() - returning with '%s'" % (client_user))
 
         return client_user
 
@@ -548,14 +542,18 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
         if msg['type'] == 'groupchat':
             if msg['mucnick'] != self.nick:
                 from_jid = msg._get_attr('from_jid')
-                logger.info("The value for from_jid is '%s'" % (from_jid))
 
                 if from_jid is not None and from_jid:
-                    message_object = Message(msg['body'], from_jid, msg['mucroom'], msg['type'], self.parent.integration_name, datetime.utcnow().replace(tzinfo=tz.tzutc()))
-
+                    msg_from = from_jid
                 else:
-                    message_object = Message(msg['body'], msg['mucnick'], msg['mucroom'], msg['type'], self.parent.integration_name, datetime.utcnow().replace(tzinfo=tz.tzutc()))
+                    jabber_id = self.plugin['xep_0045'].getJidProperty(msg['mucroom'], msg['mucnick'], 'jid')
 
+                    if jabber_id is not None:
+                        msg_from = jabber_id.bare
+                    else:
+                        msg_from = msg['mucnick']
+
+                message_object = Message(msg['body'], msg_from, msg['mucroom'], msg['type'], self.parent.integration_name, datetime.utcnow().replace(tzinfo=tz.tzutc()))
                 logger.info("Processed %s - %s" % (msg['type'], message_object))
 
                 try:
@@ -564,9 +562,6 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
                     logger.error(e)
         elif msg['type'] in ('normal', 'chat'):
             if msg['from'].bare != self.boundjid.bare:
-                # message_object = Message(msg['body'], msg['from'], msg['from'], msg['type'], 'hipchat', datetime.utcnow().replace(tzinfo=tz.tzutc()))
-                # RECENT CHANGE!!
-                # message_object = Message(msg['body'], msg['from'].bare, msg['from'].bare, msg['type'], 'hipchat', datetime.utcnow().replace(tzinfo=tz.tzutc()))
                 message_object = Message(msg['body'], msg['from'].bare, msg['to'].bare, msg['type'], self.parent.integration_name, datetime.utcnow().replace(tzinfo=tz.tzutc()))
                 logger.info("Processed %s - %s" % (msg['type'], message_object))
 
