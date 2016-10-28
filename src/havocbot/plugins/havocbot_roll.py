@@ -222,7 +222,7 @@ class RollPlugin(HavocBotPlugin):
         # else:
         #     logger.info('award_points() - no stashed user found. cannot award points to winner')
 
-        matching_user = havocbot.user.get_user_by_username(winner_user_object.current_username, client.integration_name)
+        matching_user = havocbot.user.get_user_by_username_for_client(winner_user_object.current_username, client.integration_name)
         if matching_user is not None and matching_user:
             logger.info('award_points() - adding %d points to \'%s\' (id \'%s\')' % (len(initial_participants), winner_user_object.current_username, matching_users.user_id))
             stasher.add_points(matching_users.user_id, len(initial_participants))

@@ -200,7 +200,7 @@ class QuoterPlugin(HavocBotPlugin):
                 #         # Update the user to have the previous username set
                 #         user.current_username = username
 
-                user = havocbot.user.get_user_by_username(username, client.integration_name)
+                user = havocbot.user.get_user_by_username_for_client(username, client.integration_name)
                 if user is not None and user:
                     logger.debug(user)
                     # Update the user to have the previous username set

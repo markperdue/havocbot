@@ -199,33 +199,6 @@ class HipChat(Client):
 
             return vcard
 
-    # def get_user_by_username(self, jabber_id, **kwargs):
-    #     user = self._get_user_from_private_chat(jabber_id)
-
-    #     logger.debug("get_user_by_username - user is '%s'" % (user))
-    #     if user is not None:
-    #         return user
-    #     else:
-    #         return None
-
-    # def get_users_by_name(self, name, channel=None, event=None, **kwargs):
-    #     results = []
-
-    #     logger.info("Channel is '%s', name is '%s', event is '%s'" % (channel, name, event))
-
-    #     # Fetch JID from xep_0045
-    #     if channel is not None and channel:
-    #         if '@' not in channel:
-    #             channel = "%s@%s" % (channel, self.server)
-
-    #         if event is not None and event == 'groupchat':
-    #             user = self._get_user_from_groupchat(name, channel)
-    #             if user is not None:
-    #                 results.append(user)
-
-    #     logger.debug("get_users_by_name returning with '%s'" % (results))
-    #     return results
-
     def get_users_in_channel(self, channel, event=None, **kwargs):
         result_list = []
 
