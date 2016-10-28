@@ -65,7 +65,6 @@ class RollPlugin(HavocBotPlugin):
         if message.to:
             roll_result = self.get_roll(100)
 
-            # user_object = havocbot.user.create_user(client, message)
             user_object = havocbot.user.get_user_by_username_for_client(message.sender, client.integration_name)
             # user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
             self.display_roll(client, message, user_object, roll_result)
@@ -74,7 +73,7 @@ class RollPlugin(HavocBotPlugin):
         if message.to:
             roll_result = self.get_roll(100000000000)
 
-            user_object = havocbot.user.create_user(client, message)
+            user_object = havocbot.user.get_user_by_username_for_client(message.sender, client.integration_name)
             # user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
             self.display_roll(client, message, user_object, roll_result)
 
@@ -92,7 +91,7 @@ class RollPlugin(HavocBotPlugin):
         client.send_message(text, message.reply(), event=message.event)
 
     def rolloff(self, client, message, **kwargs):
-        user_object = havocbot.user.create_user(client, message)
+        user_object = havocbot.user.get_user_by_username_for_client(message.sender, client.integration_name)
         # user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
 
         if not self.rolloff_in_process:
