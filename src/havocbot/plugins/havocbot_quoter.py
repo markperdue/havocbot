@@ -75,7 +75,7 @@ class QuoterPlugin(HavocBotPlugin):
 
         # Count occurences of messages by a user in a client integration
         previous_messages = [x for x in self.recent_messages if x[0] == message.sender and x[2] == client.integration_name and x[3] == message.to]
-        logger.info("tracked messages for user %s in channel %s is %d" % (message.sender, message.to, len(previous_messages)))
+        logger.debug("tracked messages for user %s in channel %s is %d" % (message.sender, message.to, len(previous_messages)))
 
         if len(previous_messages) >= self.max_messages_per_user_per_channel:
             # Remove oldest message from this user for the client
@@ -84,7 +84,7 @@ class QuoterPlugin(HavocBotPlugin):
             except ValueError:
                 pass
 
-        logger.info("Adding message by user %s to recent messages" % (message.sender))
+        logger.debug("Adding message by user %s to recent messages" % (message.sender))
 
         # Add new message
         self.recent_messages.append(a_message_tuple)

@@ -350,7 +350,7 @@ class HavocBot:
                 # Pass the message to the function associated with the trigger
                 try:
                     if hasattr(tuple_item, 'requires') and tuple_item.requires:
-                        logger.info("This trigger requires permission '%s'" % (tuple_item.requires))
+                        logger.debug("This trigger requires permission '%s'" % (tuple_item.requires))
 
                         # Check if user has this permission
                         # user = self.get_user_from_message(message_object.sender, channel=message_object.sender, event=message_object.event)
@@ -358,14 +358,14 @@ class HavocBot:
 
                         if user is not None and user:
                             if user.has_permission(tuple_item.requires):
-                                logger.info("permission '%s' found for user %s" % (tuple_item.requires, user.user_id))
+                                logger.debug("permission '%s' found for user %s" % (tuple_item.requires, user.user_id))
 
                                 if hasattr(tuple_item, 'param_dict') and tuple_item.param_dict:
                                     triggered_function(client, message_object, capture_groups=match.groups(), **tuple_item.param_dict)
                                 else:
                                     triggered_function(client, message_object, capture_groups=match.groups())
                             else:
-                                logger.info("permission '%s' not found for user %s" % (tuple_item.requires, user.user_id))
+                                logger.debug("permission '%s' not found for user %s" % (tuple_item.requires, user.user_id))
                                 text = 'You do not have permission to do that. Permission required: %s' % (tuple_item.requires)
                                 client.send_message(text, message_object.reply(), event=message_object.event)
                         else:
@@ -373,7 +373,7 @@ class HavocBot:
                             client.send_message(text, message_object.reply(), event=message_object.event)
 
                     else:
-                        logger.info("This trigger does not require permission")
+                        logger.debug("This trigger does not require permission")
                         if hasattr(tuple_item, 'param_dict') and tuple_item.param_dict:
                             triggered_function(client, message_object, capture_groups=match.groups(), **tuple_item.param_dict)
                         else:
