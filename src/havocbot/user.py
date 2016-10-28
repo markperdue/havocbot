@@ -276,7 +276,9 @@ def find_users_matching_client(search_string, client_integration_name):
 
     results.extend(get_users_by_name(search_string, client_integration_name))
     # results.extend(get_users_by_username(search_string, client_integration_name))  # EDIT101
-    results.append(get_user_by_username_for_client(search_string, client_integration_name))
+    user_result = get_user_by_username_for_client(search_string, client_integration_name)
+    if user_result is not None and user_result:
+        results.append(user_result)
     results.extend(get_users_by_alias(search_string, client_integration_name))
 
     return results

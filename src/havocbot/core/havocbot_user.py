@@ -114,7 +114,6 @@ class UserPlugin(HavocBotPlugin):
             client.send_message(text, message.reply(), event=message.event)
 
     def trigger_get_user(self, client, message, **kwargs):
-        logger.info('HERE')
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
         captured_usernames = capture[0]
@@ -155,7 +154,9 @@ class UserPlugin(HavocBotPlugin):
                     "Found %d matching users" % (len(set_users))
                 )
             for user_object in set_users:
-                message_list.extend(user_object.get_user_info_as_list())
+                logger.debug("Matched User - '%s'" % (user_object))
+                if user_object is not None:
+                    message_list.extend(user_object.get_user_info_as_list())
                 # message_list.extend(user_object.get_usernames_as_list())
                 # message_list.extend(
                 #     user_object.get_plugin_data_strings_as_list()
