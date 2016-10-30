@@ -135,6 +135,11 @@ class UserPlugin(HavocBotPlugin):
                 #     matched_users.append(user)
                 #     is_user_found = True
 
+                # # TEST TO GET CLIENTUSER ONLY
+                # client_user = client.get_user_from_message(message.sender, message.to, message.event)
+                # logger.info('Client user is...')
+                # logger.info(client_user)    
+
                 users = havocbot.user.find_users_matching_client(word, client.integration_name)
                 if users is not None and users:
                     matched_users.extend(users)

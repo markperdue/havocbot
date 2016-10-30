@@ -174,60 +174,60 @@ class QuoterPlugin(HavocBotPlugin):
 
         client.send_messages_from_list(message_list, message.reply(), event=message.event)
 
-    def search_messages_for_user_match(self, message_list, user_object, client, reverse=None):
-        if reverse is True:
-            message_list = message_list[::-1]
-            # message_list = list(reversed(message_list))  # Another approach
+    # def search_messages_for_user_match(self, message_list, user_object, client, reverse=None):
+    #     if reverse is True:
+    #         message_list = message_list[::-1]
+    #         # message_list = list(reversed(message_list))  # Another approach
 
-        for message in message_list:
-            logger.info("message 0 index is '%s'" % (message[0]))
-            logger.info("message 1 index is '%s'" % (message[1]))
-            logger.info("message 2 index is '%s'" % (message[2]))
-            logger.info("message 3 index is '%s'" % (message[3]))
-            logger.info("message 4 index is '%s'" % (message[4]))
-            logger.info("message 5 index is '%s'" % (message[5]))
-            new_user_object = client.get_user_from_message(message[0], channel=message[2], event=message[3])
-            logger.info(new_user_object)
+    #     for message in message_list:
+    #         logger.info("message 0 index is '%s'" % (message[0]))
+    #         logger.info("message 1 index is '%s'" % (message[1]))
+    #         logger.info("message 2 index is '%s'" % (message[2]))
+    #         logger.info("message 3 index is '%s'" % (message[3]))
+    #         logger.info("message 4 index is '%s'" % (message[4]))
+    #         logger.info("message 5 index is '%s'" % (message[5]))
+    #         new_user_object = client.get_user_from_message(message[0], channel=message[2], event=message[3])
+    #         logger.info(new_user_object)
 
-            if new_user_object is not None and new_user_object:
-                username = new_user_object.usernames[client.integration_name][0]
+    #         if new_user_object is not None and new_user_object:
+    #             username = new_user_object.usernames[client.integration_name][0]
 
-                # EDIT101
-                # user_temp_list = havocbot.user.get_users_by_username(username, client.integration_name)
-                # if user_temp_list is not None and user_temp_list:
-                #     for user in user_temp_list:
-                #         logger.debug(user)
-                #         # Update the user to have the previous username set
-                #         user.current_username = username
+    #             # EDIT101
+    #             # user_temp_list = havocbot.user.get_users_by_username(username, client.integration_name)
+    #             # if user_temp_list is not None and user_temp_list:
+    #             #     for user in user_temp_list:
+    #             #         logger.debug(user)
+    #             #         # Update the user to have the previous username set
+    #             #         user.current_username = username
 
-                user = havocbot.user.get_user_by_username_for_client(username, client.integration_name)
-                if user is not None and user:
-                    logger.debug(user)
-                    # Update the user to have the previous username set
-                    user.current_username = username
+    #             user = havocbot.user.get_user_by_username_for_client(username, client.integration_name)
+    #             if user is not None and user:
+    #                 logger.debug(user)
+    #                 # Update the user to have the previous username set
+    #                 user.current_username = username
 
 
 
-            if user_object.name is not None and user_object.name and message[0].lower() in user_object.name.lower():
-                return message
-            elif user_object.current_username is not None and user_object.current_username and message[0].lower() in user_object.current_username.lower():
-                return message
-            # elif user_object.aliases is not None and user_object.aliases and message[0].lower() in user_object.aliases:
-            #     return message
-            # XMPP messages include a resource after the JID so need to capture case where the sender includes the resource but the user_id does not
-            # elif user_object.user_id.lower() in message[0].lower():
-            #     return message
+    #         if user_object.name is not None and user_object.name and message[0].lower() in user_object.name.lower():
+    #             return message
+    #         elif user_object.current_username is not None and user_object.current_username and message[0].lower() in user_object.current_username.lower():
+    #             return message
+    #         # elif user_object.aliases is not None and user_object.aliases and message[0].lower() in user_object.aliases:
+    #         #     return message
+    #         # XMPP messages include a resource after the JID so need to capture case where the sender includes the resource but the user_id does not
+    #         # elif user_object.user_id.lower() in message[0].lower():
+    #         #     return message
 
-        # for message in message_list:
-        #     if message[0].lower() in [user_object.user_id.lower(), user_object.name.lower(), user_object.username.lower()]:
-        #         return message
-        #     elif user_object.aliases is not None and user_object.aliases and message[0].lower() in user_object.aliases:
-        #         return message
-        #     # XMPP messages include a resource after the JID so need to capture case where the sender includes the resource but the user_id does not
-        #     elif user_object.user_id.lower() in message[0].lower():
-        #         return message
+    #     # for message in message_list:
+    #     #     if message[0].lower() in [user_object.user_id.lower(), user_object.name.lower(), user_object.username.lower()]:
+    #     #         return message
+    #     #     elif user_object.aliases is not None and user_object.aliases and message[0].lower() in user_object.aliases:
+    #     #         return message
+    #     #     # XMPP messages include a resource after the JID so need to capture case where the sender includes the resource but the user_id does not
+    #     #     elif user_object.user_id.lower() in message[0].lower():
+    #     #         return message
 
-        return None
+    #     return None
 
     def add_quote(self, client, message, **kwargs):
         text = "Coming soon"
