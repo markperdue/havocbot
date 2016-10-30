@@ -353,7 +353,6 @@ class HavocBot:
                         logger.debug("This trigger requires permission '%s'" % (tuple_item.requires))
 
                         # Check if user has this permission
-                        # user = self.get_user_from_message(message_object.sender, channel=message_object.sender, event=message_object.event)
                         user = havocbot.user.get_user_by_username_for_client(message_object.sender, message_object.client)
 
                         if user is not None and user:

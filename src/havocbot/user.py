@@ -25,6 +25,7 @@ class User(object):
         self.usernames = {}
         self.current_username = None
         self.permissions = None
+        self.client_user = None
 
     def __repr__(self):
         return ("User(%s, %s, %s, %s, %d, %s, %s)"
@@ -43,6 +44,10 @@ class User(object):
             sb += ", Aliases: %s" % (self.get_aliases_as_string())
         if self.permissions:
             sb += ", Permissions: %s" % (self.get_permissions_as_string())
+        if self.client_user:
+            sb += ", Client: %s" % (self.client_user)
+
+        # Close out the User() string
         sb += ")"
 
         return sb
