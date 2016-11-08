@@ -91,11 +91,15 @@ class RollPlugin(HavocBotPlugin):
     def rolloff(self, client, message, **kwargs):
         user_object = havocbot.user.get_user_by_username_for_client(message.sender, client.integration_name)
 
-        if not self.rolloff_in_process:
-            # Start a new rolloff
-            self.new_rolloff(client, message)
+        if user_object is not None:
+            if not self.rolloff_in_process:
+                # Start a new rolloff
+                self.new_rolloff(client, message)
 
-        self.add_user_to_rolloff(client, message, user_object)
+            self.add_user_to_rolloff(client, message, user_object)
+        else:
+            text = "Only known users can do that."
+            client.send_message(text, message.reply(), event=message.event)
 
     def new_rolloff(self, client, message):
         text = "Time to throw it down. A %s rolloff has been called. Join the rolloff in the next %s seconds by typing '!rolloff'" % ('regular', self.rolloff_join_window)
