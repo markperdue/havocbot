@@ -100,7 +100,7 @@ class HelpPlugin(HavocBotPlugin):
                     for item in self.get_usage_lines_from_plugin_as_list(dictionary['usage']):
                         new_list.append(item)
             else:
-                new_list.append("%s" % (plugin_short_name, plugin_name))
+                new_list.append("%s %s" % (plugin_short_name, plugin_name))
 
         return new_list
 

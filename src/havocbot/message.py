@@ -11,7 +11,7 @@ class Message(object):
         return "Message(Text: '%s', Sender: '%s', To: '%s', Event: '%s', Client: '%s')" % (self.text, self.sender, self.to, self.event, self.client)
 
     def reply(self):
-    	if self.event == 'groupchat':
-    		return self.to
-    	else:
-    		return self.sender
+        if self.event == 'groupchat':
+            return self.to
+        else:
+            return self.sender

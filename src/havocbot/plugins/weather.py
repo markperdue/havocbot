@@ -326,7 +326,7 @@ def main():
     zip_code_list = return_zip_code_list_from_input(args)
 
     # Create a list of temperature objects from a zip code list
-    temperatures = return_temperatures_list(zip_code_list)
+    temperatures = return_temperatures_list(zip_code_list, None, None, 5)
 
     # Print the weather list
     print_weather_list(temperatures)

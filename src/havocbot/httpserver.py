@@ -32,7 +32,7 @@ class ListenServer(object):
                         self.is_enabled = True
                 elif item[0] == 'http_server_port':
                     port_value = int(item[1])
-                    if port_value > 0 and port_value < 65535:
+                    if 0 < port_value < 65535:
                         self.port = port_value
                     else:
                         logger.error("http_server_port must be set to a valid port in the settings.ini file")

@@ -128,7 +128,7 @@ class RollPlugin(HavocBotPlugin):
         if self.rolloff_in_process:
             elapsed_time = time.time() - self.rolloff_start_time
 
-            if elapsed_time > 0 and elapsed_time < self.rolloff_join_window:
+            if 0 < elapsed_time < self.rolloff_join_window:
                 logger.info("Checking on adding user '%s' to list '%s'" % (user, self.rolloff_rollers_initial))
 
                 if any(x.current_username == user.current_username for x in self.rolloff_rollers_initial):
