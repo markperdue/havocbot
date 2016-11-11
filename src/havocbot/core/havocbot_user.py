@@ -22,25 +22,31 @@ class UserPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            Usage(command="!user <name>", example="!user mark", description="get information on a user"),
+            Usage(command="!user get <name>", example="!user get mark", description="get information on a user"),
             Usage(command="!userid <user_id>", example="!userid 1", description="get information on a user by id"),
             Usage(command="!users", example=None, description="get user info on all users in the channel"),
             Usage(command="!adduser <user_id>", example="!adduser markaperdue", description="add the user to the database"),
             Usage(command="!clientuser <name>", example="!clientuser mark", description="get information on a user from the chat client"),
             Usage(command="!stasheruser <name>", example="!stasheruser mark", description="get information on a user from local storage"),
             Usage(command="!me", example=None, description="get information on you"),
+            Usage(command="!user <user_id> add_alias <alias>", example="!user 1 add_alias the_enforcer", description="adds an alias to a user"),
+            Usage(command="!user <user_id> del_alias <alias>", example="!user 1 del_alias the_enforcer", description="deletes an alias to a user"),
+            Usage(command="!user <user_id> list_aliases", example="!user 1 get_aliases", description="lists any aliases to a user"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!user\s(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True}, requires=None),
+            Trigger(match="!user\sget(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True}, requires=None),
             Trigger(match="!userid\s(.*)", function=self.trigger_coming_soon, param_dict={'use_stasher': True, 'use_client': True, 'id': True}, requires=None),
             Trigger(match="!users", function=self.trigger_get_users, param_dict=None, requires=None),
             Trigger(match="!adduser\s(.*)", function=self.trigger_coming_soon, param_dict=None, requires="bot:admin"),
             Trigger(match="!clientuser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_client': True}, requires=None),
             Trigger(match="!stasheruser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_stasher': True}, requires=None),
             Trigger(match="!me", function=self.trigger_get_sender, param_dict=None, requires=None),
+            Trigger(match="!user\s([0-9]+)\sadd_alias\s(.+)", function=self.add_alias_for_user_id, param_dict=None, requires="bot:admin"),
+            Trigger(match="!user\s([0-9]+)\sdel_alias\s(.+)", function=self.del_alias_for_user_id, param_dict=None, requires="bot:admin"),
+            Trigger(match="!user\s([0-9]+)\slist_aliases\s(.+)", function=self.list_aliases_for_user_id, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -61,6 +67,36 @@ class UserPlugin(HavocBotPlugin):
 
     def start(self, client, message, **kwargs):
         pass
+
+    def add_alias_for_user_id(self, client, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_user_id = capture[0]
+        captured_alias = capture[1]
+
+        a_user = havocbot.user.get_user_by_id(captured_user_id)
+
+        if a_user is not None and a_user:
+            a_user.add_alias(captured_alias)
+            a_user.save()
+
+    def del_alias_for_user_id(self, client, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_user_id = capture[0]
+        captured_alias = capture[1]
+
+        a_user = havocbot.user.get_user_by_id(captured_user_id)
+
+        if a_user is not None and a_user:
+            a_user.del_alias(captured_alias)
+            a_user.save()
+
+    def list_aliases_for_user_id(self, client, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_user_id = capture[0]
+        captured_alias = capture[1]
 
     def trigger_coming_soon(self, client, message, **kwargs):
         text = 'This feature is coming soon'

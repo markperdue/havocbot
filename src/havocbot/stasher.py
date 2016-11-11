@@ -70,24 +70,56 @@ class Stasher(Singleton):
                 self.data[key].append(json)
                 self.write_db()
 
+    def update_json_for_key(self, json, key, unique_root_key, unique_root_value):
+        if self.data is not None:
+            if key in self.data:
+                logger.info("Key '%s' is known" % (key))
+                result = next((
+                    x for x in self.data[key]
+                    if unique_root_key in x
+                    and x[unique_root_key] == unique_root_value
+                ), None)
+
+                if result is not None:
+                    result = json
+            else:
+                logger.info("Adding new key %s" % (key))
+                self.data[key] = []
+                self.data[key].append(json)
+
+            self.write_db()
+
     def write_data(self):
         logger.info('Writing data')
 
     def add_user(self, user_object):
-        logger.info(
-            "Add user triggered with user_object '%s'" % (user_object)
-        )
-        user_json = json.loads(
-            jsonpickle.encode(user_object, unpicklable=False)
-        )
+        logger.info("Add user triggered with user_object '%s'" % (user_object))
+        user_json = json.loads(jsonpickle.encode(user_object, unpicklable=False))
         logger.info("pickled user is '%s'" % (user_json))
 
         try:
-            self.add_json_to_key(
-                user_json, 'users', 'user_id', user_object.user_id
-            )
+            self.add_json_to_key(user_json, 'users', 'user_id', user_object.user_id)
         except:
             raise
+
+    def update_user(self, user_object):
+        logger.info("Update user triggered with user_object '%s'" % (user_object))
+        user_json = json.loads(jsonpickle.encode(user_object, unpicklable=False))
+        logger.info("pickled user is '%s'" % (user_json))
+
+        try:
+            self.update_json_for_key(user_json, 'users', 'user_id', user_object.user_id)
+        except:
+            raise
+
+    def add_or_update_user(self, user_object):
+        result = next((x for x in self.data['users'] if 'user_id' in x and x['user_id'] == user_object.user_id), None)
+
+        if result is not None:
+            self.update_user(user_object)
+        else:
+            self.add_user(user_object)
+
 
     def add_alias(self, username, alias):
         # logger.debug("Add alias triggered with username '%s' and alias '%s'"
@@ -116,30 +148,30 @@ class Stasher(Singleton):
             ]
             self.write_db()
 
-    def get_user_by_id(self, user_id):
-        result = None
-
-        if self.data is not None:
-            if 'users' in self.data:
-                users = self.data['users']
-                matched_users = [
-                    x for x in users
-                    if (
-                        'user_id' in x
-                        and x['user_id'] is not None
-                        and x['user_id'] == user_id
-                    )
-                ]
-
-                if matched_users:
-                    for user_json in matched_users:
-                        a_user = havocbot.user.user_object_from_stasher_json(user_json)
-                        if a_user.is_valid():
-                            logger.debug("Found user object - %s" % (a_user))
-                            result = a_user
-
-        logger.debug("get_users_by_id returning with '%s'" % (result))
-        return result
+    # def get_user_by_id(self, user_id):
+    #     result = None
+    #
+    #     if self.data is not None:
+    #         if 'users' in self.data:
+    #             users = self.data['users']
+    #             matched_users = [
+    #                 x for x in users
+    #                 if (
+    #                     'user_id' in x
+    #                     and x['user_id'] is not None
+    #                     and x['user_id'] == user_id
+    #                 )
+    #             ]
+    #
+    #             if matched_users:
+    #                 for user_json in matched_users:
+    #                     a_user = havocbot.user.user_object_from_stasher_json(user_json)
+    #                     if a_user.is_valid():
+    #                         logger.debug("Found user object - %s" % (a_user))
+    #                         result = a_user
+    #
+    #     logger.debug("get_users_by_id returning with '%s'" % (result))
+    #     return result
 
     def get_plugin_data(self, plugin_name):
         data = {}
@@ -157,7 +189,8 @@ class Stasher(Singleton):
 
     def add_points(self, user_id, points):
         if isinstance(points, (int, long)):
-            stashed_user = self.get_user_by_id(user_id)
+
+            stashed_user = havocbot.user.get_user_by_id(user_id)
             if stashed_user is not None and stashed_user:
                 logger.info("Users existing points set to %d. Adding %d points" % (stashed_user.points, points))
 

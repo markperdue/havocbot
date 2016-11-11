@@ -193,6 +193,19 @@ class User(object):
 
         return False
 
+    def add_alias(self, alias):
+        if alias not in self.aliases:
+            self.aliases.append(alias)
+
+    def del_alias(self, alias):
+        if alias in self.aliases:
+            self.aliases.remove(alias)
+
+    def save(self):
+        stasher = Stasher.getInstance()
+
+        stasher.add_or_update_user(self)
+
     # def to_json(self):
     #     json = {
     #         'name': self.name,
@@ -455,29 +468,26 @@ def get_user_by_username_for_client(username, client_integration_name):
 #     return results
 
 
-def get_user_by_id(user_id, stasher):
+def get_user_by_id(user_id):
     result = None
 
-    if stasher.data is not None:
-        if 'users' in stasher.data:
-            users = stasher.data['users']
-            matched_users = [
-                x for x in users
-                if (
-                    'user_id' in x
-                    and x['user_id'] is not None
-                    and x['user_id'] == user_id
-                )
-            ]
+    stasher = Stasher.getInstance()
 
-            if matched_users:
-                for user_json in matched_users:
-                    a_user = user_object_from_stasher_json(user_json)
-                    if a_user.is_valid():
-                        logger.debug("Found user object - %s" % (a_user))
-                        result = a_user
+    if stasher.data is not None and 'users' in stasher.data:
+        user_data = stasher.data['users']
 
-    logger.debug("get_users_by_id returning with '%s'" % (result))
+        match = next(
+            (x for x in user_data if 'user_id' in x and x['user_id'] is not None and x['user_id'] == int(user_id)),
+            None)
+
+        if match:
+            logger.debug(match)
+            a_user = user_object_from_stasher_json(match)
+            if a_user.is_valid():
+                logger.debug("Found user object - %s" % (a_user))
+                result = a_user
+
+    logger.debug("get_user_by_id returning with '%s'" % (result))
     return result
 
 
@@ -492,30 +502,30 @@ def get_users(stasher):
     return results
 
 
-def get_aliases_for_username(username, stasher):
-    results = []
+# def get_aliases_for_username(username, stasher):
+#     results = []
+#
+#     if stasher.data is not None:
+#         if 'user_aliases' in stasher.data:
+#             for user_alias in stasher.data['user_aliases']:
+#                 if user_alias['username'] == username:
+#                     logger.debug("Found alias %s for %s"
+#                                  % (user_alias['alias'],
+#                                     user_alias['username']))
+#                     results.append(user_alias)
+#
+#     return results
 
-    if stasher.data is not None:
-        if 'user_aliases' in stasher.data:
-            for user_alias in stasher.data['user_aliases']:
-                if user_alias['username'] == username:
-                    logger.debug("Found alias %s for %s"
-                                 % (user_alias['alias'],
-                                    user_alias['username']))
-                    results.append(user_alias)
 
-    return results
-
-
-def display_aliases_for_username(username, stasher):
-    aliases = stasher.get_aliases_for_username(username)
-    if aliases:
-        logger.debug("There are %d known aliases for %s"
-                     % (len(aliases), username))
-        for alias in aliases:
-            logger.debug(alias)
-    else:
-        logger.debug("There are no known aliases for %s" % (username))
+# def display_aliases_for_username(username, stasher):
+#     aliases = stasher.get_aliases_for_username(username)
+#     if aliases:
+#         logger.debug("There are %d known aliases for %s"
+#                      % (len(aliases), username))
+#         for alias in aliases:
+#             logger.debug(alias)
+#     else:
+#         logger.debug("There are no known aliases for %s" % (username))
 
 
 def display_users(stasher):
