@@ -5,7 +5,7 @@ from datetime import datetime
 import logging
 import random
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
-from havocbot.stasher import Stasher
+from havocbot.stasher import StasherDB
 import havocbot.user
 
 logger = logging.getLogger(__name__)
@@ -132,7 +132,7 @@ class QuoterPlugin(HavocBotPlugin):
             for word in words:
                 is_quote_found_for_user = False
 
-                users = havocbot.user.find_users_matching_client(word, client.integration_name)
+                users = self.havocbot.db.find_users_by_matching_string_for_client(word, client.integration_name)
                 # logger.debug(users)
 
                 if users is not None and users:
@@ -235,7 +235,7 @@ class QuoterPlugin(HavocBotPlugin):
         # # Get the results of the capture
         # capture = kwargs.get('capture_groups', None)
         # captured_name = capture[0]
-        # users = havocbot.user.find_users_matching_client(captured_name, client.integration_name)
+        # users = self.havocbot.db.find_users_by_matching_string_for_client(captured_name, client.integration_name)
         # logger.info("users are...")
         # logger.info(users)
         # user_that_typed_command = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
@@ -322,7 +322,7 @@ def format_datetime_for_display(date_object):
     return date_object.astimezone(tz.tzlocal()).strftime("%A %B %d %Y %I:%M%p")
 
 
-class StasherQuote(Stasher):
+class StasherQuote(StasherDB):
     def add_quote(self, user_id, quote, client, channel, timestamp):
         logger.info("Adding new quote - user_id '%s', client '%s', channel '%s', timestamp '%s', quote '%s'" % (user_id, client, channel, timestamp, quote))
 

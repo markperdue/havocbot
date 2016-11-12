@@ -116,7 +116,7 @@ class XMPP(Client):
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def get_user_by_id(self, jabber_id, **kwargs):
+    def find_user_by_id(self, jabber_id, **kwargs):
         user = None
 
         # Arrive here commonly through private messages
@@ -129,13 +129,13 @@ class XMPP(Client):
         #     # Fallback to trying to get a user object from a name
         #     user = self._get_user_from_groupchat(jabber_id, **kwargs)
 
-        logger.debug("get_user_by_id - user is '%s'" % (user))
+        logger.debug("find_user_by_id - user is '%s'" % (user))
         if user is not None:
             return user
         else:
             return None
 
-    def get_users_by_name(self, name, channel=None, event=None, **kwargs):
+    def find_users_by_name(self, name, channel=None, event=None, **kwargs):
         results = []
 
         logger.info("Channel is '%s', name is '%s', event is '%s'" % (channel, name, event))
@@ -150,7 +150,7 @@ class XMPP(Client):
                 if user is not None:
                     results.append(user)
 
-        logger.debug("get_users_by_name returning with '%s'" % (results))
+        logger.debug("find_users_by_name - returning with '%s'" % (results))
         return results
 
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):

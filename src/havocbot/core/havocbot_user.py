@@ -3,9 +3,7 @@
 import logging
 import havocbot.user
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
-from havocbot.stasher import Stasher
 import havocbot.exceptions as exceptions
-from havocbot.havocbottinydb import StasherTinyDB
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +37,7 @@ class UserPlugin(HavocBotPlugin):
     def plugin_triggers(self):
         return [
             Trigger(match="!user\sget(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True}, requires=None),
-            Trigger(match="!userid\s([0-9]+)", function=self.get_user_by_id, param_dict=None, requires=None),
+            Trigger(match="!userid\s([0-9]+)", function=self.find_user_by_id, param_dict=None, requires=None),
             Trigger(match="!users", function=self.trigger_get_users, param_dict=None, requires=None),
             Trigger(match="!adduser\s(.*)", function=self.trigger_coming_soon, param_dict=None, requires="bot:admin"),
             Trigger(match="!clientuser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_client': True}, requires=None),
@@ -69,13 +67,12 @@ class UserPlugin(HavocBotPlugin):
     def start(self, client, message, **kwargs):
         pass
 
-    def get_user_by_id(self, client, message, **kwargs):
+    def find_user_by_id(self, client, message, **kwargs):
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
         captured_user_id = capture[0]
 
-        db = StasherTinyDB()
-        result = db.find_user_by_id(int(captured_user_id))
+        result = self.havocbot.db.find_user_by_id(int(captured_user_id))
         logger.info("Result here is '%s'" % (result))
 
     def add_alias_for_user_id(self, client, message, **kwargs):
@@ -84,7 +81,7 @@ class UserPlugin(HavocBotPlugin):
         captured_user_id = capture[0]
         captured_alias = capture[1]
 
-        a_user = havocbot.user.get_user_by_id(captured_user_id)
+        a_user = self.havocbot.db.find_user_by_id(captured_user_id)
 
         if a_user is not None and a_user:
             a_user.add_alias(captured_alias)
@@ -96,7 +93,7 @@ class UserPlugin(HavocBotPlugin):
         captured_user_id = capture[0]
         captured_alias = capture[1]
 
-        a_user = havocbot.user.get_user_by_id(captured_user_id)
+        a_user = self.havocbot.db.find_user_by_id(captured_user_id)
 
         if a_user is not None and a_user:
             a_user.del_alias(captured_alias)
@@ -115,7 +112,7 @@ class UserPlugin(HavocBotPlugin):
     def trigger_get_sender(self, client, message, **kwargs):
         message_list = []
         
-        user = havocbot.user.get_user_by_username_for_client(message.sender, client.integration_name)
+        user = self.havocbot.db.find_user_by_username_for_client(message.sender, client.integration_name)
         if user is not None and user:
             logger.debug(user)
             message_list.extend(user.get_user_info_as_list())
@@ -186,7 +183,7 @@ class UserPlugin(HavocBotPlugin):
                 # logger.info('Client user is...')
                 # logger.info(client_user)    
 
-                users = havocbot.user.find_users_matching_client(word, client.integration_name)
+                users = self.havocbot.db.find_users_by_matching_string_for_client(word, client.integration_name)
                 if users is not None and users:
                     matched_users.extend(users)
                     is_user_found = True
@@ -254,7 +251,7 @@ class UserPlugin(HavocBotPlugin):
         captured_values = capture[0].split()
 
         if captured_values:
-            stasher = Stasher.getInstance()
+            stasher = StasherDB.getInstance()
             logger.info("values are '%s'" % (captured_values))
             # try:
             #     logger.info(

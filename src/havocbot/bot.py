@@ -7,6 +7,7 @@ import threading
 import time
 from havocbot import pluginmanager
 from havocbot import httpserver
+from havocbot.stasherfactory import StasherFactory
 import havocbot.user
 
 # Python2/3 compat
@@ -40,6 +41,8 @@ class HavocBot:
         self.should_restart = False
         self.http_server = None
         self.exact_match_one_word_triggers = False
+        # self.db = Stasher.factory('StasherTinyDB')
+        self.db = StasherFactory.factory('StasherTinyDB')
 
     def configure(self, settings_file):
         self.load_settings_from_file(settings_file)
@@ -353,7 +356,7 @@ class HavocBot:
                         logger.debug("This trigger requires permission '%s'" % (tuple_item.requires))
 
                         # Check if user has this permission
-                        user = havocbot.user.get_user_by_username_for_client(message_object.sender, message_object.client)
+                        user = self.db.find_user_by_username_for_client(message_object.sender, message_object.client)
 
                         if user is not None and user:
                             if user.has_permission(tuple_item.requires):

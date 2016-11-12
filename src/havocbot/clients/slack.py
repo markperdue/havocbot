@@ -137,14 +137,14 @@ class Slack(Client):
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def get_user_by_id(self, user_id, **kwargs):
+    def find_user_by_id(self, user_id, **kwargs):
         if self.client:
             user_json = self.client.api_call('users.info', user=user_id)
             logger.debug(user_json)
 
         return create_user_object_from_json(user_json['user']) if user_json is not None and 'user' in user_json else None
 
-    def get_users_by_name(self, name, channel=None, event=None, **kwargs):
+    def find_users_by_name(self, name, channel=None, event=None, **kwargs):
         results = []
 
         if self.client:
@@ -158,7 +158,7 @@ class Slack(Client):
                 else:
                     results.append(matched_users[0])
 
-        logger.debug("get_users_by_name returning with '%s'" % (results))
+        logger.debug("find_users_by_name - returning with '%s'" % (results))
         return results
 
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
@@ -169,7 +169,7 @@ class Slack(Client):
         if event is not None and event:
             if event == 'message':
                 # Get user from message
-                user = self.get_user_by_id(message_sender)
+                user = self.find_user_by_id(message_sender)
 
         return user
 

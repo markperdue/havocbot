@@ -175,19 +175,19 @@ class Skype(Client):
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def get_user_by_id(self, user_id, **kwargs):
+    def find_user_by_id(self, user_id, **kwargs):
         user = None
 
         api_result = self.client.User(user_id)
         user = create_user_object_from_skype_user_object(api_result)
 
-        logger.debug("get_user_by_id - user is '%s'" % (user))
+        logger.debug("find_user_by_id - user is '%s'" % (user))
         if user is not None and user:
             return user
         else:
             return None
 
-    def get_users_by_name(self, name, channel=None, event=None, **kwargs):
+    def find_users_by_name(self, name, channel=None, event=None, **kwargs):
         results = []
 
         # # This will search for users only in the provided channel
@@ -203,7 +203,7 @@ class Skype(Client):
                 chat_result_list = self._get_matching_users_from_chat_for_name(chat, name)
                 results.extend(chat_result_list)
 
-        logger.debug("get_users_by_name returning with '%s'" % (results))
+        logger.debug("find_users_by_name - returning with '%s'" % (results))
         return results
 
     def _get_matching_users_from_chat_for_name(self, skype_chat_object, name):
@@ -222,7 +222,7 @@ class Skype(Client):
         return results
 
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
-        user = self.get_user_by_id(message_sender)
+        user = self.find_user_by_id(message_sender)
         if user is not None and user:
             return user
         else:
