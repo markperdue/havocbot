@@ -5,6 +5,7 @@ import havocbot.user
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 from havocbot.stasher import Stasher
 import havocbot.exceptions as exceptions
+from havocbot.havocbottinydb import StasherTinyDB
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class UserPlugin(HavocBotPlugin):
     def plugin_triggers(self):
         return [
             Trigger(match="!user\sget(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True}, requires=None),
-            Trigger(match="!userid\s(.*)", function=self.trigger_coming_soon, param_dict={'use_stasher': True, 'use_client': True, 'id': True}, requires=None),
+            Trigger(match="!userid\s([0-9]+)", function=self.get_user_by_id, param_dict=None, requires=None),
             Trigger(match="!users", function=self.trigger_get_users, param_dict=None, requires=None),
             Trigger(match="!adduser\s(.*)", function=self.trigger_coming_soon, param_dict=None, requires="bot:admin"),
             Trigger(match="!clientuser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_client': True}, requires=None),
@@ -67,6 +68,15 @@ class UserPlugin(HavocBotPlugin):
 
     def start(self, client, message, **kwargs):
         pass
+
+    def get_user_by_id(self, client, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_user_id = capture[0]
+
+        db = StasherTinyDB()
+        result = db.find_user_by_id(int(captured_user_id))
+        logger.info("Result here is '%s'" % (result))
 
     def add_alias_for_user_id(self, client, message, **kwargs):
         # Get the results of the capture
