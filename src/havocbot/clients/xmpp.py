@@ -4,8 +4,6 @@ import logging
 import sleekxmpp
 from havocbot.client import Client
 from havocbot.message import Message
-from havocbot.user import ClientUser
-# import ssl
 
 logger = logging.getLogger(__name__)
 

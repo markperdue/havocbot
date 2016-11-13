@@ -1,10 +1,10 @@
 from dateutil import tz
 from datetime import datetime
+import json
 import logging
 import requests
 import sleekxmpp
-from sleekxmpp.xmlstream.stanzabase import ElementBase, register_stanza_plugin
-from sleekxmpp.stanza.message import Message as MessageStanza
+from sleekxmpp.xmlstream.stanzabase import ElementBase
 from havocbot.client import Client
 from havocbot.message import Message
 from havocbot.user import User, ClientUser

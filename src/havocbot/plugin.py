@@ -129,7 +129,7 @@ class HavocBotPlugin(object):
             self (HavocBotPlugin): The HavocBotPlugin subclass
             client (Client): A havocbot client instance
             message (Message): A havocbot message subclass instance
-            **kwargs: any addional keyword arguments supplied by the client instance
+            **kwargs: any additional keyword arguments supplied by the client instance
         """
         pass
 

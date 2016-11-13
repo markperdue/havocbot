@@ -8,7 +8,6 @@ import time
 from havocbot import pluginmanager
 from havocbot import httpserver
 from havocbot.stasherfactory import StasherFactory
-import havocbot.user
 
 # Python2/3 compat
 try:
@@ -51,7 +50,7 @@ class HavocBot:
         self.load_plugins()
 
         # The bot is now configured
-        logger.debug("HavoceBot instance has been configured")
+        logger.debug("HavocBot instance has been configured")
         self.is_configured = True
 
     def load_settings_from_file(self, settings_file):
@@ -95,7 +94,7 @@ class HavocBot:
         """ Configures the bot prior to starting up.
 
         Takes in a dictionary with keys relating to the bot name with
-        the value containg a standard SafeConfigParser.items() tuple
+        the value containing a standard SafeConfigParser.items() tuple
         list
 
         example:
@@ -120,7 +119,7 @@ class HavocBot:
         """ Configures a client integration prior to starting up.
 
         Takes in a dictionary with keys relating to the client name with
-        the values containg a standard SafeConfigParser.items() tuple
+        the values containing a standard SafeConfigParser.items() tuple
         list. The client names are iterated over and a instance of the
         client integration is instantiated if possible. The tuple list
         is then passed to the configure() method inside the client
@@ -322,7 +321,7 @@ class HavocBot:
                     # a restart event
                     if self.should_restart:
                         self.should_restart = False
-                        self.configure()
+                        self.configure(self.settings_file)
                         self.start()
                 time.sleep(1)
                 pass
@@ -481,7 +480,7 @@ class HavocBot:
         using the private api of pip which breaks havocbot's root log
         handler. This is called during startup if the setting
         'plugins_can_install_modules' is set to True and at least one
-        plugin has a 'depedencies' setting
+        plugin has a 'dependencies' setting
 
         See https://github.com/pypa/pip/issues/3043
         """

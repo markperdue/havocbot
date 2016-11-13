@@ -6,7 +6,6 @@ import logging
 import random
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 from havocbot.stasher import StasherDB
-import havocbot.user
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +72,7 @@ class QuoterPlugin(HavocBotPlugin):
         timestamp = datetime.utcnow().replace(tzinfo=tz.tzutc())
         a_message_tuple = (message.sender, message.text, message.to, message.event, client.integration_name, timestamp.isoformat())
 
-        # Count occurences of messages by a user in a client integration
+        # Count occurrences of messages by a user in a client integration
         previous_messages = [x for x in self.recent_messages if x[0] == message.sender and x[2] == client.integration_name and x[3] == message.to]
         logger.debug("tracked messages for user %s in channel %s is %d" % (message.sender, message.to, len(previous_messages)))
 

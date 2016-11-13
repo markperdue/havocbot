@@ -314,7 +314,7 @@ def get_showtimes_for_zip_on_date(zip_code, date, api_key_amc, max_distance_in_m
             locations_json = get_theater_id_list_from_locations_url(locations_url, api_key_amc)
             theatre_list = parse_locations_for_theatre_objects_within_distance(locations_json, max_distance_in_miles)
 
-            # We now have some theates within the max distance of the zip code
+            # We now have some theaters within the max distance of the zip code
             for theatre in theatre_list:
                 results.append("Upcoming showtimes at %s" % (theatre.name))
                 showtimes_list = get_showtimes_list_for_theatre_object_and_date(theatre, date, api_key_amc)

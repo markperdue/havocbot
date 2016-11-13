@@ -7,7 +7,6 @@ import threading
 import time
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 from havocbot.stasher import StasherDB
-import havocbot.user
 
 logger = logging.getLogger(__name__)
 
@@ -225,7 +224,7 @@ class RollPlugin(HavocBotPlugin):
         matching_user = self.havocbot.db.find_user_by_username_for_client(winner_user_object.current_username, client.integration_name)
         if matching_user is not None and matching_user:
             logger.info('award_points() - adding %d points to \'%s\' (id \'%s\')' % (len(initial_participants), winner_user_object.current_username, matching_users.user_id))
-            self.db.add_points_to_user_id(matching_users.user_id, len(initial_participants))
+            self.havocbot.db.add_points_to_user_id(matching_users.user_id, len(initial_participants))
         else:
             logger.info('award_points() - no stashed user found. cannot award points to winner')
 

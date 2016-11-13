@@ -286,7 +286,7 @@ class StasherDB(StasherClass):
             user_data = self.db['users']
 
             match = next(
-                (x for x in user_data if 'user_id' in x and x['user_id'] is not None and x['user_id'] == int(user_id)),
+                (x for x in user_data if 'user_id' in x and x['user_id'] is not None and x['user_id'] == int(search_user_id)),
                 None)
 
             if match:

@@ -20,8 +20,8 @@ class InfoPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            Usage(command="!info list", example=None, description="list all info catagories"),
-            Usage(command="!info get <info category>", example="!info get password", description="get info on an info catagory"),
+            Usage(command="!info list", example=None, description="list all info categories"),
+            Usage(command="!info get <info category>", example="!info get password", description="get info on an info category"),
         ]
 
     @property

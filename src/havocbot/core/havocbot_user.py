@@ -1,9 +1,7 @@
 #!/havocbot
 
 import logging
-import havocbot.user
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
-import havocbot.exceptions as exceptions
 
 logger = logging.getLogger(__name__)
 

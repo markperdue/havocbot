@@ -55,7 +55,7 @@ class Client(object):
 
     @abstractmethod
     def process(self):
-        """ Processeses incoming and outgoing events while connected to
+        """ Processes incoming and outgoing events while connected to
         the client integration.
 
         This is the main loop of the chat client that will process all events
@@ -68,7 +68,7 @@ class Client(object):
 
     @abstractmethod
     def handle_message(self, **kwargs):
-        """ Receives an event/message and processeses it as needed.
+        """ Receives an event/message and processes it as needed.
 
         This is the main processing center of the chat client. It will
         receive nearly all the events direct from the method process()

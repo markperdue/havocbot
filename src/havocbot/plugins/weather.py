@@ -234,9 +234,9 @@ def return_zip_code_string_from_file(filepath):
 
 def parse_args_and_return():
     parser = argparse.ArgumentParser(description='Fetch weather for one or many zip codes')
-    parser.add_argument('-z', '--zip-code', help='comma seperated list of zip codes', required=False)
-    parser.add_argument('-f', '--file', help='file containing comma seperated list of zip codes', required=False)
-    parser.add_argument('-v', '--verbose', help='enable verboes logging', required=False, action='store_true')
+    parser.add_argument('-z', '--zip-code', help='comma separated list of zip codes', required=False)
+    parser.add_argument('-f', '--file', help='file containing comma separated list of zip codes', required=False)
+    parser.add_argument('-v', '--verbose', help='enable verbose logging', required=False, action='store_true')
     args = vars(parser.parse_args())
 
     if args['verbose']:
