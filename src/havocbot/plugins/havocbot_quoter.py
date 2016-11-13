@@ -206,7 +206,6 @@ class QuoterPlugin(HavocBotPlugin):
     #                 user.current_username = username
 
 
-
     #         if user_object.name is not None and user_object.name and message[0].lower() in user_object.name.lower():
     #             return message
     #         elif user_object.current_username is not None and user_object.current_username and message[0].lower() in user_object.current_username.lower():

@@ -120,7 +120,6 @@ class Stasher(Singleton):
         else:
             self.add_user(user_object)
 
-
     def add_alias(self, username, alias):
         # logger.debug("Add alias triggered with username '%s' and alias '%s'"
         #              % (username, alias))

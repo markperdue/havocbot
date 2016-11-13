@@ -35,11 +35,11 @@ class User(object):
 
     def __str__(self):
         sb = ("User(User ID: '%d', Name: '%s', "
-                    "Username %s, "
-                    "Points: %d, Is Stashed: %s"
-                    % (self.user_id, self.name,
-                       self.current_username,
-                       self.points, self.is_stashed))
+              "Username %s, "
+              "Points: %d, Is Stashed: %s"
+              % (self.user_id, self.name,
+                 self.current_username,
+                 self.points, self.is_stashed))
         if self.aliases:
             sb += ", Aliases: %s" % (self.get_aliases_as_string())
         if self.permissions:

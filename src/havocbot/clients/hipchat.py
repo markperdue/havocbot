@@ -77,7 +77,6 @@ class HipChat(Client):
         self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # XMPP Ping set for a keepalive ping every 60 seconds
 
         if self.client.connect(address=(self.server, 5223), use_ssl=True):
-        # if self.client.connect(address=(self.server, 5223), use_ssl=True):
             logger.info("I am.. %s! (%s)" % (self.nickname, self.username))
             return True
         else:
@@ -241,7 +240,6 @@ class HipChat(Client):
 
     def _get_user_from_jid(self, jabber_id):
         user = None
-
 
         if jabber_id is not None and jabber_id:
             vcard = self._get_vcard_by_jabber_id(jabber_id)
@@ -574,6 +572,7 @@ def create_user_object(jabber_id, name, vcard):
 
     logger.debug("create_user_object - client_user is '%s'" % (client_user))
     return client_user
+
 
 def create_user_object_2(jabber_id, vcard):
     if vcard is not None:

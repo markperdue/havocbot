@@ -131,7 +131,7 @@ class HavocBot:
 
         # Placeholder for client integration instances that will be
         # override the self.clients value
-        clientList = []
+        client_list = []
 
         if clients_dict is not None:
             for client_name, client_settings_tuple_list \
@@ -143,10 +143,10 @@ class HavocBot:
                     client = client_temp(self)
 
                     if client.configure(client_settings_tuple_list):
-                        clientList.append(client)
+                        client_list.append(client)
 
         # Override the client list with the new temp list
-        self.clients = clientList
+        self.clients = client_list
 
     # Takes in a name of a module and tries to import it
     def import_and_return_client(self, name, module=None):

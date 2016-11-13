@@ -7,10 +7,11 @@ class Trigger(namedtuple('Trigger', 'match, function, param_dict, requires')):
     def __new__(cls, match, function, param_dict=None, requires=None):
         return super(Trigger, cls).__new__(cls, match, function, param_dict, requires)
 
-# Usage = namedtuple('Usage', 'command, example, description')
+
 class Usage(namedtuple('Usage', 'command, example, description')):
     def __new__(cls, command, description, example=None):
         return super(Usage, cls).__new__(cls, command, example, description)
+
 
 class HavocBotPlugin(object):
     __metaclass__ = ABCMeta

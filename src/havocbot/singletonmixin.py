@@ -107,6 +107,7 @@ own risk.
 
 import threading
 
+
 class SingletonException(Exception):
     pass
 
@@ -123,10 +124,11 @@ _lockForSingletonCreation = threading.RLock()   # Ensure only one instance of ea
                                                 # then we don't need to lock it again for that
                                                 # class.
 
+
 def _createSingletonInstance(cls, lstArgs, dctKwArgs):
     _lockForSingletonCreation.acquire()
     try:
-        if cls._isInstantiated(): # some other thread got here first
+        if cls._isInstantiated():  # some other thread got here first
             return
 
         instance = cls.__new__(cls)
@@ -142,6 +144,7 @@ def _createSingletonInstance(cls, lstArgs, dctKwArgs):
     finally:
         _lockForSingletonCreation.release()
 
+
 def _addSingleton(cls):
     _lockForSingletons.acquire()
     try:
@@ -150,6 +153,7 @@ def _addSingleton(cls):
     finally:
         _lockForSingletons.release()
 
+
 def _removeSingleton(cls):
     _lockForSingletons.acquire()
     try:
@@ -157,6 +161,7 @@ def _removeSingleton(cls):
             _stSingletons.remove(cls)
     finally:
         _lockForSingletons.release()
+
 
 def forgetAllSingletons():
     '''This is useful in tests, since it is hard to know which singletons need to be cleared to make a test work.'''
@@ -177,6 +182,7 @@ def forgetAllSingletons():
     finally:
         _lockForSingletons.release()
 
+
 class MetaSingleton(type):
     def __new__(metaclass, strName, tupBases, dct):
         if ('__new__') in dct:
@@ -185,6 +191,7 @@ class MetaSingleton(type):
 
     def __call__(cls, *lstArgs, **dictArgs):
         raise SingletonException('Singletons may only be instantiated through getInstance()')
+
 
 class Singleton(object):
     __metaclass__ = MetaSingleton
@@ -339,7 +346,6 @@ if __name__ == '__main__':
 
             self.assertRaises(SingletonException, instantiatedAnIllegalClass)
 
-
         def testDontAllowArgsAfterConstruction(self):
             class B(Singleton):
 
@@ -355,6 +361,7 @@ if __name__ == '__main__':
             class A(Singleton):
                 def __init__(self):
                     super(A, self).__init__()
+
             class B(A):
                 def __init__(self):
                     super(B, self).__init__()
@@ -380,6 +387,7 @@ if __name__ == '__main__':
 
             class A(Singleton):
                 ciInitCount = 0
+
                 def __init__(self):
                     super(A, self).__init__()
                     A.ciInitCount += 1
@@ -409,7 +417,7 @@ if __name__ == '__main__':
 
                 def run(self):
                     try:
-                        fSleepTime =  self._fTargetTime - time.time()
+                        fSleepTime = self._fTargetTime - time.time()
                         if fSleepTime > 0:
                             time.sleep(fSleepTime)
                         Test_Singleton.getInstance()
@@ -442,7 +450,7 @@ if __name__ == '__main__':
                 #def __init__(self):
                 #    super(A, self).__init__()
 
-            A.getInstance() #Make sure no exception is raised
+            A.getInstance()  #Make sure no exception is raised
 
         def testMultipleGetInstancesWithArgs(self):
 
@@ -454,7 +462,7 @@ if __name__ == '__main__':
                     pass
 
             a1 = A.getInstance(1)
-            a2 = A.getInstance(2) # ignores the second call because of ignoreSubsequent
+            a2 = A.getInstance(2)  # ignores the second call because of ignoreSubsequent
 
             class B(Singleton):
 
@@ -462,7 +470,7 @@ if __name__ == '__main__':
                     pass
 
             b1 = B.getInstance(1)
-            self.assertRaises(SingletonException, B.getInstance, 2) # No ignoreSubsequent included
+            self.assertRaises(SingletonException, B.getInstance, 2)  # No ignoreSubsequent included
 
             class C(Singleton):
 
@@ -470,7 +478,7 @@ if __name__ == '__main__':
                     pass
 
             c1 = C.getInstance(a=1)
-            self.assertRaises(SingletonException, C.getInstance, a=2) # No ignoreSubsequent included
+            self.assertRaises(SingletonException, C.getInstance, a=2)  # No ignoreSubsequent included
 
         def testInheritance(self):
             """
