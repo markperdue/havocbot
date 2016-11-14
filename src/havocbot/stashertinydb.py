@@ -29,18 +29,20 @@ class StasherTinyDB(StasherClass):
         if result is not None:
             user = self.build_user(result)
 
+        logger.debug("find_user_by_id - returning with '%s'" % (user))
         return user
 
     def find_user_by_username_for_client(self, search_username, client_name):
         user = None
 
-        UserQuery = Query()
-        result_list = self.db.search(UserQuery.usernames[client_name].any([search_username]))
+        user_query = Query()
+        result_list = self.db.search(user_query.usernames[client_name].any([search_username]))
 
         if result_list is not None and result_list:
             if len(result_list) == 1:
                 user = self.build_user(result_list[0])
 
+        logger.debug("find_user_by_username_for_client - returning with '%s'" % (user))
         return user
 
     def find_users_by_username(self, search_username):
@@ -61,8 +63,13 @@ class StasherTinyDB(StasherClass):
     def find_users_by_name_for_client(self, search_name, client_name):
         results = []
 
-        UserQuery = Query()
-        matched_users = self.db.search(UserQuery.name == search_name)
+        def name_test_func(val, nested_search_name):
+            return val.lower() == nested_search_name.lower()
+
+        user_query = Query()
+        matched_users = self.db.search((user_query['name'].test(name_test_func, search_name)) &
+                                       (user_query['usernames'].any([client_name]))
+                                       )
 
         if matched_users:
             for matched_user in matched_users:
@@ -74,7 +81,24 @@ class StasherTinyDB(StasherClass):
         return results
 
     def find_users_by_alias_for_client(self, search_alias, client_name):
-        return None
+        results = []
+
+        def alias_test_func(val, nested_search_alias):
+            return any(x.lower() for x in val if x.lower() == search_alias.lower())
+
+        user_query = Query()
+        matched_users = self.db.search((user_query['aliases'].test(alias_test_func, search_alias)) &
+                                       (user_query['usernames'].any([client_name]))
+                                       )
+
+        if matched_users:
+            for matched_user in matched_users:
+                a_user = self.build_user(matched_user)
+                if a_user.is_valid():
+                    results.append(a_user)
+
+        logger.debug("find_users_by_alias_for_client - returning with '[%s]'" % (', '.join(map(str, results))))
+        return results
 
     def find_users_by_matching_string_for_client(self, search_string, client_name):
         results = []
@@ -83,19 +107,15 @@ class StasherTinyDB(StasherClass):
 
         results_name = self.find_users_by_name_for_client(search_string, client_name)
         if results_name is not None and results_name:
-            logger.info("Adding '%s'" % (results_name))
             results.extend(results_name)
 
         result_username = self.find_user_by_username_for_client(search_string, client_name)
         if result_username is not None and result_username:
-            logger.info("Adding a thing")
             results.append(result_username)
 
         results_alias = self.find_users_by_alias_for_client(search_string, client_name)
         if results_alias is not None and results_alias:
             results.extend(results_alias)
-
-        # results.extend(get_users_by_username(search_string, client_integration_name))  # EDIT101
 
         return results
 
@@ -105,12 +125,11 @@ class StasherTinyDB(StasherClass):
     def build_user(self, result_data):
         user = User(result_data.eid)
 
-        user.name = result_data['name']
-        user.usernames = result_data['usernames']
-        user.points = result_data['points']
-        user.permissions = result_data['permissions']
-        user.aliases = result_data['aliases']
+        user.name = result_data['name'] if 'name' in result_data else None
+        user.usernames = result_data['usernames'] if 'usernames' in result_data else {}
+        user.points = result_data['points'] if 'points' in result_data else None
+        user.permissions = result_data['permissions'] if 'permissions' in result_data else []
+        user.aliases = result_data['aliases'] if 'aliases' in result_data else []
         user.is_stashed = True
 
         return user
-
