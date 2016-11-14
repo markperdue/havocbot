@@ -29,15 +29,34 @@ class StasherTinyDB(StasherClass):
         if result is not None:
             user = self.build_user(result)
 
-        logger.info("Returning with '%s'" % (result))
-
         return user
 
     def find_user_by_username_for_client(self, search_username, client_name):
-        return None
+        user = None
+
+        UserQuery = Query()
+        result_list = self.db.search(UserQuery.usernames[client_name].any([search_username]))
+
+        if result_list is not None and result_list:
+            if len(result_list) == 1:
+                user = self.build_user(result_list[0])
+
+        return user
 
     def find_users_by_username(self, search_username):
-        return None
+        # user_list = None
+        #
+        # UserQuery = Query()
+        # results = self.db.search(UserQuery.usernames[client_name].any([search_username]))
+        #
+        # if results is not None and results:
+        #     user_list = []
+        #     for user in results:
+        #         user_list.append(self.build_user(user))
+        #     user_list = results
+        #
+        # return user_list
+        pass
 
     def find_users_by_name_for_client(self, search_name, client_name):
         results = []
@@ -69,6 +88,7 @@ class StasherTinyDB(StasherClass):
 
         result_username = self.find_user_by_username_for_client(search_string, client_name)
         if result_username is not None and result_username:
+            logger.info("Adding a thing")
             results.append(result_username)
 
         results_alias = self.find_users_by_alias_for_client(search_string, client_name)
