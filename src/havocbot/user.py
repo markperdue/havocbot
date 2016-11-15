@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from dateutil import tz
 from datetime import datetime
+import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ class User(object):
         )
 
         self.aliases = []
+        self.is_disabled = False
         self.is_stashed = False
         self.last_modified = timestamp
         self.name = None
@@ -24,7 +26,7 @@ class User(object):
         self.user_id = user_id
         self.usernames = {}
         self.current_username = None
-        self.permissions = None
+        self.permissions = []
         self.client_user = None
 
     def __repr__(self):
@@ -201,22 +203,20 @@ class User(object):
         if alias in self.aliases:
             self.aliases.remove(alias)
 
-    # def to_json(self):
-    #     json = {
-    #         'name': self.name,
-    #         'aliases': self.aliases,
-    #         'points': self.points,
-    #         'plugin_data': self.plugin_data
-    #     }
-    #     # json = {
-    #     #     'name': self.name,
-    #     #     'username': self.username,
-    #     #     'aliases': self.aliases,
-    #     #     'points': self.points,
-    #     #     'plugin_data': self.plugin_data
-    #     # }
+    def to_json(self):
+        return json.dumps(self, default=lambda o: o.__dict__)
 
-    #     return json
+    def to_dict_for_db(self):
+        a_dict = {
+            "aliases": self.aliases,
+            "name": self.name,
+            "plugin_data": self.plugin_data,
+            "permissions": self.permissions,
+            "points": self.points,
+            "usernames": self.usernames
+        }
+
+        return a_dict
 
 
 class ClientUser(object):

@@ -10,13 +10,16 @@ class StasherTinyDB(StasherClass):
         self.db = TinyDB('stasher/havocbot.json', default_table='users', sort_keys=True, indent=2)
 
     def add_user(self, user):
-        pass
+        logger.info("Adding new user '%s' to database" % (user.name))
+
+        logger.debug("add_user - adding '%s'" % (user.to_dict_for_db()))
+        self.db.insert(user.to_dict_for_db())
 
     def del_user(self, user):
         pass
 
     def add_points_to_user_id(self, user_id, points):
-        logger.debug("add_points_to_user_id - adding %d points to '%s'" % (points, user_id))
+        logger.info("Adding %d points to user id %s" % (points, user_id))
 
         def increment_by_value(field, value):
             def transform(element):
@@ -27,7 +30,7 @@ class StasherTinyDB(StasherClass):
         self.db.update(increment_by_value('points', points), eids=[user_id])
 
     def del_points_to_user_id(self, user_id, points):
-        logger.debug("del_points_to_user_id - deleting %d points from '%s'" % (points, user_id))
+        logger.info("Deleting %d points from user id %s" % (points, user_id))
 
         def decrement_by_value(field, value):
             def transform(element):

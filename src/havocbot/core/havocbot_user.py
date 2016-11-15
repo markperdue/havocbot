@@ -2,6 +2,7 @@
 
 import logging
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
+from havocbot.user import User, ClientUser
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class UserPlugin(HavocBotPlugin):
             Usage(command="!user get <name>", example="!user get mark", description="get information on a user"),
             Usage(command="!userid <user_id>", example="!userid 1", description="get information on a user by id"),
             Usage(command="!users", example=None, description="get user info on all users in the channel"),
-            Usage(command="!adduser <user_id>", example="!adduser markaperdue", description="add the user to the database"),
+            Usage(command="!adduser <name> <username>", example="!adduser Mark mark@chat.hipchat.com", description="add the user to the database"),
             Usage(command="!clientuser <name>", example="!clientuser mark", description="get information on a user from the chat client"),
             Usage(command="!stasheruser <name>", example="!stasheruser mark", description="get information on a user from local storage"),
             Usage(command="!me", example=None, description="get information on you"),
@@ -37,7 +38,7 @@ class UserPlugin(HavocBotPlugin):
             Trigger(match="!user\sget(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True}, requires=None),
             Trigger(match="!userid\s([0-9]+)", function=self.find_user_by_id, param_dict=None, requires=None),
             Trigger(match="!users", function=self.trigger_get_users, param_dict=None, requires=None),
-            Trigger(match="!adduser\s(.*)", function=self.trigger_coming_soon, param_dict=None, requires="bot:admin"),
+            Trigger(match="!adduser\s(.*)\s(.*)", function=self.trigger_add_user, param_dict=None, requires="bot:admin"),
             Trigger(match="!clientuser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_client': True}, requires=None),
             Trigger(match="!stasheruser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_stasher': True}, requires=None),
             Trigger(match="!me", function=self.trigger_get_sender, param_dict=None, requires=None),
@@ -246,29 +247,17 @@ class UserPlugin(HavocBotPlugin):
     def trigger_add_user(self, client, message, **kwargs):
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
-        captured_values = capture[0].split()
+        captured_name = capture[0]
+        captured_username = capture[1]
 
-        if captured_values:
-            # stasher = StasherDB.getInstance()
-            logger.info("values are '%s'" % (captured_values))
-            # try:
-            #     logger.info(
-            #         "about to get user by id '%s'" % (captured_values[0])
-            #     )
-            #     a_user = client.get_user_by_id(captured_values[0])
-            #     logger.info("a_user is '%s'" % (a_user))
-            #     if a_user is not None and a_user.is_valid():
-            #         stasher.add_user(a_user)
+        if captured_name and captured_username:
+            logger.info("values are '%s' and '%s'" % (captured_name, captured_username))
 
-            #     text = 'User added'
-            #     client.send_message(text, message.reply(), event=message.event)
-            # except exceptions.StasherEntryAlreadyExistsError as e:
-            #     logger.error(
-            #         "User alread exists - Existing user json is '%s'" % (e)
-            #     )
+            a_user = User(0)
+            a_user.name = captured_name
+            a_user.usernames = {client.integration_name: [captured_username]}
 
-            #     text = 'That user already exists!'
-            #     client.send_message(text, message.reply(), event=message.event)
+            self.havocbot.db.add_user(a_user)
         else:
             text = 'Invalid parameters. Check the help option for usage'
             client.send_message(text, message.reply(), event=message.event)
