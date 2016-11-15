@@ -204,33 +204,13 @@ class RollPlugin(HavocBotPlugin):
         self.rolloff_disable()
 
     def award_points(self, winner_user_object, initial_participants, client, message):
-        logger.info('award_points() - triggered')
+        logger.info('award_points - there were %s initial participants' % (len(initial_participants)))
 
-        logger.info('award_points() - there were %s initial participants' % (len(initial_participants)))
-
-        stasher = StasherDB.getInstance()
-
-        # EDIT101
-        # matching_users = havocbot.user.get_users_by_username(winner_user_object.current_username, client.integration_name)
-        # if matching_users is not None and matching_users:
-        #     if len(matching_users) == 1:
-        #         logger.info('award_points() - adding %d points to \'%s\' (id \'%s\')' % (len(initial_participants), winner_user_object.current_username, matching_users[0].user_id))
-        #         stasher.add_points(matching_users[0].user_id, len(initial_participants))
-        #     else:
-        #         logger.info('award_points() - more than 1 user match found')
-        # else:
-        #     logger.info('award_points() - no stashed user found. cannot award points to winner')
-
-        matching_user = self.havocbot.db.find_user_by_username_for_client(winner_user_object.current_username, client.integration_name)
-        if matching_user is not None and matching_user:
-            logger.info('award_points() - adding %d points to \'%s\' (id \'%s\')' % (len(initial_participants), winner_user_object.current_username, matching_users.user_id))
-            self.havocbot.db.add_points_to_user_id(matching_users.user_id, len(initial_participants))
-        else:
-            logger.info('award_points() - no stashed user found. cannot award points to winner')
+        self.havocbot.db.add_points_to_user_id(winner_user_object.user_id, len(initial_participants))
 
         for user in initial_participants:
-            if winner_user_object.current_username != user.current_username:
-                logger.info('award_points() - \'%s\' lost 1 point' % (user.current_username))
+            if user.user_id != winner_user_object.user_id:
+                self.havocbot.db.del_points_to_user_id(user.user_id, 1)
 
     def background_thread(self, client, message):
         time.sleep(self.rolloff_join_window)

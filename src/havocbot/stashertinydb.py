@@ -16,10 +16,26 @@ class StasherTinyDB(StasherClass):
         pass
 
     def add_points_to_user_id(self, user_id, points):
-        pass
+        logger.debug("add_points_to_user_id - adding %d points to '%s'" % (points, user_id))
+
+        def increment_by_value(field, value):
+            def transform(element):
+                element[field] += int(value)
+
+            return transform
+
+        self.db.update(increment_by_value('points', points), eids=[user_id])
 
     def del_points_to_user_id(self, user_id, points):
-        pass
+        logger.debug("del_points_to_user_id - deleting %d points from '%s'" % (points, user_id))
+
+        def decrement_by_value(field, value):
+            def transform(element):
+                element[field] -= int(value)
+
+            return transform
+
+        self.db.update(decrement_by_value('points', points), eids=[user_id])
 
     def find_user_by_id(self, search_user_id):
         user = None
