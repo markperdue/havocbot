@@ -42,8 +42,8 @@ class Stasher(Singleton):
         logger.info("Writing to db")
         with open(self.filename, 'wt') as outfile:
             json.dump(json.loads(
-                      jsonpickle.encode(self.data, unpicklable=False)),
-                      outfile, indent=2, sort_keys=True)
+                jsonpickle.encode(self.data, unpicklable=False)),
+                outfile, indent=2, sort_keys=True)
         self.load_db()
 
     def add_json_to_key(self, json, key, unique_root_key, unique_root_value):
@@ -53,7 +53,7 @@ class Stasher(Singleton):
                 result = next((
                     x for x in self.data[key]
                     if unique_root_key in x
-                    and x[unique_root_key] == unique_root_value
+                       and x[unique_root_key] == unique_root_value
                 ), None)
                 if result is not None:
                     logger.error("Match found for record. Not unique")
@@ -77,7 +77,7 @@ class Stasher(Singleton):
                 result = next((
                     x for x in self.data[key]
                     if unique_root_key in x
-                    and x[unique_root_key] == unique_root_value
+                       and x[unique_root_key] == unique_root_value
                 ), None)
 
                 if result is not None:
@@ -127,7 +127,7 @@ class Stasher(Singleton):
             if 'user_aliases' in self.data:
                 if any((user_aliases['username'] == username
                         and user_aliases['alias'] == alias)
-                        for user_aliases in self.data['user_aliases']):
+                       for user_aliases in self.data['user_aliases']):
                     logger.info("Username %s already contains alias %s"
                                 % (username, alias))
                 else:
@@ -226,8 +226,8 @@ class Stasher(Singleton):
 
         with open(plugin_file, 'wt') as outfile:
             json.dump(json.loads(
-                      jsonpickle.encode(self.plugin_data, unpicklable=False)),
-                      outfile, indent=2, sort_keys=True)
+                jsonpickle.encode(self.plugin_data, unpicklable=False)),
+                outfile, indent=2, sort_keys=True)
         self.plugin_data = self.get_plugin_data(plugin_name)
 
 
@@ -268,7 +268,8 @@ class StasherDB(StasherClass):
                 logger.info("Users existing points set to %d. Subtracting %d points" % (stashed_user.points, points))
 
                 if isinstance(stashed_user.points, (int, long)):
-                    logger.debug("Users existing points set to %d. Subtracting %d points" % (stashed_user.points, points))
+                    logger.debug(
+                        "Users existing points set to %d. Subtracting %d points" % (stashed_user.points, points))
                     stashed_user.points -= points
                     # self.write_db()
                 else:
@@ -285,7 +286,8 @@ class StasherDB(StasherClass):
             user_data = self.db['users']
 
             match = next(
-                (x for x in user_data if 'user_id' in x and x['user_id'] is not None and x['user_id'] == int(search_user_id)),
+                (x for x in user_data if
+                 'user_id' in x and x['user_id'] is not None and x['user_id'] == int(search_user_id)),
                 None)
 
             if match:
@@ -308,14 +310,15 @@ class StasherDB(StasherClass):
                 logger.debug("find_user_by_username_for_client - Searching for users...")
 
                 for x in users:
-                    if ('usernames' in x and x['usernames'] is not None and x['usernames']):
+                    if 'usernames' in x and x['usernames'] is not None and x['usernames']:
                         for (key, value) in x['usernames'].items():
                             if key == client_name:
                                 for username_string in value:
                                     if search_username == username_string:
                                         result = self.build_user(x)
                                         result.current_username = search_username
-                                        logger.debug("find_user_by_username_for_client - returning with '%s'" % (result))
+                                        logger.debug(
+                                            "find_user_by_username_for_client - returning with '%s'" % (result))
 
                                         return result
 
@@ -333,15 +336,14 @@ class StasherDB(StasherClass):
                 matched_users = [
                     x for x in users
                     if (
-                        (
-                            'name' in x
-                            and x['name'] is not None
-                            and search_name.lower() in x['name'].lower()
-                        )
-                        and ('usernames' in x and x['usernames'] is not None and x[
-                            'usernames'] and client_name in x['usernames'])
+                        ('name' in x and x['name'] is not None
+                         and search_name.lower() in x['name'].lower())
+                        and
+                        ('usernames' in x and x['usernames'] is not None
+                         and x['usernames'] and client_name in x['usernames']
+                         )
                     )
-                    ]
+                ]
 
                 if matched_users:
                     for user_json in matched_users:
@@ -369,7 +371,7 @@ class StasherDB(StasherClass):
                         and ('usernames' in x and x['usernames'] is not None and x[
                             'usernames'] and client_name in x['usernames'])
                     )
-                    ]
+                ]
 
                 if matched_users:
                     for user_json in matched_users:

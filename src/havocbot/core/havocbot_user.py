@@ -249,7 +249,7 @@ class UserPlugin(HavocBotPlugin):
         captured_values = capture[0].split()
 
         if captured_values:
-            stasher = StasherDB.getInstance()
+            # stasher = StasherDB.getInstance()
             logger.info("values are '%s'" % (captured_values))
             # try:
             #     logger.info(
