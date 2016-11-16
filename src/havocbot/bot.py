@@ -381,6 +381,7 @@ class HavocBot:
                             triggered_function(client, message_object, capture_groups=match.groups())
                 except Exception as e:
                     logger.error(e)
+                    raise
 
     def register_triggers(self, trigger_tuple_list):
         if trigger_tuple_list:

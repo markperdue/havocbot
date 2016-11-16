@@ -516,6 +516,8 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
                     self.parent.handle_message(message_object=message_object)
                 except Exception as e:
                     logger.error(e)
+                    raise
+
         elif msg['type'] in ('normal', 'chat'):
             if msg['from'].bare != self.boundjid.bare:
                 message_object = Message(msg['body'], msg['from'].bare, msg['to'].bare, msg['type'], self.parent.integration_name, datetime.utcnow().replace(tzinfo=tz.tzutc()))
