@@ -1,6 +1,6 @@
 import logging
 from tinydb import TinyDB, Query
-from havocbot.user import User, StasherClass
+from havocbot.user import User, StasherClass, UserAlreadyExistsException
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +10,11 @@ class StasherTinyDB(StasherClass):
         self.db = TinyDB('stasher/havocbot.json', default_table='users', sort_keys=True, indent=2)
 
     def add_user(self, user):
+        # Iterate through the user's usernames and see if any usernames already exist
+        if self._user_exists(user):
+            logger.error("This user already exists in the db")
+            raise UserAlreadyExistsException
+
         logger.info("Adding new user '%s' to database" % (user.name))
 
         logger.debug("add_user - adding '%s'" % (user.to_dict_for_db()))
@@ -41,6 +46,7 @@ class StasherTinyDB(StasherClass):
         self.db.update(decrement_by_value('points', points), eids=[user_id])
 
     def find_user_by_id(self, search_user_id):
+        logger.info("Searching for '%s'" % (search_user_id))
         user = None
 
         result = self.db.get(eid=search_user_id)
@@ -48,10 +54,12 @@ class StasherTinyDB(StasherClass):
         if result is not None:
             user = self.build_user(result)
 
-        logger.debug("find_user_by_id - returning with '%s'" % (user))
+        logger.debug("Returning with '%s'" % (user))
         return user
 
     def find_user_by_username_for_client(self, search_username, client_name):
+        logger.info("Searching for '%s' in client '%s'" % (search_username, client_name))
+
         user = None
 
         user_query = Query()
@@ -61,7 +69,7 @@ class StasherTinyDB(StasherClass):
             if len(result_list) == 1:
                 user = self.build_user(result_list[0])
 
-        logger.debug("find_user_by_username_for_client - returning with '%s'" % (user))
+        logger.debug("Returning with '%s'" % (user))
         return user
 
     def find_users_by_username(self, search_username):
@@ -80,6 +88,7 @@ class StasherTinyDB(StasherClass):
         pass
 
     def find_users_by_name_for_client(self, search_name, client_name):
+        logger.info("Searching for '%s' in client '%s'" % (search_name, client_name))
         results = []
 
         def name_test_func(val, nested_search_name):
@@ -96,10 +105,11 @@ class StasherTinyDB(StasherClass):
                 if a_user.is_valid():
                     results.append(a_user)
 
-        logger.debug("find_users_by_name_for_client - returning with '[%s]'" % (', '.join(map(str, results))))
+        logger.debug("Returning with '[%s]'" % (', '.join(map(str, results))))
         return results
 
     def find_users_by_alias_for_client(self, search_alias, client_name):
+        logger.info("Searching for '%s' in client '%s'" % (search_alias, client_name))
         results = []
 
         def alias_test_func(val, nested_search_alias):
@@ -116,13 +126,13 @@ class StasherTinyDB(StasherClass):
                 if a_user.is_valid():
                     results.append(a_user)
 
-        logger.debug("find_users_by_alias_for_client - returning with '[%s]'" % (', '.join(map(str, results))))
+        logger.debug("Returning with '[%s]'" % (', '.join(map(str, results))))
         return results
 
     def find_users_by_matching_string_for_client(self, search_string, client_name):
-        results = []
+        logger.info("Searching for '%s' in client '%s'" % (search_string, client_name))
 
-        logger.debug("Searching for users matching string '%s' on client '%s'" % (search_string, client_name))
+        results = []
 
         results_name = self.find_users_by_name_for_client(search_string, client_name)
         if results_name is not None and results_name:
@@ -152,3 +162,17 @@ class StasherTinyDB(StasherClass):
         user.is_stashed = True
 
         return user
+
+    def _user_exists(self, user):
+        # Iterate through the user's usernames and see if any usernames already exist
+        if user.usernames is not None and user.usernames:
+            for (key, value) in user.usernames.items():
+                logger.info("Iterating over key '%s' with value '%s'" % (key, value))
+                for username in value:
+                    logger.info("Iterating over username '%s'" % (username))
+                    result = self.find_user_by_username_for_client(username, key)
+                    logger.info("result for username '%s' is '%s'" %(username, result))
+                    if result is not None:
+                        return True
+
+        return False

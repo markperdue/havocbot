@@ -283,3 +283,7 @@ class StasherClass(object):
     @abstractmethod
     def build_user(self, result_data):
         pass
+
+
+class UserAlreadyExistsException(Exception):
+    pass

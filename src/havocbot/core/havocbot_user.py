@@ -1,8 +1,9 @@
 #!/havocbot
 
 import logging
+import traceback
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
-from havocbot.user import User, ClientUser
+from havocbot.user import User, ClientUser, UserAlreadyExistsException
 
 logger = logging.getLogger(__name__)
 
@@ -20,31 +21,35 @@ class UserPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
+            Usage(command="!user add <name> <username>", example="!user add Mark mark@chat.hipchat.com", description="add the user to the database"),
             Usage(command="!user get <name>", example="!user get mark", description="get information on a user"),
-            Usage(command="!userid <user_id>", example="!userid 1", description="get information on a user by id"),
+            Usage(command="!user get-id <user-id>", example="!user get-id 1", description="get information on a user by id"),
+            Usage(command="!user add-alias <user-id> <alias>", example="!user add-alias 1 the_enforcer", description="adds an alias to a user"),
+            Usage(command="!user del-alias <user-id> <alias>", example="!user del-alias 1 the_enforcer", description="deletes an alias to a user"),
+            Usage(command="!user get-aliases <user-id>", example="!user get-aliases 1", description="lists all aliases for a user"),
+            Usage(command="!user add-points <user-id> <points>", example="!user add-points 1 3", description="adds points to a user"),
+            Usage(command="!user del-points <user-id> <points>", example="!user del-points 1 50", description="deletes points from a user"),
             Usage(command="!users", example=None, description="get user info on all users in the channel"),
-            Usage(command="!adduser <name> <username>", example="!adduser Mark mark@chat.hipchat.com", description="add the user to the database"),
-            Usage(command="!clientuser <name>", example="!clientuser mark", description="get information on a user from the chat client"),
-            Usage(command="!stasheruser <name>", example="!stasheruser mark", description="get information on a user from local storage"),
             Usage(command="!me", example=None, description="get information on you"),
-            Usage(command="!user <user_id> add_alias <alias>", example="!user 1 add_alias the_enforcer", description="adds an alias to a user"),
-            Usage(command="!user <user_id> del_alias <alias>", example="!user 1 del_alias the_enforcer", description="deletes an alias to a user"),
-            Usage(command="!user <user_id> list_aliases", example="!user 1 get_aliases", description="lists any aliases to a user"),
+            # Usage(command="!clientuser <name>", example="!clientuser mark", description="get information on a user from the chat client"),
+            # Usage(command="!stasheruser <name>", example="!stasheruser mark", description="get information on a user from local storage"),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!user\sget(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True}, requires=None),
-            Trigger(match="!userid\s([0-9]+)", function=self.find_user_by_id, param_dict=None, requires=None),
+            Trigger(match="!user\sadd\s(.*)\s(.*)", function=self.trigger_add_user, param_dict=None, requires="bot:admin"),
+            Trigger(match="!user\sget\s(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True}, requires=None),
+            Trigger(match="!user\sget-id\s([0-9]+)", function=self.trigger_get_user_by_id, param_dict=None, requires=None),
+            Trigger(match="!user\sadd-alias\s([0-9]+)\s(.+)", function=self.trigger_coming_soon, param_dict=None, requires="bot:admin"),
+            Trigger(match="!user\sdel-alias\s([0-9]+)\s(.+)", function=self.trigger_coming_soon, param_dict=None, requires="bot:admin"),
+            Trigger(match="!user\sget-aliases\s([0-9]+)", function=self.trigger_list_aliases_for_user_id, param_dict=None, requires=None),
+            Trigger(match="!user\sadd-points\s([0-9]+)\s([0-9]+)", function=self.trigger_add_points_for_user_id, param_dict=None, requires="bot:points"),
+            Trigger(match="!user\sdel-points\s([0-9]+)\s([0-9]+)", function=self.trigger_del_points_for_user_id, param_dict=None, requires="bot:points"),
             Trigger(match="!users", function=self.trigger_get_users, param_dict=None, requires=None),
-            Trigger(match="!adduser\s(.*)\s(.*)", function=self.trigger_add_user, param_dict=None, requires="bot:admin"),
-            Trigger(match="!clientuser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_client': True}, requires=None),
-            Trigger(match="!stasheruser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_stasher': True}, requires=None),
             Trigger(match="!me", function=self.trigger_get_sender, param_dict=None, requires=None),
-            Trigger(match="!user\s([0-9]+)\sadd_alias\s(.+)", function=self.add_alias_for_user_id, param_dict=None, requires="bot:admin"),
-            Trigger(match="!user\s([0-9]+)\sdel_alias\s(.+)", function=self.del_alias_for_user_id, param_dict=None, requires="bot:admin"),
-            Trigger(match="!user\s([0-9]+)\slist_aliases\s(.+)", function=self.list_aliases_for_user_id, param_dict=None, requires=None),
+            # Trigger(match="!clientuser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_client': True}, requires=None),
+            # Trigger(match="!stasheruser\s(.*)", function=self.trigger_coming_soon, param_dict={'use_stasher': True}, requires=None),
         ]
 
     def init(self, havocbot):
@@ -66,18 +71,109 @@ class UserPlugin(HavocBotPlugin):
     def start(self, client, message, **kwargs):
         pass
 
-    def find_user_by_id(self, client, message, **kwargs):
+    def trigger_add_user(self, client, message, **kwargs):
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
-        captured_user_id = capture[0]
+        captured_name = capture[0]
+        captured_username = capture[1]
 
-        result = self.havocbot.db.find_user_by_id(int(captured_user_id))
+        if captured_name and captured_username:
+            logger.info("values are '%s' and '%s'" % (captured_name, captured_username))
+
+            a_user = User(0)
+            a_user.name = captured_name
+            a_user.usernames = {client.integration_name: [captured_username]}
+
+            try:
+                self.havocbot.db.add_user(a_user)
+            except UserAlreadyExistsException:
+                text = "That user already exists"
+                client.send_message(text, message.reply(), event=message.event)
+            else:
+                text = "User added"
+                client.send_message(text, message.reply(), event=message.event)
+            # finally:
+            #     client.send_message(text, message.reply(), event=message.event)
+        else:
+            text = 'Invalid parameters. Check the help option for usage'
+            client.send_message(text, message.reply(), event=message.event)
+
+    def trigger_get_user(self, client, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_usernames = capture[0]
+        words = captured_usernames.split()
+        # use_stasher = kwargs.get('stasher', None)
+        # use_client = kwargs.get('client', None)
+        # use_id = kwargs.get('id', None)
+
+        matched_users = []
+        matched_users_other_client = []
+        message_list = []
+
+        if len(words) <= 3:
+            for word in words:
+                is_user_found = False
+
+                # user = havocbot.user.find_user_by_id_or_name(word, None, client)
+                # if user is not None and user:
+                #     matched_users.append(user)
+                #     is_user_found = True
+
+                # # TEST TO GET CLIENTUSER ONLY
+                # client_user = client.get_user_from_message(message.sender, message.to, message.event)
+                # logger.info('Client user is...')
+                # logger.info(client_user)
+
+                users = self.havocbot.db.find_users_by_matching_string_for_client(word, client.integration_name)
+                if users is not None and users:
+                    matched_users.extend(users)
+                    is_user_found = True
+
+                if not is_user_found:
+                    text = "User %s was not found" % (word)
+                    client.send_message(text, message.reply(), event=message.event)
+        else:
+            text = 'Too many parameters. What are you trying to do?'
+            client.send_message(text, message.reply(), event=message.event)
+
+        if matched_users:
+            set_users = set(matched_users)
+            if len(set_users) > 1:
+                message_list.append(
+                    "Found %d matching users" % (len(set_users))
+                )
+            for user_object in set_users:
+                logger.debug("Matched User - '%s'" % (user_object))
+                if user_object is not None:
+                    message_list.extend(user_object.get_user_info_as_list())
+                # message_list.extend(user_object.get_usernames_as_list())
+                # message_list.extend(
+                #     user_object.get_plugin_data_strings_as_list()
+                # )
+
+        if message_list:
+            client.send_messages_from_list(message_list, message.reply(), event=message.event)
+
+    def trigger_get_user_by_id(self, client, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_user_id = int(capture[0])
+
+        result = self.havocbot.db.find_user_by_id(captured_user_id)
         logger.info("Result here is '%s'" % (result))
 
-    def add_alias_for_user_id(self, client, message, **kwargs):
+        if result is not None and result:
+            message_list = result.get_user_info_as_list()
+            client.send_messages_from_list(message_list, message.reply(), event=message.event)
+        else:
+            text = "User ID %d was not found" % (captured_user_id)
+            client.send_message(text, message.reply(), event=message.event)
+
+    def trigger_add_alias_for_user_id(self, client, message, **kwargs):
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
-        captured_user_id = capture[0]
+        captured_user_id = int(capture[0])
         captured_alias = capture[1]
 
         a_user = self.havocbot.db.find_user_by_id(captured_user_id)
@@ -86,10 +182,10 @@ class UserPlugin(HavocBotPlugin):
             a_user.add_alias(captured_alias)
             a_user.save()
 
-    def del_alias_for_user_id(self, client, message, **kwargs):
+    def trigger_del_alias_for_user_id(self, client, message, **kwargs):
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
-        captured_user_id = capture[0]
+        captured_user_id = int(capture[0])
         captured_alias = capture[1]
 
         a_user = self.havocbot.db.find_user_by_id(captured_user_id)
@@ -98,11 +194,52 @@ class UserPlugin(HavocBotPlugin):
             a_user.del_alias(captured_alias)
             a_user.save()
 
-    def list_aliases_for_user_id(self, client, message, **kwargs):
+    def trigger_add_points_for_user_id(self, client, message, **kwargs):
         # Get the results of the capture
         capture = kwargs.get('capture_groups', None)
-        captured_user_id = capture[0]
-        captured_alias = capture[1]
+        captured_user_id = int(capture[0])
+        captured_points = int(capture[1])
+
+        try:
+            self.havocbot.db.add_points_to_user_id(captured_user_id, captured_points)
+        except Exception as e:
+            logger.error(traceback.format_exc())
+
+            text = "Unable to add points to user id"
+            client.send_message(text, message.reply(), event=message.event)
+        else:
+            text = "Points updated for user id %d" % (captured_user_id)
+            client.send_message(text, message.reply(), event=message.event)
+
+    def trigger_del_points_for_user_id(self, client, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_user_id = int(capture[0])
+        captured_points = int(capture[1])
+
+        try:
+            self.havocbot.db.del_points_to_user_id(captured_user_id, captured_points)
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            text = "Unable to delete points from user id"
+            client.send_message(text, message.reply(), event=message.event)
+        else:
+            text = "Points updated for user id %d" % (captured_user_id)
+            client.send_message(text, message.reply(), event=message.event)
+
+    def trigger_list_aliases_for_user_id(self, client, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_user_id = int(capture[0])
+
+        result = self.havocbot.db.find_user_by_id(captured_user_id)
+
+        if result is not None and result:
+            text = "%s's aliases: %s" % (result.name, result.get_aliases_as_string())
+            client.send_message(text, message.reply(), event=message.event)
+        else:
+            text = "User ID %d was not found" % (captured_user_id)
+            client.send_message(text, message.reply(), event=message.event)
 
     def trigger_coming_soon(self, client, message, **kwargs):
         text = 'This feature is coming soon'
@@ -155,67 +292,6 @@ class UserPlugin(HavocBotPlugin):
             text = 'No matches found'
             client.send_message(text, message.reply(), event=message.event)
 
-    def trigger_get_user(self, client, message, **kwargs):
-        # Get the results of the capture
-        capture = kwargs.get('capture_groups', None)
-        captured_usernames = capture[0]
-        words = captured_usernames.split()
-        # use_stasher = kwargs.get('stasher', None)
-        # use_client = kwargs.get('client', None)
-        # use_id = kwargs.get('id', None)
-
-        matched_users = []
-        matched_users_other_client = []
-        message_list = []
-
-        if len(words) <= 3:
-            for word in words:
-                is_user_found = False
-
-                # user = havocbot.user.find_user_by_id_or_name(word, None, client)
-                # if user is not None and user:
-                #     matched_users.append(user)
-                #     is_user_found = True
-
-                # # TEST TO GET CLIENTUSER ONLY
-                # client_user = client.get_user_from_message(message.sender, message.to, message.event)
-                # logger.info('Client user is...')
-                # logger.info(client_user)    
-
-                users = self.havocbot.db.find_users_by_matching_string_for_client(word, client.integration_name)
-                if users is not None and users:
-                    matched_users.extend(users)
-                    is_user_found = True
-
-                if not is_user_found:
-                    text = "User %s was not found" % (word)
-                    client.send_message(text, message.reply(), event=message.event)
-        else:
-            text = 'Too many parameters. What are you trying to do?'
-            client.send_message(text, message.reply(), event=message.event)
-
-        if matched_users:
-            set_users = set(matched_users)
-            if len(set_users) > 1:
-                message_list.append(
-                    "Found %d matching users" % (len(set_users))
-                )
-            for user_object in set_users:
-                logger.debug("Matched User - '%s'" % (user_object))
-                if user_object is not None:
-                    message_list.extend(user_object.get_user_info_as_list())
-                # message_list.extend(user_object.get_usernames_as_list())
-                # message_list.extend(
-                #     user_object.get_plugin_data_strings_as_list()
-                # )
-
-        if message_list:
-            client.send_messages_from_list(
-                message_list,
-                message.reply(),
-                event=message.event
-            )
-
     def trigger_get_users(self, client, message, **kwargs):
         matched_users = []
         message_list = []
@@ -242,24 +318,6 @@ class UserPlugin(HavocBotPlugin):
             )
         else:
             text = 'No users found'
-            client.send_message(text, message.reply(), event=message.event)
-
-    def trigger_add_user(self, client, message, **kwargs):
-        # Get the results of the capture
-        capture = kwargs.get('capture_groups', None)
-        captured_name = capture[0]
-        captured_username = capture[1]
-
-        if captured_name and captured_username:
-            logger.info("values are '%s' and '%s'" % (captured_name, captured_username))
-
-            a_user = User(0)
-            a_user.name = captured_name
-            a_user.usernames = {client.integration_name: [captured_username]}
-
-            self.havocbot.db.add_user(a_user)
-        else:
-            text = 'Invalid parameters. Check the help option for usage'
             client.send_message(text, message.reply(), event=message.event)
 
     # def trigger_get_user(self, client, message, **kwargs):
