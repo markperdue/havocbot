@@ -1,6 +1,6 @@
 import logging
 from tinydb import TinyDB, Query
-from havocbot.user import User, StasherClass, UserAlreadyExistsException
+from havocbot.user import User, StasherClass, UserDataAlreadyExistsException, UserDataNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ class StasherTinyDB(StasherClass):
         # Iterate through the user's usernames and see if any usernames already exist
         if self._user_exists(user):
             logger.error("This user already exists in the db")
-            raise UserAlreadyExistsException
+            raise UserDataAlreadyExistsException
 
         logger.info("Adding new user '%s' to database" % (user.name))
 
@@ -22,6 +22,39 @@ class StasherTinyDB(StasherClass):
 
     def del_user(self, user):
         pass
+
+    def add_alias_to_user_id(self, user_id, alias):
+        logger.info("Adding '%s' alias to user id %s" % (alias, user_id))
+
+        updated_aliases = []
+
+        try:
+            updated_aliases = self.db.get(eid=user_id)['aliases']
+        except KeyError:
+            logger.info("No aliases found for user id '%d'" % (user_id))
+            updated_aliases = [alias]
+        else:
+            if alias in updated_aliases:
+                raise UserDataAlreadyExistsException
+            else:
+                updated_aliases.append(alias)
+        finally:
+            logger.debug("Updating aliases to '%s' for user id '%s'" % (updated_aliases, user_id))
+            self.db.update({'aliases': updated_aliases}, eids=[user_id])
+
+    def del_alias_to_user_id(self, user_id, alias):
+        logger.info("Deleting '%s' alias from user id %s" % (alias, user_id))
+
+        try:
+            updated_aliases = self.db.get(eid=user_id)['aliases']
+        except KeyError:
+            raise
+        else:
+            if alias not in updated_aliases:
+                raise UserDataNotFoundException
+            else:
+                updated_aliases.remove(alias)
+                self.db.update({'aliases': updated_aliases}, eids=[user_id])
 
     def add_points_to_user_id(self, user_id, points):
         logger.info("Adding %d points to user id %s" % (points, user_id))

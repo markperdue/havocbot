@@ -245,6 +245,14 @@ class StasherClass(object):
         pass
 
     @abstractmethod
+    def add_alias_to_user_id(self, user_id, alias):
+        pass
+
+    @abstractmethod
+    def del_alias_to_user_id(self, user_id, alias):
+        pass
+
+    @abstractmethod
     def add_points_to_user_id(self, user_id, points):
         pass
 
@@ -285,5 +293,9 @@ class StasherClass(object):
         pass
 
 
-class UserAlreadyExistsException(Exception):
+class UserDataAlreadyExistsException(Exception):
+    pass
+
+
+class UserDataNotFoundException(Exception):
     pass

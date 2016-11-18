@@ -3,7 +3,7 @@
 import logging
 import traceback
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
-from havocbot.user import User, ClientUser, UserAlreadyExistsException
+from havocbot.user import User, ClientUser, UserDataAlreadyExistsException, UserDataNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +41,8 @@ class UserPlugin(HavocBotPlugin):
             Trigger(match="!user\sadd\s(.*)\s(.*)", function=self.trigger_add_user, param_dict=None, requires="bot:admin"),
             Trigger(match="!user\sget\s(.*)", function=self.trigger_get_user, param_dict={'use_stasher': True, 'use_client': True}, requires=None),
             Trigger(match="!user\sget-id\s([0-9]+)", function=self.trigger_get_user_by_id, param_dict=None, requires=None),
-            Trigger(match="!user\sadd-alias\s([0-9]+)\s(.+)", function=self.trigger_coming_soon, param_dict=None, requires="bot:admin"),
-            Trigger(match="!user\sdel-alias\s([0-9]+)\s(.+)", function=self.trigger_coming_soon, param_dict=None, requires="bot:admin"),
+            Trigger(match="!user\sadd-alias\s([0-9]+)\s(.+)", function=self.trigger_add_alias_for_user_id, param_dict=None, requires="bot:admin"),
+            Trigger(match="!user\sdel-alias\s([0-9]+)\s(.+)", function=self.trigger_del_alias_for_user_id, param_dict=None, requires="bot:admin"),
             Trigger(match="!user\sget-aliases\s([0-9]+)", function=self.trigger_list_aliases_for_user_id, param_dict=None, requires=None),
             Trigger(match="!user\sadd-points\s([0-9]+)\s([0-9]+)", function=self.trigger_add_points_for_user_id, param_dict=None, requires="bot:points"),
             Trigger(match="!user\sdel-points\s([0-9]+)\s([0-9]+)", function=self.trigger_del_points_for_user_id, param_dict=None, requires="bot:points"),
@@ -86,7 +86,7 @@ class UserPlugin(HavocBotPlugin):
 
             try:
                 self.havocbot.db.add_user(a_user)
-            except UserAlreadyExistsException:
+            except UserDataAlreadyExistsException:
                 text = "That user already exists"
                 client.send_message(text, message.reply(), event=message.event)
             else:
@@ -176,11 +176,14 @@ class UserPlugin(HavocBotPlugin):
         captured_user_id = int(capture[0])
         captured_alias = capture[1]
 
-        a_user = self.havocbot.db.find_user_by_id(captured_user_id)
-
-        if a_user is not None and a_user:
-            a_user.add_alias(captured_alias)
-            a_user.save()
+        try:
+            self.havocbot.db.add_alias_to_user_id(captured_user_id, captured_alias)
+        except UserDataAlreadyExistsException:
+            text = "That alias already exists"
+            client.send_message(text, message.reply(), event=message.event)
+        else:
+            text = "Alias added"
+            client.send_message(text, message.reply(), event=message.event)
 
     def trigger_del_alias_for_user_id(self, client, message, **kwargs):
         # Get the results of the capture
@@ -188,11 +191,17 @@ class UserPlugin(HavocBotPlugin):
         captured_user_id = int(capture[0])
         captured_alias = capture[1]
 
-        a_user = self.havocbot.db.find_user_by_id(captured_user_id)
-
-        if a_user is not None and a_user:
-            a_user.del_alias(captured_alias)
-            a_user.save()
+        try:
+            self.havocbot.db.del_alias_to_user_id(captured_user_id, captured_alias)
+        except KeyError:
+            text = "That user has no aliases to delete"
+            client.send_message(text, message.reply(), event=message.event)
+        except UserDataNotFoundException:
+            text = "That alias was not found"
+            client.send_message(text, message.reply(), event=message.event)
+        else:
+            text = "Alias deleted"
+            client.send_message(text, message.reply(), event=message.event)
 
     def trigger_add_points_for_user_id(self, client, message, **kwargs):
         # Get the results of the capture

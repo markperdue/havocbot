@@ -242,6 +242,12 @@ class StasherDB(StasherClass):
     def del_user(self, user):
         pass
 
+    def add_alias_to_user_id(self, user_id, alias):
+        pass
+
+    def del_alias_to_user_id(self, user_id, alias):
+        pass
+
     def add_points_to_user_id(self, user_id, points):
         if isinstance(points, (int, long)):
 
