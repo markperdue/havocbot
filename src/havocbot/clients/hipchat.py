@@ -411,13 +411,13 @@ class X(ElementBase):
     sub_interfaces = set(('type', 'notify', 'color', 'message_format', 'card', 'notification_sender'))
     subitem = (Card, NotificationSender,)
 
-    def setBasics(self, basic_type, notify, color, format):
-        logger.info("setting basics to '%s', '%s', '%s', and '%s'" % (basic_type, notify, color, format))
+    def setBasics(self, basic_type, notify, color, message_format):
+        logger.info("setting basics to '%s', '%s', '%s', and '%s'" % (basic_type, notify, color, message_format))
 
         self['type'] = basic_type
         self['notify'] = notify
         self['color'] = color
-        self['message_format'] = format
+        self['message_format'] = message_format
 
     def getCard(self):
         raw = ''
@@ -540,14 +540,14 @@ class HipChatUser(ClientUser):
         return "HipChatUser(Username: '%s', Name: '%s', Email: '%s')" % (self.username, self.name, self.email)
 
     def to_json(self):
-        json = {
+        json_data = {
             'name': self.name,
             'username': self.username,
             'email': self.email,
             'client': self.client
         }
 
-        return json
+        return json_data
 
 
 # Returns a newly created user from a json source

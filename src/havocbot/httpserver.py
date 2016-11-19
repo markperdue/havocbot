@@ -100,5 +100,5 @@ class ListenServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         except Exception as e:
             logger.error(e)
 
-    def log_message(self, format, *args):
+    def log_message(self, message_format, *args):
         return

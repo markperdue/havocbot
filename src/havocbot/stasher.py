@@ -46,7 +46,7 @@ class Stasher(Singleton):
                 outfile, indent=2, sort_keys=True)
         self.load_db()
 
-    def add_json_to_key(self, json, key, unique_root_key, unique_root_value):
+    def add_json_to_key(self, json_data, key, unique_root_key, unique_root_value):
         if self.data is not None:
             if key in self.data:
                 logger.info("Key '%s' is known" % (key))
@@ -61,16 +61,16 @@ class Stasher(Singleton):
                     raise exceptions.StasherEntryAlreadyExistsError(result)
                 else:
                     logger.info("No match found for record. Unique entry")
-                    self.data[key].append(json)
+                    self.data[key].append(json_data)
                     logger.info(self.data[key])
                     self.write_db()
             else:
                 logger.info("Adding new key %s" % (key))
                 self.data[key] = []
-                self.data[key].append(json)
+                self.data[key].append(json_data)
                 self.write_db()
 
-    def update_json_for_key(self, json, key, unique_root_key, unique_root_value):
+    def update_json_for_key(self, json_data, key, unique_root_key, unique_root_value):
         if self.data is not None:
             if key in self.data:
                 logger.info("Key '%s' is known" % (key))
@@ -81,11 +81,11 @@ class Stasher(Singleton):
                 ), None)
 
                 if result is not None:
-                    result = json
+                    result = json_data
             else:
                 logger.info("Adding new key %s" % (key))
                 self.data[key] = []
-                self.data[key].append(json)
+                self.data[key].append(json_data)
 
             self.write_db()
 
@@ -246,6 +246,12 @@ class StasherDB(StasherClass):
         pass
 
     def del_alias_to_user_id(self, user_id, alias):
+        pass
+
+    def add_permission_to_user_id(self, user_id, permission):
+        pass
+
+    def del_permission_to_user_id(self, user_id, permission):
         pass
 
     def add_points_to_user_id(self, user_id, points):

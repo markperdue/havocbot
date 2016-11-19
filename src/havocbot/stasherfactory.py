@@ -3,10 +3,10 @@ from havocbot.stasher import StasherDB
 
 
 class StasherFactory(object):
-    def factory(type):
-        if type == "StasherTinyDB":
+    def factory(factory_type):
+        if factory_type == "StasherTinyDB":
             return StasherTinyDB()
-        elif type == "StasherDB":
+        elif factory_type == "StasherDB":
             return StasherDB()
         else:
             return StasherTinyDB()

@@ -76,9 +76,7 @@ class User(object):
         return hash((self.user_id))
 
     def get_user_info_as_list(self):
-        results = []
-
-        results.append(self.get_user_header())
+        results = [self.get_user_header()]
 
         if self.aliases is not None and self.aliases:
             results.append(self.get_user_aliases())
@@ -185,7 +183,7 @@ class User(object):
         if self.name is not None and name_or_username_or_alias.lower() in self.name.lower():
             return True
 
-        if self.username is not None and name_or_username_or_alias.lower() in self.username.lower():
+        if self.current_username is not None and name_or_username_or_alias.lower() in self.current_username.lower():
             return True
 
         if self.aliases is not None and self.aliases:

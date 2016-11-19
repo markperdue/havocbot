@@ -14,8 +14,8 @@ def timedelta_total_seconds(timedelta):
 
 
 class TheatreObject(object):
-    def __init__(self, id=None, name=None, city=None, state=None, movies=None):
-        self.id = id
+    def __init__(self, id_object=None, name=None, city=None, state=None, movies=None):
+        self.id_object = id_object
         self.name = name
         self.city = city
         self.state = state
@@ -27,10 +27,10 @@ class TheatreObject(object):
         self.attributes = []
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and self.id == other.id)
+        return (isinstance(other, self.__class__) and self.id_object == other.id_object)
 
     def __str__(self):
-        return "TheatreObject(ID: %s, Name: %s, City: %s, State: %s)" % (self.id, self.name, self.city, self.state)
+        return "TheatreObject(ID: %s, Name: %s, City: %s, State: %s)" % (self.id_object, self.name, self.city, self.state)
 
     def print_theatre(self):
         print("%s - %s, %s, %s" % (self.name, self.address, self.city, self.state))
@@ -40,7 +40,7 @@ class TheatreObject(object):
         return self
 
     def is_valid(self):
-        if not self.id:
+        if not self.id_object:
             return False
         if not self.city:
             return False
@@ -54,7 +54,7 @@ class TheatreObject(object):
 
 
 def create_theatre_object_from_json(json):
-    theatre = TheatreObject(id=json['id'], name=json['name'], city=json['location']['city'], state=json['location']['state'])
+    theatre = TheatreObject(id_object=json['id'], name=json['name'], city=json['location']['city'], state=json['location']['state'])
 
     theatre.website_url = json['websiteUrl'] if 'websiteUrl' in json else None
     theatre.postal_code = json['location']['postalCode'] if ('location' in json and 'postalCode' in json['location']) else None
@@ -65,8 +65,8 @@ def create_theatre_object_from_json(json):
 
 
 class MovieObject(object):
-    def __init__(self, id_=None, name=None, synopsis=None, genre=None, has_scheduled_showtimes=None, release_date_utc=None, earliest_showing_utc=None):
-        self.id_ = id_
+    def __init__(self, id_object=None, name=None, synopsis=None, genre=None, has_scheduled_showtimes=None, release_date_utc=None, earliest_showing_utc=None):
+        self.id_object = id_object
         self.name = name
         self.synopsis = synopsis
         self.genre = genre
@@ -75,10 +75,10 @@ class MovieObject(object):
         self.earliest_showing_utc = earliest_showing_utc
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and self.id == other.id)
+        return (isinstance(other, self.__class__) and self.id_object == other.id_object)
 
     def __str__(self):
-        return "MovieObject(ID: %s, Name: %s, Genre: %s, Has Showtimes: %s, Release Date: %s, Earliest Showing: %s)" % (self.id_, self.name, self.genre, self.has_scheduled_showtimes, self.release_date_utc, self.earliest_showing_utc)
+        return "MovieObject(ID: %s, Name: %s, Genre: %s, Has Showtimes: %s, Release Date: %s, Earliest Showing: %s)" % (self.id_object, self.name, self.genre, self.has_scheduled_showtimes, self.release_date_utc, self.earliest_showing_utc)
 
     def print_theatre(self):
         print(self.return_theatre())
@@ -88,7 +88,7 @@ class MovieObject(object):
 
     def populate_from_json(self, json):
         if json:
-            self.id_ = json["id"] if "id" in json else None
+            self.id_object = json["id"] if "id" in json else None
             self.name = json["name"] if "name" in json else None
             self.synopsis = json["synopsis"] if "synopsis" in json else None
             self.genre = json["genre"] if "genre" in json else None
@@ -116,15 +116,15 @@ class Showtimes(object):
             return 'No showtimes found'
 
     # dt must be timezone aware
-    def get_nearest_showtimes_to_datetime(self, dt, max):
+    def get_nearest_showtimes_to_datetime(self, dt, max_value):
         nearest_showtimes = []
 
         if self.count and self.count > 0 and self.showtimes:
             sorted_list = sorted(self.showtimes, key=lambda x: timedelta_total_seconds(dt - x.get_showtime_as_datetime()))
             # sorted_list = sorted(self.showtimes, key=lambda x: (dt - x.get_showtime_as_datetime()).total_seconds())
 
-            if len(sorted_list) > max:
-                for showtime in sorted_list[:max]:
+            if len(sorted_list) > max_value:
+                for showtime in sorted_list[:max_value]:
                     nearest_showtimes.append(showtime)
             else:
                 nearest_showtimes = nearest_showtimes.append(showtime)
@@ -133,8 +133,8 @@ class Showtimes(object):
 
 
 class Showtime(object):
-    def __init__(self, id_=None, run_time=None, internal_release_number=None, performance_number=None, is_sold_out=None, movie_id=None, movie_name=None, ticket_prices=None, show_date_time_local=None, show_date_time_utc=None):
-        self.id_ = id_
+    def __init__(self, id_object=None, run_time=None, internal_release_number=None, performance_number=None, is_sold_out=None, movie_id=None, movie_name=None, ticket_prices=None, show_date_time_local=None, show_date_time_utc=None):
+        self.id_object = id_object
         self.run_time = run_time
         self.internal_release_number = internal_release_number
         self.performance_number = performance_number
@@ -148,7 +148,7 @@ class Showtime(object):
         self.mpaa_rating = None
 
     def __str__(self):
-        return "Showtime(ID: %s, Movie Name: %s, Internal Release Number: %s, Movie ID: %s)" % (self.id_, self.movie_name, self.internal_release_number, self.movie_id)
+        return "Showtime(ID: %s, Movie Name: %s, Internal Release Number: %s, Movie ID: %s)" % (self.id_object, self.movie_name, self.internal_release_number, self.movie_id)
 
     def return_basic(self):
         return "%s - $%s [%s]" % (self.time_as_local(), self.ticket_prices[0].price, self.ticket_prices[0].type_)
@@ -186,9 +186,9 @@ class ShowtimeTicket(object):
 
 def get_json_showtimes_at_theatre_on_date(theatre_object, date, api_key_amc):
     headers = {'X-AMC-Vendor-Key': api_key_amc}
-    url = "https://api.amctheatres.com/v2/theatres/%s/showtimes/%s/?pageSize=25" % (theatre_object.id, date)
+    url = "https://api.amctheatres.com/v2/theatres/%s/showtimes/%s/?pageSize=25" % (theatre_object.id_object, date)
 
-    logger.debug("Fetching showtimes at %s on %s..." % (theatre_object.id, date))
+    logger.debug("Fetching showtimes at %s on %s..." % (theatre_object.id_object, date))
 
     r = requests.get(url, headers=headers)
 
@@ -200,9 +200,9 @@ def get_json_showtimes_at_theatre_on_date(theatre_object, date, api_key_amc):
 
 def get_json_showtimes_at_theatre_on_date_for_movie(theatre_object, date, movie_name, api_key_amc):
     headers = {'X-AMC-Vendor-Key': api_key_amc}
-    url = "https://api.amctheatres.com/v2/theatres/%s/showtimes/%s/?movieName=%s&pageSize=25" % (theatre_object.id, date, movie_name)
+    url = "https://api.amctheatres.com/v2/theatres/%s/showtimes/%s/?movieName=%s&pageSize=25" % (theatre_object.id_object, date, movie_name)
 
-    logger.debug("Fetching showtimes at %s on %s for %s..." % (theatre_object.id, date, movie_name))
+    logger.debug("Fetching showtimes at %s on %s for %s..." % (theatre_object.id_object, date, movie_name))
 
     r = requests.get(url, headers=headers)
 
@@ -220,7 +220,7 @@ def create_showtime_from_json(data):
     if data is not None:
         showtime = Showtime()
 
-        showtime.id_ = data['id']
+        showtime.id_object = data['id']
         showtime.run_time = data['runTime']
         showtime.internal_release_number = data['internalReleaseNumber']
         showtime.performance_number = data['performanceNumber']
