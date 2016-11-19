@@ -130,7 +130,7 @@ class RollPlugin(HavocBotPlugin):
             if 0 < elapsed_time < self.rolloff_join_window:
                 logger.info("Checking on adding user '%s' to list '%s'" % (user, self.rolloff_rollers_initial))
 
-                if any(x.current_username == user.current_username for x in self.rolloff_rollers_initial):
+                if any(x.user_id == user.user_id for x in self.rolloff_rollers_initial):
                     text = "You are already in this round %s" % (user.name)
                     client.send_message(text, message.reply(), event=message.event)
                 else:
