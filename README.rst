@@ -43,7 +43,7 @@ Install the latest version from pip:
 
     pip install havocbot
 
-Copy the example `main.py`_ and `settings.ini`_ files into a new directory on your machine. Modify the settings.ini to include the neccessary API tokens and server settings for the chat clients that the bot should connect to.
+Copy the example `main.py`_ and `settings.ini`_ files into a new directory on your machine. Modify the settings.ini to include the necessary API tokens and server settings for the chat clients that the bot should connect to.
 
 Make sure the chat client is also listed in the 'clients_enabled' field in settings.ini
 
