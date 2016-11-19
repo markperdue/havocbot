@@ -27,6 +27,8 @@ class UserPlugin(HavocBotPlugin):
             Usage(command="!user add-alias <user-id> <alias>", example="!user add-alias 1 the_enforcer", description="adds an alias to a user"),
             Usage(command="!user del-alias <user-id> <alias>", example="!user del-alias 1 the_enforcer", description="deletes an alias to a user"),
             Usage(command="!user get-aliases <user-id>", example="!user get-aliases 1", description="lists all aliases for a user"),
+            Usage(command="!user add-permission <user-id> <permission>", example="!user add-permission 1 bot:user", description="adds a permission to a user"),
+            Usage(command="!user del-permission <user-id> <permission>", example="!user del-permission 1 bot:user", description="deletes a permission to a user"),
             Usage(command="!user add-points <user-id> <points>", example="!user add-points 1 3", description="adds points to a user"),
             Usage(command="!user del-points <user-id> <points>", example="!user del-points 1 50", description="deletes points from a user"),
             Usage(command="!users", example=None, description="get user info on all users in the channel"),
@@ -43,6 +45,8 @@ class UserPlugin(HavocBotPlugin):
             Trigger(match="!user\sget-id\s([0-9]+)", function=self.trigger_get_user_by_id, param_dict=None, requires=None),
             Trigger(match="!user\sadd-alias\s([0-9]+)\s(.+)", function=self.trigger_add_alias_for_user_id, param_dict=None, requires="bot:admin"),
             Trigger(match="!user\sdel-alias\s([0-9]+)\s(.+)", function=self.trigger_del_alias_for_user_id, param_dict=None, requires="bot:admin"),
+            Trigger(match="!user\sadd-permission\s([0-9]+)\s(.+)", function=self.trigger_add_permission_for_user_id, param_dict=None, requires="bot:admin"),
+            Trigger(match="!user\sdel-permission\s([0-9]+)\s(.+)", function=self.trigger_del_permission_for_user_id, param_dict=None, requires="bot:admin"),
             Trigger(match="!user\sget-aliases\s([0-9]+)", function=self.trigger_list_aliases_for_user_id, param_dict=None, requires=None),
             Trigger(match="!user\sadd-points\s([0-9]+)\s([0-9]+)", function=self.trigger_add_points_for_user_id, param_dict=None, requires="bot:points"),
             Trigger(match="!user\sdel-points\s([0-9]+)\s([0-9]+)", function=self.trigger_del_points_for_user_id, param_dict=None, requires="bot:points"),
@@ -201,6 +205,39 @@ class UserPlugin(HavocBotPlugin):
             client.send_message(text, message.reply(), event=message.event)
         else:
             text = "Alias deleted"
+            client.send_message(text, message.reply(), event=message.event)
+
+    def trigger_add_permission_for_user_id(self, client, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_user_id = int(capture[0])
+        captured_permission = capture[1]
+
+        try:
+            self.havocbot.db.add_permission_to_user_id(captured_user_id, captured_permission)
+        except UserDataAlreadyExistsException:
+            text = "That permission already exists"
+            client.send_message(text, message.reply(), event=message.event)
+        else:
+            text = "Permission added"
+            client.send_message(text, message.reply(), event=message.event)
+
+    def trigger_del_permission_for_user_id(self, client, message, **kwargs):
+        # Get the results of the capture
+        capture = kwargs.get('capture_groups', None)
+        captured_user_id = int(capture[0])
+        captured_permission = capture[1]
+
+        try:
+            self.havocbot.db.del_permission_to_user_id(captured_user_id, captured_permission)
+        except KeyError:
+            text = "That user has no permissions to delete"
+            client.send_message(text, message.reply(), event=message.event)
+        except UserDataNotFoundException:
+            text = "That user does not have that permission"
+            client.send_message(text, message.reply(), event=message.event)
+        else:
+            text = "Permission deleted"
             client.send_message(text, message.reply(), event=message.event)
 
     def trigger_add_points_for_user_id(self, client, message, **kwargs):

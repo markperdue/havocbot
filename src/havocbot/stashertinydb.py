@@ -23,38 +23,29 @@ class StasherTinyDB(StasherClass):
     def del_user(self, user):
         pass
 
-    def add_alias_to_user_id(self, user_id, alias):
-        logger.info("Adding '%s' alias to user id %s" % (alias, user_id))
-
-        updated_aliases = []
-
+    def add_permission_to_user_id(self, user_id, permission):
         try:
-            updated_aliases = self.db.get(eid=user_id)['aliases']
-        except KeyError:
-            logger.info("No aliases found for user id '%d'" % (user_id))
-            updated_aliases = [alias]
-        else:
-            if alias in updated_aliases:
-                raise UserDataAlreadyExistsException
-            else:
-                updated_aliases.append(alias)
-        finally:
-            logger.debug("Updating aliases to '%s' for user id '%s'" % (updated_aliases, user_id))
-            self.db.update({'aliases': updated_aliases}, eids=[user_id])
+            self._add_string_to_list_by_key_for_user_id(user_id, 'permissions', permission)
+        except:
+            raise
+
+    def del_permission_to_user_id(self, user_id, permission):
+        try:
+            self._del_string_to_list_by_key_for_user_id(user_id, 'permissions', permission)
+        except:
+            raise
+
+    def add_alias_to_user_id(self, user_id, alias):
+        try:
+            self._add_string_to_list_by_key_for_user_id(user_id, 'aliases', alias)
+        except:
+            raise
 
     def del_alias_to_user_id(self, user_id, alias):
-        logger.info("Deleting '%s' alias from user id %s" % (alias, user_id))
-
         try:
-            updated_aliases = self.db.get(eid=user_id)['aliases']
-        except KeyError:
+            self._del_string_to_list_by_key_for_user_id(user_id, 'aliases', alias)
+        except:
             raise
-        else:
-            if alias not in updated_aliases:
-                raise UserDataNotFoundException
-            else:
-                updated_aliases.remove(alias)
-                self.db.update({'aliases': updated_aliases}, eids=[user_id])
 
     def add_points_to_user_id(self, user_id, points):
         logger.info("Adding %d points to user id %s" % (points, user_id))
@@ -195,6 +186,42 @@ class StasherTinyDB(StasherClass):
         user.is_stashed = True
 
         return user
+
+    def _add_string_to_list_by_key_for_user_id(self, user_id, list_key, string_item):
+        logger.info("Adding '%s' item '%s' to user id %d" % (list_key, string_item, user_id))
+
+        list_items = []
+
+        try:
+            list_items = self.db.get(eid=user_id)[list_key]
+        except KeyError:
+            logger.info("No items found for list '%s' for user id '%d'" % (list_key, user_id))
+            list_items = [string_item]
+        else:
+            if string_item in list_items:
+                raise UserDataAlreadyExistsException
+            else:
+                list_items.append(string_item)
+        finally:
+            logger.debug("Updating '%s' to '%s' for user id '%s'" % (list_key, list_items, user_id))
+            self.db.update({list_key: list_items}, eids=[user_id])
+
+    def _del_string_to_list_by_key_for_user_id(self, user_id, list_key, string_item):
+        logger.info("Deleting '%s' item '%s' from user id %d" % (list_key, string_item, user_id))
+
+        list_items = []
+
+        try:
+            list_items = self.db.get(eid=user_id)[list_key]
+        except KeyError:
+            raise
+        else:
+            if string_item not in list_items:
+                raise UserDataNotFoundException
+            else:
+                list_items.remove(string_item)
+                logger.debug("Updating '%s' to '%s' for user id '%s'" % (list_key, list_items, user_id))
+                self.db.update({list_key: list_items}, eids=[user_id])
 
     def _user_exists(self, user):
         # Iterate through the user's usernames and see if any usernames already exist

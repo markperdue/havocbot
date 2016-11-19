@@ -253,6 +253,14 @@ class StasherClass(object):
         pass
 
     @abstractmethod
+    def add_permission_to_user_id(self, user_id, permission):
+        pass
+
+    @abstractmethod
+    def del_permission_to_user_id(self, user_id, permission):
+        pass
+
+    @abstractmethod
     def add_points_to_user_id(self, user_id, points):
         pass
 
