@@ -6,7 +6,6 @@ from random import choice
 import threading
 import time
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
-from havocbot.stasher import StasherDB
 
 logger = logging.getLogger(__name__)
 
@@ -39,19 +38,38 @@ class RollPlugin(HavocBotPlugin):
 
     def init(self, havocbot):
         self.havocbot = havocbot
-        self.rolloff_join_window = 10
+        self.rolloff_join_interval = None
         self.rolloff_in_process = False
         self.rolloff_start_time = None
         self.rolloff_rollers_current = None
         self.rolloff_rollers_initial = None
-        self.rolloff_minimum_players = 1
-        self.should_award_points = True
+        self.rolloff_minimum_players = None
+        self.should_award_points = False
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
-        requirements_met = True
+        requirements_met = False
 
-        # Return true if this plugin has the information required to work
+        if settings is not None and settings:
+            for item in settings:
+                # Switch on the key
+                if item[0] == 'join_interval':
+                    self.rolloff_join_interval = int(item[1])
+                elif item[0] == 'minimal_players':
+                    self.rolloff_minimum_players = int(item[1])
+                elif item[0] == 'award_points':
+                    self.should_award_points = item[1]
+
+        if self.rolloff_join_interval is not None and self.rolloff_minimum_players is not None:
+            if self.rolloff_join_interval > 0 and isinstance(self.rolloff_join_interval, int):
+                if self.rolloff_minimum_players > 0 and isinstance(self.rolloff_minimum_players, int):
+                    requirements_met = True
+                else:
+                    logger.error('There was an issue with the minimal players number. Verify minimum_players is set in the settings file')
+            else:
+                logger.error('There was an issue with the join interval value. Verify join_interval is set in the settings file')
+
+        # Return true if this plugin has the information required to connect
         if requirements_met:
             return True
         else:
@@ -101,7 +119,18 @@ class RollPlugin(HavocBotPlugin):
             client.send_message(text, message.reply(), event=message.event)
 
     def new_rolloff(self, client, message):
-        text = "Time to throw it down. A %s rolloff has been called. Join the rolloff in the next %s seconds by typing '!rolloff'" % ('regular', self.rolloff_join_window)
+        start_phrases = [
+            'Time to throw it down.',
+            'Let\'s get this started!',
+            'Here we go!',
+            'Oh doggy!'
+        ]
+        text = "%s " % (choice(start_phrases))
+        text += "A %s rolloff has been called. " % ('regular')
+        if self.should_award_points:
+            text += "Wager 1 point and join the rolloff in the next %s seconds by typing '!rolloff'" % (self.rolloff_join_interval)
+        else:
+            text += "Join the rolloff in the next %s seconds by typing '!rolloff'" % (self.rolloff_join_interval)
         client.send_message(text, message.reply(), event=message.event)
 
         self.rolloff_enable()
@@ -110,14 +139,14 @@ class RollPlugin(HavocBotPlugin):
         bg_thread.start()
 
     def rolloff_enable(self):
-        logger.debug("rolloff_enable() triggered")
+        logger.debug("triggered")
         self.rolloff_in_process = True
         self.rolloff_start_time = time.time()
         self.rolloff_rollers_current = []
         self.rolloff_rollers_initial = []
 
     def rolloff_disable(self):
-        logger.debug("rolloff_disable() triggered")
+        logger.debug("triggered")
         self.rolloff_in_process = False
         self.rolloff_start_time = None
         self.rolloff_rollers_current = []
@@ -127,7 +156,7 @@ class RollPlugin(HavocBotPlugin):
         if self.rolloff_in_process:
             elapsed_time = time.time() - self.rolloff_start_time
 
-            if 0 < elapsed_time < self.rolloff_join_window:
+            if 0 < elapsed_time < self.rolloff_join_interval:
                 logger.info("Checking on adding user '%s' to list '%s'" % (user, self.rolloff_rollers_initial))
 
                 if any(x.user_id == user.user_id for x in self.rolloff_rollers_initial):
@@ -162,7 +191,7 @@ class RollPlugin(HavocBotPlugin):
                 round_winners_dict['roll'] = roll_result
             elif roll_result == round_winners_dict['roll']:
                 round_winners_dict['users'].append(user)
-                logger.debug("<run_rolloff_round>: tied_users are '%s'" % (round_winners_dict['users']))
+                logger.debug("tied_users are '%s'" % (round_winners_dict['users']))
 
         if len(round_winners_dict['users']) == 1:
             logger.debug("Found a single winner")
@@ -204,7 +233,7 @@ class RollPlugin(HavocBotPlugin):
         self.rolloff_disable()
 
     def award_points(self, winner_user_object, initial_participants, client, message):
-        logger.info('award_points - there were %s initial participants' % (len(initial_participants)))
+        logger.info('%d initial participants' % (len(initial_participants)))
 
         self.havocbot.db.add_points_to_user_id(winner_user_object.user_id, len(initial_participants))
 
@@ -213,8 +242,8 @@ class RollPlugin(HavocBotPlugin):
                 self.havocbot.db.del_points_to_user_id(user.user_id, 1)
 
     def background_thread(self, client, message):
-        time.sleep(self.rolloff_join_window)
-        logger.debug("background_thread() - triggered")
+        time.sleep(self.rolloff_join_interval)
+        logger.debug("triggered")
         self.run_rolloff(client, message, self.rolloff_rollers_initial)
 
 
