@@ -22,25 +22,28 @@ class HipChat(Client):
         # Capture a reference to havocbot
         self.havocbot = havocbot
 
-        self.token = None
-        self.api_root_url = None
-        self.username = None
+        self.client = None
+        self.password = None
+        self.bot_name = None
+        self.bot_username = None
         self.room_names = None
-        self.nickname = None
         self.server = None
+        self.chat_server = None
+        self.api_root_url = None
+        self.api_token = None
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
         for item in settings:
             # Switch on the key
             if item[0] == 'jabber_id':
-                self.username = item[1]
+                self.bot_username = item[1]
             elif item[0] == 'password':
                 self.password = item[1]
             elif item[0] == 'room_names':
                 self.room_names = item[1].strip().split(',')
             elif item[0] == 'nickname':
-                self.nickname = item[1]
+                self.bot_name = item[1]
             elif item[0] == 'server':
                 self.server = item[1]
             elif item[0] == 'chat_server':
@@ -48,10 +51,10 @@ class HipChat(Client):
             elif item[0] == 'api_root_url':
                 self.api_root_url = item[1]
             elif item[0] == 'send_notification_token':
-                self.token = item[1]
+                self.api_token = item[1]
 
         # Return true if this integrations has the information required to connect
-        if self.username is not None and self.password is not None and self.room_names is not None and self.nickname is not None and self.server is not None and self.chat_server is not None:
+        if self.bot_username is not None and self.password is not None and self.room_names is not None and self.bot_name is not None and self.server is not None and self.chat_server is not None:
             # Make sure there is at least one non falsy room to join (ex. room_names = ,,,,,, should fail)
             if len([x for x in self.room_names if x]) > 0:
                 logger.debug('There is at least one non falsy room name')
@@ -64,12 +67,12 @@ class HipChat(Client):
             return False
 
     def connect(self):
-        if self.username is None:
+        if self.bot_username is None:
             logger.error('A XMPP username must be configured')
         if self.password is None:
             logger.error('A XMPP password must be configured')
 
-        self.client = HipMUCBot(self, self.havocbot, self.username, self.password, self.room_names, self.server, self.nickname, self.chat_server)
+        self.client = HipMUCBot(self, self.havocbot, self.bot_username, self.password, self.room_names, self.server, self.bot_name, self.chat_server)
 
         self.client.register_plugin('xep_0030')  # Service Discovery
         self.client.register_plugin('xep_0045')  # Multi-User Chat
@@ -77,7 +80,7 @@ class HipChat(Client):
         self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # XMPP Ping set for a keepalive ping every 60 seconds
 
         if self.client.connect(address=(self.server, 5223), use_ssl=True):
-            logger.info("I am.. %s! (%s)" % (self.nickname, self.username))
+            logger.info("I am.. %s! (%s)" % (self.bot_name, self.bot_username))
             return True
         else:
             return False
@@ -152,7 +155,7 @@ class HipChat(Client):
                             json_dict = kwargs.get('json')
                             logger.info("Found room_id which is '%s' and json which is '%s'" % (api_room_id, json_dict))
 
-                            self.send_message_api(self.api_root_url, api_room_id, self.token, json_dict)
+                            self.send_message_api(self.api_root_url, api_room_id, self.api_token, json_dict)
                             used_notification_api = True
 
                 if not used_notification_api:
@@ -180,23 +183,19 @@ class HipChat(Client):
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def get_vcard_by_jabber_id(self, jabber_id):
-        vcard = None
+    def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
+        user = User(0)
 
-        if jabber_id is not None:
-            if isinstance(jabber_id, sleekxmpp.jid.JID):
-                bare_jid = jabber_id.bare
-            else:
-                bare_jid = jabber_id
+        logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
 
-            try:
-                vcard = self.client.plugin['xep_0054'].get_vcard(jid=bare_jid)
-            except sleekxmpp.exceptions.IqError as e:
-                logger.error("IqError - %s" % (e.iq))
-            except sleekxmpp.exceptions.IqTimeout:
-                logger.error('IqTimeOut')
+        # Get client object information
+        client_user = self.get_client_object_from_message_object(message_sender, channel=channel, event=event)
+        user.client_user = client_user
 
-            return vcard
+        user.name = client_user.name
+        user.current_username = client_user.username
+
+        return user
 
     def get_users_in_channel(self, channel, event=None, **kwargs):
         result_list = []
@@ -214,29 +213,23 @@ class HipChat(Client):
 
         return result_list
 
-    def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
-        user = User(0)
+    def get_vcard_by_jabber_id(self, jabber_id):
+        vcard = None
 
-        logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
+        if jabber_id is not None:
+            if isinstance(jabber_id, sleekxmpp.jid.JID):
+                bare_jid = jabber_id.bare
+            else:
+                bare_jid = jabber_id
 
-        # Get client object information
-        client_user = self.get_client_object_from_message_object(message_sender, channel=channel, event=event)
-        user.client_user = client_user
+            try:
+                vcard = self.client.plugin['xep_0054'].get_vcard(jid=bare_jid)
+            except sleekxmpp.exceptions.IqError as e:
+                logger.error("IqError - %s" % (e.iq))
+            except sleekxmpp.exceptions.IqTimeout:
+                logger.error('IqTimeOut')
 
-        user.name = client_user.name
-        user.username = client_user.username
-
-        # if event is not None and event:
-        #     if event in ['chat', 'normal']:
-        #         # Get users from private message
-        #         user = self._get_user_from_private_chat(message_sender)
-
-        #     elif event in ['groupchat']:
-        #         # Get users from groupchat
-        #         # user = self._get_user_from_groupchat(message_sender, channel)
-        #         user = self._get_user_from_jid(message_sender)
-
-        return user
+            return vcard
 
     def _get_user_from_jid(self, jabber_id):
         user = None
@@ -532,7 +525,6 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
 class HipChatUser(ClientUser):
     def __init__(self, username, name, email):
         super(HipChatUser, self).__init__(username, 'hipchat')
-        self.username = username
         self.name = name
         self.email = email
 
