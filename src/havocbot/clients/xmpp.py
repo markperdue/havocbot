@@ -4,6 +4,7 @@ import logging
 import sleekxmpp
 from havocbot.client import Client
 from havocbot.message import Message
+from havocbot.user import User, ClientUser
 
 logger = logging.getLogger(__name__)
 
@@ -18,31 +19,35 @@ class XMPP(Client):
         # Capture a reference to havocbot
         self.havocbot = havocbot
 
-        self.token = None
-        self.username = None
+        self.client = None
+        self.password = None
+        self.bot_name = None
+        self.bot_username = None
         self.room_names = None
-        self.nickname = None
         self.server = None
+        self.chat_server = None
+
+
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
         for item in settings:
             # Switch on the key
             if item[0] == 'jabber_id':
-                self.username = item[1]
+                self.bot_username = item[1]
             elif item[0] == 'password':
                 self.password = item[1]
             elif item[0] == 'room_names':
                 self.room_names = item[1].strip().split(',')
             elif item[0] == 'nickname':
-                self.nickname = item[1]
+                self.bot_name = item[1]
             elif item[0] == 'server':
                 self.server = item[1]
             elif item[0] == 'chat_server':
                 self.chat_server = item[1]
 
         # Return true if this integrations has the information required to connect
-        if self.username is not None and self.password is not None and self.room_names is not None and self.nickname is not None and self.server is not None and self.chat_server is not None:
+        if self.bot_username is not None and self.password is not None and self.room_names is not None and self.bot_name is not None and self.server is not None and self.chat_server is not None:
             # Make sure there is at least one non falsy room to join (ex. room_names = ,,,,,, should fail)
             if len([x for x in self.room_names if x]) > 0:
                 logger.debug('There is at least one non falsy room name')
@@ -55,12 +60,12 @@ class XMPP(Client):
             return False
 
     def connect(self):
-        if self.username is None:
+        if self.bot_username is None:
             logger.error('A XMPP username must be configured')
         if self.password is None:
             logger.error('A XMPP password must be configured')
 
-        self.client = MUCBot(self, self.havocbot, self.username, self.password, self.room_names, self.server, self.nickname, self.chat_server)
+        self.client = MUCBot(self, self.havocbot, self.bot_username, self.password, self.room_names, self.server, self.bot_name, self.chat_server)
 
         self.client.register_plugin('xep_0030')  # Service Discovery
         self.client.register_plugin('xep_0045')  # Multi-User Chat
@@ -70,7 +75,7 @@ class XMPP(Client):
         # self.client.ssl_version = ssl.PROTOCOL_SSLv23
 
         if self.client.connect(address=(self.server, 5223), use_ssl=True):
-            logger.info("I am.. %s! (%s)" % (self.nickname, self.username))
+            logger.info("I am.. %s! (%s)" % (self.bot_name, self.bot_username))
             return True
         else:
             return False
@@ -113,58 +118,17 @@ class XMPP(Client):
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
-    def find_user_by_id(self, jabber_id, **kwargs):
-        user = None
-
-        # Arrive here commonly through private messages
-        if isinstance(jabber_id, sleekxmpp.jid.JID):
-            vcard = self._get_vcard_by_jabber_id(jabber_id)
-            if vcard is not None:
-                user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
-        # Arrive here commonly through group messages
-        # else:
-        #     # Fallback to trying to get a user object from a name
-        #     user = self._get_user_from_groupchat(jabber_id, **kwargs)
-
-        logger.debug("find_user_by_id - user is '%s'" % (user))
-        if user is not None:
-            return user
-        else:
-            return None
-
-    def find_users_by_name(self, name, channel=None, event=None, **kwargs):
-        results = []
-
-        logger.info("Channel is '%s', name is '%s', event is '%s'" % (channel, name, event))
-
-        # Fetch JID from xep_0045
-        if channel is not None and channel:
-            if '@' not in channel:
-                channel = "%s@%s" % (channel, self.server)
-
-            if event is not None and event == 'groupchat':
-                user = self._get_user_from_groupchat(name, channel)
-                if user is not None:
-                    results.append(user)
-
-        logger.debug("find_users_by_name - returning with '%s'" % (results))
-        return results
-
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
-        user = None
+        user = User(0)
 
         logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
 
-        if event is not None and event:
-            if event in ['chat', 'normal']:
-                # Get users from private message
-                # logger.info('CHAT FOUND')
-                user = self._get_user_from_private_chat(message_sender)
+        # Get client object information
+        client_user = self.get_client_object_from_message_object(message_sender, channel=channel, event=event)
+        user.client_user = client_user
 
-            elif event in ['groupchat']:
-                # Get users from groupchat
-                # logger.info('GROUPCHAT FOUND')
-                user = self._get_user_from_groupchat(message_sender, channel)
+        user.name = client_user.name
+        user.current_username = client_user.username
 
         return user
 
@@ -184,6 +148,40 @@ class XMPP(Client):
 
         return result_list
 
+    def get_vcard_by_jabber_id(self, jabber_id):
+        vcard = None
+
+        if jabber_id is not None:
+            if isinstance(jabber_id, sleekxmpp.jid.JID):
+                bare_jid = jabber_id.bare
+            else:
+                bare_jid = jabber_id
+
+            try:
+                vcard = self.client.plugin['xep_0054'].get_vcard(jid=bare_jid)
+            except sleekxmpp.exceptions.IqError as e:
+                logger.error("IqError - %s" % (e.iq))
+            except sleekxmpp.exceptions.IqTimeout:
+                logger.error('IqTimeOut')
+
+            return vcard
+
+    def _get_user_from_jid(self, jabber_id):
+        user = None
+
+        if jabber_id is not None and jabber_id:
+            vcard = self._get_vcard_by_jabber_id(jabber_id)
+            user = create_user_object_2(jabber_id, vcard)
+            # user = self.get_client_object_from_message_object(message_sender, channel=channel, event=event)
+
+            logger.info('Displaying user')
+            logger.info(user)
+        else:
+            logger.info('else clause top')
+
+        return user
+
+    # Uncommented this. Not sure why it was commented out
     def _get_user_from_groupchat(self, name, channel):
         user = None
 
@@ -194,46 +192,37 @@ class XMPP(Client):
 
             jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
 
-            # if isinstance(jabber_id, sleekxmpp.jid.JID):
-            #     logger.info('IT IS A JID INSTANCE')
-            # else:
-            #     logger.info('IT IS NOT A JID INSTANCE')
-
             if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
                 vcard = self._get_vcard_by_jabber_id(jabber_id)
-                if vcard is not None:
-                    user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
-                else:
-                    # user = create_user_object(jabber_id.bare, name, None)
-                    user = create_user_object(jabber_id, name, None)
+                logger.info('Creating user')
+                logger.info("jabber_id is '%s', name is '%s' and vcard is '%s'" % (jabber_id, name, vcard))
+                user = create_user_object(jabber_id, name, vcard)
 
-                logger.info(repr(user))
+                logger.info('Displaying user')
+                logger.info(user)
+            else:
+                logger.info('else clause top')
+        else:
+            logger.info('else clause')
 
         return user
 
-    def _get_user_from_private_chat(self, name):
-        user = None
+    # def _get_user_from_private_chat(self, name):
+    #     user = None
 
-        if name is not None:
-            if isinstance(name, sleekxmpp.jid.JID):
-                # logger.info('IT IS A JID INSTANCE')
-                jabber_id = name
-                # bare_jid = name.bare
-            else:
-                # logger.info('IT IS NOT A JID INSTANCE')
-                jabber_id = name
-                # bare_jid = name
+    #     if name is not None:
+    #         if isinstance(name, sleekxmpp.jid.JID):
+    #             jabber_id = name.bare
+    #         else:
+    #             jabber_id = name
 
-            vcard = self._get_vcard_by_jabber_id(jabber_id)
-            if vcard is not None:
-                user = create_user_object_from_jid_and_vcard(jabber_id, vcard)
-            else:
-                # user = create_user_object(jabber_id.bare, name, None)
-                user = create_user_object(jabber_id, name, None)
+    #         vcard = self._get_vcard_by_jabber_id(jabber_id)
+    #         user = create_user_object(jabber_id, name, vcard)
 
-            logger.info(repr(user))
+    #         logger.info('_get_user_from_private_chat() - Displaying user')
+    #         logger.info(repr(user))
 
-        return user
+    #     return user
 
     def _get_vcard_by_jabber_id(self, jabber_id):
         vcard = None
@@ -252,6 +241,78 @@ class XMPP(Client):
                 logger.error('IqTimeOut')
 
             return vcard
+
+    def update_user_object_from_message(self, user_object, message_object):
+        logger.debug('update_user_object_from_message() - triggered')
+
+        # Get client object information
+        client_object = self.get_client_object_from_message_object(message_object.sender, channel=message_object.to, event=message_object.event)
+
+        # user_object.add_client(client_object)
+        if client_object is not None:
+            if client_object.username is not None:
+                user_object.current_username = client_object.username
+            if client_object.name is not None:
+                user_object.name = client_object.name
+
+    def get_client_object_from_message_object(self, message_sender, channel=None, event=None, **kwargs):
+        user = None
+
+        if event is not None and event:
+            if event in ['chat', 'normal']:
+                user = self._get_client_object_from_private_chat(message_sender)
+
+            elif event in ['groupchat']:
+                user = self._get_user_from_jid(message_sender)
+                # user = self._get_client_object_from_groupchat(message_sender, channel)
+
+        return user
+
+    def _get_client_object_from_groupchat(self, name, channel):
+        user = None
+
+        # Fetch JID from xep_0045
+        if channel is not None and channel:
+            if '@' not in channel:
+                channel = "%s@%s" % (channel, self.server)
+
+            jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
+
+            if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
+                vcard = self._get_vcard_by_jabber_id(jabber_id)
+                user = self.create_client_object_object(jabber_id, name, vcard)
+
+        return user
+
+    def _get_client_object_from_private_chat(self, message_sender):
+        user = None
+
+        if message_sender is not None:
+            if isinstance(message_sender, sleekxmpp.jid.JID):
+                jabber_id = message_sender.bare
+            else:
+                jabber_id = message_sender
+
+            vcard = self._get_vcard_by_jabber_id(jabber_id)
+            user = self.create_client_object_object(jabber_id, message_sender, vcard)
+
+        return user
+
+    def create_client_object_object(self, jabber_id, name, vcard):
+        jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
+
+        if vcard is not None:
+            # get_payload() returns the xml for the Iq() as a Element object
+            payload = vcard.get_payload()
+            vcard_xml = payload[0]
+            # vcard_full_name = vcard_xml.findtext('.//{vcard-temp}FN')
+            vcard_nickname = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
+            vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
+
+        client_user = XMPPUser(jabber_id_bare, vcard_nickname if vcard_nickname is not None and vcard_nickname else name, vcard_email if vcard_email is not None and vcard_email else None)
+        logger.debug("returning with '%s'" % (client_user))
+
+        return client_user
 
 
 class MUCBot(sleekxmpp.ClientXMPP):
@@ -310,48 +371,70 @@ class MUCBot(sleekxmpp.ClientXMPP):
                     logger.error(e)
 
 
-class XMPPUser(User):
-    def __init__(self, user_id, name, email):
-        super(XMPPUser, self).__init__(user_id)
-        self.user_id = user_id
+class XMPPUser(ClientUser):
+    def __init__(self, username, name, email):
+        super(XMPPUser, self).__init__(username, 'xmpp')
         self.name = name
         self.email = email
 
     def __str__(self):
-        return "XMPPUser(User ID: '%s', Name: '%s', Email: '%s')" % (self.user_id, self.name, self.email)
+        return "XMPPUser(Username: '%s', Name: '%s', Email: '%s')" % (self.username, self.name, self.email)
+
+    def to_json(self):
+        json_data = {
+            'name': self.name,
+            'username': self.username,
+            'email': self.email,
+            'client': self.client
+        }
+
+        return json_data
 
 
 # Returns a newly created user from a json source
-def create_user_object(jabber_id, name, email):
+def create_user_object(jabber_id, name, vcard):
     jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
-    username = jabber_id.resource if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.resource is not None and jabber_id.resource else None
-    client = 'xmpp'
 
-    user = XMPPUser(jabber_id_bare, name, email)
-    user.username = username
-    user.client = client
+    if vcard is not None:
+        # get_payload() returns the xml for the Iq() as a Element object
+        payload = vcard.get_payload()
+        vcard_xml = payload[0]
+        # vcard_full_name = vcard_xml.findtext('.//{vcard-temp}FN')
+        vcard_nickname = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
+        vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
 
-    logger.debug("create_user_object - user is '%s'" % (user))
-    return user
+    client_user = XMPPUser(jabber_id_bare, vcard_nickname if vcard_nickname is not None and vcard_nickname else name, vcard_email if vcard_email is not None and vcard_email else None)
+
+    # Create a User object
+    user_object = User(0)
+    user_object.name = name
+    user_object.points = 0
+    json_data = client_user.to_json()
+    user_object.usernames = {json_data['client']: [json_data['username']]}
+    user_object.current_username = json_data['username']
+
+    logger.debug("client_user is '%s'" % (client_user))
+    return client_user
 
 
-# Returns a newly created user from a json source
-def create_user_object_from_jid_and_vcard(jabber_id, vcard):
-    # get_payload() returns the xml for the Iq() as a Element object
-    payload = vcard.get_payload()
-    vcard_xml = payload[0]
+def create_user_object_2(jabber_id, vcard):
+    if vcard is not None:
+        # get_payload() returns the xml for the Iq() as a Element object
+        payload = vcard.get_payload()
+        vcard_xml = payload[0]
+        vcard_full_name = vcard_xml.findtext('.//{vcard-temp}FN')
+        vcard_nickname = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
+        vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
 
-    jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
-    username = jabber_id.resource if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.resource is not None and jabber_id.resource else None
-    # first_name = vcard_xml.findtext('.//{vcard-temp}FN')
-    name = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
-    email = vcard_xml.findtext('.//{vcard-temp}USERID')
-    client = 'xmpp'
+    client_user = XMPPUser(jabber_id, vcard_nickname if vcard_nickname is not None and vcard_nickname else None, vcard_email if vcard_email is not None and vcard_email else None)
 
-    # Create the user
-    user = XMPPUser(jabber_id_bare, name, email)
-    user.username = username
-    user.client = client
+    # # Create a User object
+    # user_object = User(0)
+    # user_object.points = 0
+    # json_data = client_user.to_json()
+    # user_object.usernames = {json_data['client']: [json_data['username']]}
+    # user_object.current_username = json_data['username']
 
-    logger.debug("create_user_object_from_jid_and_vcard - user is '%s'" % (user))
-    return user
+    logger.debug("client_user is '%s'" % (client_user))
+    return client_user
+
