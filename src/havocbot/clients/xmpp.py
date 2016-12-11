@@ -26,8 +26,8 @@ class XMPP(Client):
         self.room_names = None
         self.server = None
         self.chat_server = None
-
-
+        self.use_ssl = False
+        self.port = 5222
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
@@ -45,15 +45,21 @@ class XMPP(Client):
                 self.server = item[1]
             elif item[0] == 'chat_server':
                 self.chat_server = item[1]
+            elif item[0] == 'use_ssl':
+                if item[1] == 'True':
+                    self.use_ssl = True
+                elif item[1] == 'False':
+                    self.use_ssl = False
+            elif item[0] == 'port':
+                self.port = item[1]
 
         # Return true if this integrations has the information required to connect
         if self.bot_username is not None and self.password is not None and self.room_names is not None and self.bot_name is not None and self.server is not None and self.chat_server is not None:
-            # Make sure there is at least one non falsy room to join (ex. room_names = ,,,,,, should fail)
+            # Make sure there is at least one valid looking room to join (ex. room_names = ,,,,,, should fail)
             if len([x for x in self.room_names if x]) > 0:
-                logger.debug('There is at least one non falsy room name')
                 return True
             else:
-                logger.error('You must enter at least one chatroom in settings.ini for this configuration')
+                logger.error('You must provide at least one chat room in settings.ini for this configuration')
                 return False
         else:
             logger.error('XMPP configuration is not valid. Check your settings and try again')
@@ -70,11 +76,9 @@ class XMPP(Client):
         self.client.register_plugin('xep_0030')  # Service Discovery
         self.client.register_plugin('xep_0045')  # Multi-User Chat
         self.client.register_plugin('xep_0054')  # vCard
-        self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # XMPP Ping set for a keepalive ping every 60 seconds
+        self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # keep alive ping every 60 seconds
 
-        # self.client.ssl_version = ssl.PROTOCOL_SSLv23
-
-        if self.client.connect(address=(self.server, 5222), use_ssl=False):
+        if self.client.connect(address=(self.server, self.port), use_ssl=self.use_ssl):
             logger.info("I am.. %s! (%s)" % (self.bot_name, self.bot_username))
             return True
         else:

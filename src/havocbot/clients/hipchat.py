@@ -1,6 +1,5 @@
 from dateutil import tz
 from datetime import datetime
-import json
 import logging
 import requests
 import sleekxmpp
@@ -31,6 +30,8 @@ class HipChat(Client):
         self.chat_server = None
         self.api_root_url = None
         self.api_token = None
+        self.use_ssl = True
+        self.port = 5223
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
@@ -52,15 +53,21 @@ class HipChat(Client):
                 self.api_root_url = item[1]
             elif item[0] == 'send_notification_token':
                 self.api_token = item[1]
+            elif item[0] == 'use_ssl':
+                if item[1] == 'True':
+                    self.use_ssl = True
+                elif item[1] == 'False':
+                    self.use_ssl = False
+            elif item[0] == 'port':
+                self.port = item[1]
 
         # Return true if this integrations has the information required to connect
         if self.bot_username is not None and self.password is not None and self.room_names is not None and self.bot_name is not None and self.server is not None and self.chat_server is not None:
-            # Make sure there is at least one non falsy room to join (ex. room_names = ,,,,,, should fail)
+            # Make sure there is at least one valid looking room to join (ex. room_names = ,,,,,, should fail)
             if len([x for x in self.room_names if x]) > 0:
-                logger.debug('There is at least one non falsy room name')
                 return True
             else:
-                logger.error('You must enter at least one chatroom in settings.ini for this configuration')
+                logger.error('You must provide at least one chat room in settings.ini for this configuration')
                 return False
         else:
             logger.error('HipChat configuration is not valid. Check your settings and try again')
@@ -77,9 +84,9 @@ class HipChat(Client):
         self.client.register_plugin('xep_0030')  # Service Discovery
         self.client.register_plugin('xep_0045')  # Multi-User Chat
         self.client.register_plugin('xep_0054')  # vCard
-        self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # XMPP Ping set for a keepalive ping every 60 seconds
+        self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # keep alive ping every 60 seconds
 
-        if self.client.connect(address=(self.server, 5223), use_ssl=True):
+        if self.client.connect(address=(self.server, self.port), use_ssl=self.use_ssl):
             logger.info("I am.. %s! (%s)" % (self.bot_name, self.bot_username))
             return True
         else:
@@ -102,46 +109,6 @@ class HipChat(Client):
             else:
                 logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 
-    def send_message_api_2(self, url, json_dict):
-        logger.debug("POSTING to '%s' with '%s'" % (url, json_dict))
-        requests.post(url, json=json_dict, verify=False)
-
-    def send_message_api(self, api_root_url, api_room_id, api_token, json_dict):
-        if api_room_id is not None:
-            url = '%s/v2/room/%s/notification?auth_token=%s' % (api_root_url, api_room_id, api_token)
-
-            self.send_message_api_2(url, json_dict)
-        else:
-            logger.info("Unable to get an api room id from a jabber room id")
-
-    def send_message_xmpp(self, message, channel):
-        new_test = X()
-        new_test.setBasics('system', '0', 'purple', 'text')
-
-        new_test.setNotificationSender('user', '1_422@chat.btf.hipchat.com')
-        logger.info(new_test.getNotificationSender())
-
-        json_obj = {}
-        json_obj['style'] = 'application'
-        json_obj['id'] = 'c253adc6-11fa-4941-ae26-7180d67e814a'
-        json_obj['title'] = 'Test'
-        json_obj['validation'] = {}
-        json_obj['validation']['safehtmls'] = ['activity.html']
-        json_obj['validation']['safeurls'] = ['url', 'images.image', 'images.image-small', 'images.image-big', 'icon.url', 'icon.url@2x', 'icon', 'thumbnail.url@2x', 'thumbnail.url']
-
-        new_test.setCard(json.dumps(json_obj))
-        logger.info(new_test.getCard())
-
-        # logger.info(dir(new_test))
-        # logger.info("Appending XML")
-        # message.append(new_test)
-        # logger.info(message._get_stanza_values())
-        # logger.info(message.values)
-        # logger.info(message['x']['color'])
-        # logger.info(message.get_payload())
-        message.reply('Test').set_payload([new_test.xml])
-        message['to'] = channel
-
     def send_message(self, text, channel, event=None, **kwargs):
         if channel and text and event:
             try:
@@ -161,12 +128,6 @@ class HipChat(Client):
                 if not used_notification_api:
                     logger.info("Sending %s text '%s' to channel '%s'" % (event, text, channel))
                     self.client.send_message(mto=channel, mbody=text, mtype=event)
-
-                    # This was a test to try to send cards over xmpp but the required stanzas to send
-                    # to the server are not documented
-                    # message = self.client.make_message(mto=channel, mbody=text, mtype=event)
-                    # message.send()
-                    # self.send_message_xmpp(message, channel)
             except AttributeError:
                 logger.error('Unable to send message. Are you connected?')
             except Exception as e:
@@ -212,6 +173,15 @@ class HipChat(Client):
                         result_list.append(user)
 
         return result_list
+
+    def send_message_api(self, api_root_url, api_room_id, api_token, json_dict):
+        if api_room_id is not None:
+            url = '%s/v2/room/%s/notification?auth_token=%s' % (api_root_url, api_room_id, api_token)
+
+            logger.debug("POSTING to '%s' with '%s'" % (url, json_dict))
+            requests.post(url, json=json_dict, verify=False)
+        else:
+            logger.info("Unable to get an api room id from a jabber room id")
 
     def get_vcard_by_jabber_id(self, jabber_id):
         vcard = None
