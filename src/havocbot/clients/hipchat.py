@@ -239,10 +239,10 @@ class HipChat(Client):
             user = create_user_object_2(jabber_id, vcard)
             # user = self.get_client_object_from_message_object(message_sender, channel=channel, event=event)
 
-            logger.info('_get_user_from_jid() - Displaying user')
+            logger.info('Displaying user')
             logger.info(user)
         else:
-            logger.info('_get_user_from_jid() - else clause top')
+            logger.info('else clause top')
 
         return user
 
@@ -259,16 +259,16 @@ class HipChat(Client):
 
             if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
                 vcard = self._get_vcard_by_jabber_id(jabber_id)
-                logger.info('_get_user_from_groupchat() - Creating user')
-                logger.info("_get_user_from_groupchat() - jabber_id is '%s', name is '%s' and vcard is '%s'" % (jabber_id, name, vcard))
+                logger.info('Creating user')
+                logger.info("jabber_id is '%s', name is '%s' and vcard is '%s'" % (jabber_id, name, vcard))
                 user = create_user_object(jabber_id, name, vcard)
 
-                logger.info('_get_user_from_groupchat() - Displaying user')
+                logger.info('Displaying user')
                 logger.info(user)
             else:
-                logger.info('_get_user_from_groupchat() - else clause top')
+                logger.info('else clause top')
         else:
-            logger.info('_get_user_from_groupchat() - else clause')
+            logger.info('else clause')
 
         return user
 
@@ -375,7 +375,7 @@ class HipChat(Client):
             vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
 
         client_user = HipChatUser(jabber_id_bare, vcard_nickname if vcard_nickname is not None and vcard_nickname else name, vcard_email if vcard_email is not None and vcard_email else None)
-        logger.debug("create_client_object_object() - returning with '%s'" % (client_user))
+        logger.debug("returning with '%s'" % (client_user))
 
         return client_user
 
@@ -564,7 +564,7 @@ def create_user_object(jabber_id, name, vcard):
     user_object.usernames = {json_data['client']: [json_data['username']]}
     user_object.current_username = json_data['username']
 
-    logger.debug("create_user_object - client_user is '%s'" % (client_user))
+    logger.debug("client_user is '%s'" % (client_user))
     return client_user
 
 
@@ -586,6 +586,5 @@ def create_user_object_2(jabber_id, vcard):
     # user_object.usernames = {json_data['client']: [json_data['username']]}
     # user_object.current_username = json_data['username']
 
-    logger.debug("create_user_object - client_user is '%s'" % (client_user))
+    logger.debug("client_user is '%s'" % (client_user))
     return client_user
-
