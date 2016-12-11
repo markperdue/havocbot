@@ -366,6 +366,9 @@ class HipChat(Client):
     def create_client_object_object(self, jabber_id, name, vcard):
         jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
 
+        vcard_nickname = None
+        vcard_email = None
+
         if vcard is not None:
             # get_payload() returns the xml for the Iq() as a Element object
             payload = vcard.get_payload()
@@ -546,6 +549,9 @@ class HipChatUser(ClientUser):
 def create_user_object(jabber_id, name, vcard):
     jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
 
+    vcard_nickname = None
+    vcard_email = None
+
     if vcard is not None:
         # get_payload() returns the xml for the Iq() as a Element object
         payload = vcard.get_payload()
@@ -569,6 +575,9 @@ def create_user_object(jabber_id, name, vcard):
 
 
 def create_user_object_2(jabber_id, vcard):
+    vcard_nickname = None
+    vcard_email = None
+
     if vcard is not None:
         # get_payload() returns the xml for the Iq() as a Element object
         payload = vcard.get_payload()

@@ -74,7 +74,7 @@ class XMPP(Client):
 
         # self.client.ssl_version = ssl.PROTOCOL_SSLv23
 
-        if self.client.connect(address=(self.server, 5223), use_ssl=True):
+        if self.client.connect(address=(self.server, 5222), use_ssl=False):
             logger.info("I am.. %s! (%s)" % (self.bot_name, self.bot_username))
             return True
         else:
@@ -301,6 +301,9 @@ class XMPP(Client):
     def create_client_object_object(self, jabber_id, name, vcard):
         jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
 
+        vcard_nickname = None
+        vcard_email = None
+
         if vcard is not None:
             # get_payload() returns the xml for the Iq() as a Element object
             payload = vcard.get_payload()
@@ -362,7 +365,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
                     logger.error(e)
         elif msg['type'] in ('normal', 'chat'):
             if msg['from'].bare != self.boundjid.bare:
-                message_object = Message(msg['body'], msg['from'], msg['from'], msg['type'], 'xmpp', datetime.utcnow().replace(tzinfo=tz.tzutc()))
+                message_object = Message(msg['body'], msg['from'], msg['to'], msg['type'], self.parent.integration_name, datetime.utcnow().replace(tzinfo=tz.tzutc()))
                 logger.info("Processed %s - %s" % (msg['type'], message_object))
 
                 try:
@@ -395,6 +398,9 @@ class XMPPUser(ClientUser):
 def create_user_object(jabber_id, name, vcard):
     jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
 
+    vcard_nickname = None
+    vcard_email = None
+
     if vcard is not None:
         # get_payload() returns the xml for the Iq() as a Element object
         payload = vcard.get_payload()
@@ -418,6 +424,9 @@ def create_user_object(jabber_id, name, vcard):
 
 
 def create_user_object_2(jabber_id, vcard):
+    vcard_nickname = None
+    vcard_email = None
+
     if vcard is not None:
         # get_payload() returns the xml for the Iq() as a Element object
         payload = vcard.get_payload()
