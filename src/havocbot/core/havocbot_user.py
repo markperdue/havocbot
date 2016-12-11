@@ -45,9 +45,9 @@ class UserPlugin(HavocBotPlugin):
             Trigger(match="!user\sget-id\s([0-9]+)", function=self.trigger_get_user_by_id, param_dict=None, requires=None),
             Trigger(match="!user\sadd-alias\s([0-9]+)\s(.+)", function=self.trigger_add_alias_for_user_id, param_dict=None, requires="bot:admin"),
             Trigger(match="!user\sdel-alias\s([0-9]+)\s(.+)", function=self.trigger_del_alias_for_user_id, param_dict=None, requires="bot:admin"),
+            Trigger(match="!user\sget-aliases\s([0-9]+)", function=self.trigger_list_aliases_for_user_id, param_dict=None, requires=None),
             Trigger(match="!user\sadd-permission\s([0-9]+)\s(.+)", function=self.trigger_add_permission_for_user_id, param_dict=None, requires="bot:admin"),
             Trigger(match="!user\sdel-permission\s([0-9]+)\s(.+)", function=self.trigger_del_permission_for_user_id, param_dict=None, requires="bot:admin"),
-            Trigger(match="!user\sget-aliases\s([0-9]+)", function=self.trigger_list_aliases_for_user_id, param_dict=None, requires=None),
             Trigger(match="!user\sadd-points\s([0-9]+)\s([0-9]+)", function=self.trigger_add_points_for_user_id, param_dict=None, requires="bot:points"),
             Trigger(match="!user\sdel-points\s([0-9]+)\s([0-9]+)", function=self.trigger_del_points_for_user_id, param_dict=None, requires="bot:points"),
             Trigger(match="!users", function=self.trigger_get_users, param_dict=None, requires=None),
@@ -296,39 +296,17 @@ class UserPlugin(HavocBotPlugin):
         
         user = self.havocbot.db.find_user_by_username_for_client(message.sender, client.integration_name)
         if user is not None and user:
+            user.current_username = message.sender
             logger.debug(user)
             message_list.extend(user.get_user_info_as_list())
         else:
-            message_list.extend(client_user_object.get_user_info_as_list())
-
-        # client_user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
-        # logger.debug(client_user_object)
-
-        # if client_user_object is not None and client_user_object:
-        #     username = client_user_object.username
-        #     message_list = []
-
-        #     # EDIT101
-        #     # user_temp_list = havocbot.user.get_users_by_username(username, client.integration_name)
-        #     # if user_temp_list is not None and user_temp_list:
-        #     #     for user in user_temp_list:
-        #     #         logger.debug(user)
-        #     #         # Update the user to have the previous username set
-        #     #         user.current_username = username
-        #     #         message_list.extend(user.get_user_info_as_list())
-        #     # else:
-        #     #     message_list.extend(client_user_object.get_user_info_as_list())
-
-        #     user = havocbot.user.get_user_by_username_for_client(username, client.integration_name)
-        #     if user is not None and user:
-        #         logger.debug(user)
-        #         # Update the user to have the previous username set
-        #         user.current_username = username
-        #         message_list.extend(user.get_user_info_as_list())
-        #     else:
-        #         message_list.extend(client_user_object.get_user_info_as_list())
+            user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
+            user_object.current_username = message.sender
+            logger.debug(user_object)
+            message_list.extend(user_object.get_user_info_as_list())
 
         if message_list is not None and message_list:
+
             client.send_messages_from_list(
                 message_list,
                 message.reply(),
@@ -344,16 +322,16 @@ class UserPlugin(HavocBotPlugin):
 
         users = client.get_users_in_channel(message.to, event=message.event)
         if users:
-            for user_object in users:
-                matched_users.append(user_object)
+            for client_user_object in users:
+                matched_users.append(client_user_object)
 
         if matched_users:
             set_users = set(matched_users)
             if len(set_users) > 1:
                 message_list.append("Found %d users" % (len(set_users)))
-            for user_object in set_users:
+            for client_user_object in set_users:
                 # message_list.extend(user_object.get_user_info_as_list())
-                message_list.append("%s %s" % (user_object.name, user_object.email))
+                message_list.append("%s" % (client_user_object.name))
                 # message_list.append(user_object.pprint())
 
         if message_list:

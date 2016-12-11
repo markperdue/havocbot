@@ -108,6 +108,9 @@ class User(object):
 
     def get_user_client_info_other(self):
         other_usernames_list = self.get_other_usernames_as_list()
+        if self.current_username in other_usernames_list:
+            other_usernames_list.remove(self.current_username)
+
         if other_usernames_list is not None and other_usernames_list:
             return "    Other usernames: %s" % (', '.join(other_usernames_list))
 
