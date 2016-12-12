@@ -96,10 +96,10 @@ class XMPP(Client):
             if 'message_object' in kwargs and kwargs.get('message_object') is not None:
                 message_object = kwargs.get('message_object')
 
-            if message_object.event in ('groupchat', 'chat', 'normal'):
-                self.havocbot.handle_message(self, message_object)
-            else:
-                logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
+                if message_object.event in ('groupchat', 'chat', 'normal'):
+                    self.havocbot.handle_message(self, message_object)
+                else:
+                    logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 
     def send_message(self, text, channel, event=None, **kwargs):
         if channel and text and event:

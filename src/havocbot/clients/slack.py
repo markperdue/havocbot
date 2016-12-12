@@ -104,10 +104,10 @@ class Slack(Client):
             if 'message_object' in kwargs and kwargs.get('message_object') is not None:
                 message_object = kwargs.get('message_object')
 
-            if message_object.event == 'message':
-                self.havocbot.handle_message(self, message_object)
-            else:
-                logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
+                if message_object.event == 'message':
+                    self.havocbot.handle_message(self, message_object)
+                else:
+                    logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
 
     def send_message(self, text, channel, event=None, **kwargs):
         if channel and text:
@@ -133,7 +133,7 @@ class Slack(Client):
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
         user = User(0)
 
-        logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
+        logger.debug("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
 
         api_json = self.client.api_call('users.info', user=message_sender)
         if 'user' in api_json and api_json['user'] is not None:
@@ -166,7 +166,9 @@ class SlackMessage(Message):
         self.reply_to = reply_to
 
     def __str__(self):
-        return "SlackMessage(Text: '%s', Sender: '%s', To: '%s', Event: '%s', Team: '%s', Reply To: '%s', Timestamp: '%s')" % (self.text, self.sender, self.to, self.event, self.team, self.reply_to, self.timestamp)
+        return "SlackMessage(" \
+               "Text: '%s', Sender: '%s', To: '%s', Event: '%s', Team: '%s', Reply To: '%s', Timestamp: '%s')" \
+               % (self.text, self.sender, self.to, self.event, self.team, self.reply_to, self.timestamp)
 
     def reply(self):
         return self.to
@@ -181,7 +183,9 @@ class SlackUser(ClientUser):
         self.tz = None
 
     def __str__(self):
-        return "SlackUser(Username: '%s', Name: '%s', Real Name: '%s', Timezone: '%s')" % (self.username, self.name, self.real_name, self.tz)
+        return "SlackUser(" \
+               "Username: '%s', Name: '%s', Real Name: '%s', Timezone: '%s')" \
+               % (self.username, self.name, self.real_name, self.tz)
 
 
 def create_message_object_from_json(json_data):
@@ -200,14 +204,18 @@ def create_message_object_from_json(json_data):
     return message
 
 
-def create_user_object_from_json(json_user_data):
-    logger.debug(json_user_data)
+def create_user_object_from_json(j):
+    logger.debug(j)
 
-    username = json_user_data['id'] if 'id' in json_user_data and json_user_data['id'] is not None and len(json_user_data['id']) > 0 else None
-    name = json_user_data['name'] if 'name' in json_user_data and json_user_data['name'] is not None and len(json_user_data['name']) > 0 else None
-    real_name = json_user_data['real_name'] if 'real_name' in json_user_data and json_user_data['real_name'] is not None and len(json_user_data['real_name']) > 0 else None
-    first_name = json_user_data['first_name'] if 'first_name' in json_user_data and json_user_data['first_name'] is not None and len(json_user_data['first_name']) > 0 else None
-    time_zone = json_user_data['tz'] if 'tz' in json_user_data and json_user_data['tz'] is not None and len(json_user_data['tz']) > 0 else None
+    username = j['id'] if 'id' in j and j['id'] is not None and len(j['id']) > 0 else None
+    name = j['name'] if 'name' in j and j['name'] is not None and len(j['name']) > 0 else None
+    real_name = j['real_name'] if 'real_name' in j and j['real_name'] is not None and len(j['real_name']) > 0 else None
+    time_zone = j['tz'] if 'tz' in j and j['tz'] is not None and len(j['tz']) > 0 else None
+
+    if 'first_name' in j and j['first_name'] is not None and len(j['first_name']) > 0:
+        first_name = j['first_name']
+    else:
+        first_name = None
 
     user = SlackUser(username, name)
     user.real_name = real_name
