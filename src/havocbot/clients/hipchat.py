@@ -155,7 +155,7 @@ class HipChat(Client):
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
         user = User(0)
 
-        logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
+        logger.debug("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
 
         # Get client object information
         client_user = self.get_client_object_from_message_object(message_sender, channel=channel, event=event)

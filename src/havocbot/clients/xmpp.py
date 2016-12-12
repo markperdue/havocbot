@@ -31,6 +31,8 @@ class XMPP(Client):
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
+        requirements_met = False
+
         for item in settings:
             # Switch on the key
             if item[0] == 'jabber_id':
@@ -51,16 +53,20 @@ class XMPP(Client):
                 elif item[1] == 'False':
                     self.use_ssl = False
             elif item[0] == 'port':
-                self.port = item[1]
+                self.port = int(item[1])
 
         # Return true if this integrations has the information required to connect
-        if self.bot_username is not None and self.password is not None and self.room_names is not None and self.bot_name is not None and self.server is not None and self.chat_server is not None:
-            # Make sure there is at least one valid looking room to join (ex. room_names = ,,,,,, should fail)
-            if len([x for x in self.room_names if x]) > 0:
-                return True
-            else:
-                logger.error('You must provide at least one chat room in settings.ini for this configuration')
-                return False
+        if self.server is not None and self.chat_server is not None and self.room_names is not None:
+            if self.bot_username is not None and self.password is not None and self.bot_name is not None:
+                # Make sure there is at least one valid looking room to join (ex. room_names = ,,,,,, should fail)
+                if len([x for x in self.room_names if x]) > 0:
+                    return True
+                else:
+                    logger.error('You must provide at least one chat room in settings.ini for this configuration')
+
+        # Return true if this plugin has the information required to work
+        if requirements_met:
+            return True
         else:
             logger.error('XMPP configuration is not valid. Check your settings and try again')
             return False
@@ -71,7 +77,9 @@ class XMPP(Client):
         if self.password is None:
             logger.error('A XMPP password must be configured')
 
-        self.client = MUCBot(self, self.havocbot, self.bot_username, self.password, self.room_names, self.server, self.bot_name, self.chat_server)
+        self.client = MUCBot(
+            self, self.havocbot, self.bot_username, self.password, self.room_names,
+            self.server, self.bot_name, self.chat_server)
 
         self.client.register_plugin('xep_0030')  # Service Discovery
         self.client.register_plugin('xep_0045')  # Multi-User Chat
@@ -125,7 +133,7 @@ class XMPP(Client):
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
         user = User(0)
 
-        logger.info("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
+        logger.debug("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
 
         # Get client object information
         client_user = self.get_client_object_from_message_object(message_sender, channel=channel, event=event)
@@ -139,13 +147,13 @@ class XMPP(Client):
     def get_users_in_channel(self, channel, event=None, **kwargs):
         result_list = []
 
-        logger.info('starting get_active_users_in_channel')
+        logger.debug('starting get_active_users_in_channel')
         if event is not None and event == 'groupchat':
             roster = self.client.plugin['xep_0045'].getRoster(channel)
             if roster is not None and roster:
-                logger.info("roster is '%s'" % (roster))
+                logger.debug("roster is '%s'" % (roster))
                 for roster_item in roster:
-                    logger.info("roster_item is '%s'" % (roster_item))
+                    logger.debug("roster_item is '%s'" % (roster_item))
                     user = self._get_user_from_groupchat(roster_item, channel)
                     if user is not None and user:
                         result_list.append(user)
@@ -250,7 +258,8 @@ class XMPP(Client):
         logger.debug('update_user_object_from_message() - triggered')
 
         # Get client object information
-        client_object = self.get_client_object_from_message_object(message_object.sender, channel=message_object.to, event=message_object.event)
+        client_object = self.get_client_object_from_message_object(
+            message_object.sender, channel=message_object.to, event=message_object.event)
 
         # user_object.add_client(client_object)
         if client_object is not None:
@@ -303,7 +312,10 @@ class XMPP(Client):
         return user
 
     def create_client_object_object(self, jabber_id, name, vcard):
-        jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
+        if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare:
+            jabber_id_bare = jabber_id.bare
+        else:
+            jabber_id_bare = jabber_id
 
         vcard_nickname = None
         vcard_email = None
@@ -316,9 +328,11 @@ class XMPP(Client):
             vcard_nickname = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
             vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
 
-        client_user = XMPPUser(jabber_id_bare, vcard_nickname if vcard_nickname is not None and vcard_nickname else name, vcard_email if vcard_email is not None and vcard_email else None)
-        logger.debug("returning with '%s'" % (client_user))
+        client_user = XMPPUser(
+            jabber_id_bare, vcard_nickname if vcard_nickname is not None and vcard_nickname else name,
+            vcard_email if vcard_email is not None and vcard_email else None)
 
+        logger.debug("returning with '%s'" % (client_user))
         return client_user
 
 
@@ -349,18 +363,22 @@ class MUCBot(sleekxmpp.ClientXMPP):
         logger.debug(type(msg['from']))
         logger.debug(msg['from'].resource)
         if msg['type'] == 'groupchat':
-            logger.info("Message - Type: '%s', To: '%s', From: '%s', ID: '%s', MUCNick: '%s', MUCRoom '%s', Body '%s'" % (msg['type'], msg['to'], msg['from'], msg['id'], msg['mucnick'], msg['mucroom'], msg['body']))
+            logger.info("Message - Type: '%s', To: '%s', From: '%s', ID: '%s', MUCNick: '%s', MUCRoom '%s', Body '%s'"
+                        % (msg['type'], msg['to'], msg['from'], msg['id'], msg['mucnick'], msg['mucroom'], msg['body']))
             if msg['subject'] and msg['thread']:
                 logger.info("Message - Thread '%s', Body '%s'" % (msg['thread'], msg['body']))
         else:
-            logger.info("Message - Type: '%s', To: '%s', From: '%s', ID: '%s', Body '%s'" % (msg['type'], msg['to'], msg['from'], msg['id'], msg['body']))
+            logger.info("Message - Type: '%s', To: '%s', From: '%s', ID: '%s', Body '%s'"
+                        % (msg['type'], msg['to'], msg['from'], msg['id'], msg['body']))
             if msg['subject'] and msg['thread']:
                 logger.info("Message - Thread '%s', Body '%s'" % (msg['thread'], msg['body']))
 
     def message(self, msg):
         if msg['type'] == 'groupchat':
             if msg['mucnick'] != self.nick:
-                message_object = Message(msg['body'], msg['mucnick'], msg['mucroom'], msg['type'], 'xmpp', datetime.utcnow().replace(tzinfo=tz.tzutc()))
+                message_object = Message(
+                    msg['body'], msg['mucnick'], msg['mucroom'], msg['type'],
+                    self.parent.integration_name, datetime.utcnow().replace(tzinfo=tz.tzutc()))
                 logger.info("Processed %s - %s" % (msg['type'], message_object))
 
                 try:
@@ -369,7 +387,9 @@ class MUCBot(sleekxmpp.ClientXMPP):
                     logger.error(e)
         elif msg['type'] in ('normal', 'chat'):
             if msg['from'].bare != self.boundjid.bare:
-                message_object = Message(msg['body'], msg['from'], msg['to'], msg['type'], self.parent.integration_name, datetime.utcnow().replace(tzinfo=tz.tzutc()))
+                message_object = Message(
+                    msg['body'], msg['from'], msg['to'], msg['type'],
+                    self.parent.integration_name, datetime.utcnow().replace(tzinfo=tz.tzutc()))
                 logger.info("Processed %s - %s" % (msg['type'], message_object))
 
                 try:
@@ -400,7 +420,10 @@ class XMPPUser(ClientUser):
 
 # Returns a newly created user from a json source
 def create_user_object(jabber_id, name, vcard):
-    jabber_id_bare = jabber_id.bare if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare else jabber_id
+    if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare:
+        jabber_id_bare = jabber_id.bare
+    else:
+        jabber_id_bare = jabber_id
 
     vcard_nickname = None
     vcard_email = None
@@ -413,7 +436,9 @@ def create_user_object(jabber_id, name, vcard):
         vcard_nickname = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
         vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
 
-    client_user = XMPPUser(jabber_id_bare, vcard_nickname if vcard_nickname is not None and vcard_nickname else name, vcard_email if vcard_email is not None and vcard_email else None)
+    client_user = XMPPUser(
+        jabber_id_bare, vcard_nickname if vcard_nickname is not None and vcard_nickname else name,
+        vcard_email if vcard_email is not None and vcard_email else None)
 
     # Create a User object
     user_object = User(0)
@@ -439,7 +464,9 @@ def create_user_object_2(jabber_id, vcard):
         vcard_nickname = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
         vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
 
-    client_user = XMPPUser(jabber_id, vcard_nickname if vcard_nickname is not None and vcard_nickname else None, vcard_email if vcard_email is not None and vcard_email else None)
+    client_user = XMPPUser(
+        jabber_id, vcard_nickname if vcard_nickname is not None and vcard_nickname else None,
+        vcard_email if vcard_email is not None and vcard_email else None)
 
     # # Create a User object
     # user_object = User(0)
