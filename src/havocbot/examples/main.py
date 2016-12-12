@@ -41,9 +41,9 @@ def configure_logging(settings_dict):
         for (key, value) in settings_dict['havocbot']:
             if key == 'log_file':
                 log_file = value.strip()
-            if key == 'log_format':
+            elif key == 'log_format':
                 log_format = value.strip()
-            if key == 'log_level':
+            elif key == 'log_level':
                 log_level = value.strip()
 
     if log_file is not None and log_format is not None and log_level is not None:
