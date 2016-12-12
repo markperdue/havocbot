@@ -27,8 +27,8 @@ class InfoPlugin(HavocBotPlugin):
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!info list", function=self.info_list, param_dict=None, requires=None),
-            Trigger(match="!info get\s(.*)", function=self.info_get, param_dict=None, requires=None),
+            Trigger(match="!info list", function=self.trigger_info_list, param_dict=None, requires=None),
+            Trigger(match="!info get\s(.*)", function=self.trigger_info_get, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -69,7 +69,7 @@ class InfoPlugin(HavocBotPlugin):
 
         return results
 
-    def info_get(self, client, message, **kwargs):
+    def trigger_info_get(self, client, message, **kwargs):
         logger.debug("start - message is '%s'" % (message))
 
         # Get the results of the capture
@@ -92,7 +92,7 @@ class InfoPlugin(HavocBotPlugin):
         else:
             client.send_message('Please provide an info category', message.reply(), event=message.event)
 
-    def info_list(self, client, message, **kwargs):
+    def trigger_info_list(self, client, message, **kwargs):
         logger.debug("start - message is '%s'" % (message))
 
         client_message_list = []

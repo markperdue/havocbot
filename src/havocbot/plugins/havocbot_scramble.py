@@ -29,7 +29,7 @@ class ScramblePlugin(HavocBotPlugin):
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match='!scramble', function=self.start_scramble, param_dict=None, requires='scramble:start'),
+            Trigger(match='!scramble', function=self.trigger_start_scramble, param_dict=None, requires='scramble:start'),
             Trigger(match="(.*)", function=self.start),
         ]
 
@@ -88,7 +88,7 @@ class ScramblePlugin(HavocBotPlugin):
         else:
             return
 
-    def start_scramble(self, client, message, **kwargs):
+    def trigger_start_scramble(self, client, message, **kwargs):
         # Check to see if a scramble has already been started
         if not self.in_process:
 

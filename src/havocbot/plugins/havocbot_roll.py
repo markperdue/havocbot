@@ -32,8 +32,8 @@ class RollPlugin(HavocBotPlugin):
     def plugin_triggers(self):
         return [
             Trigger(match="!roll", function=self.start, param_dict=None, requires=None),
-            Trigger(match="!highroll", function=self.high_roll, param_dict=None, requires=None),
-            Trigger(match="!rolloff", function=self.rolloff, param_dict=None, requires=None),
+            Trigger(match="!highroll", function=self.trigger_high_roll, param_dict=None, requires=None),
+            Trigger(match="!rolloff", function=self.trigger_rolloff, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -85,7 +85,7 @@ class RollPlugin(HavocBotPlugin):
             user_object = self.havocbot.db.find_user_by_username_for_client(message.sender, client.integration_name)
             self.display_roll(client, message, user_object, roll_result)
 
-    def high_roll(self, client, message, **kwargs):
+    def trigger_high_roll(self, client, message, **kwargs):
         if message.to:
             roll_result = self.get_roll(100000000000)
 
@@ -105,7 +105,7 @@ class RollPlugin(HavocBotPlugin):
 
         client.send_message(text, message.reply(), event=message.event)
 
-    def rolloff(self, client, message, **kwargs):
+    def trigger_rolloff(self, client, message, **kwargs):
         user_object = self.havocbot.db.find_user_by_username_for_client(message.sender, client.integration_name)
 
         if user_object is not None:

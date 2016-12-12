@@ -28,8 +28,8 @@ class HelpPlugin(HavocBotPlugin):
     def plugin_triggers(self):
         return [
             Trigger(match="!help", function=self.start, param_dict=None, requires=None),
-            Trigger(match="!help plugins", function=self.help_plugins, param_dict=None, requires=None),
-            Trigger(match="!help plugin\s", function=self.help_plugin, param_dict=None, requires=None),
+            Trigger(match="!help plugins", function=self.trigger_help_plugins, param_dict=None, requires=None),
+            Trigger(match="!help plugin\s", function=self.trigger_help_plugin, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -56,7 +56,7 @@ class HelpPlugin(HavocBotPlugin):
         if message.to:
             client.send_messages_from_list(client_message_list, message.reply(), event=message.event)
 
-    def help_plugins(self, client, message, **kwargs):
+    def trigger_help_plugins(self, client, message, **kwargs):
         client_message_list = []
 
         tuples_list = self.get_help_list_sorted()
@@ -67,7 +67,7 @@ class HelpPlugin(HavocBotPlugin):
         if message.to:
             client.send_messages_from_list(client_message_list, message.reply(), event=message.event)
 
-    def help_plugin(self, client, message, **kwargs):
+    def trigger_help_plugin(self, client, message, **kwargs):
         client_message_list = []
 
         tuples_list = self.get_help_list_sorted()
