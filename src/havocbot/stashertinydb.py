@@ -231,7 +231,7 @@ class StasherTinyDB(StasherClass):
                 for username in value:
                     logger.info("Iterating over username '%s'" % (username))
                     result = self.find_user_by_username_for_client(username, key)
-                    logger.info("result for username '%s' is '%s'" %(username, result))
+                    logger.info("result for username '%s' is '%s'" % (username, result))
                     if result is not None:
                         return True
 

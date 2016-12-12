@@ -113,6 +113,7 @@ class QuoterPlugin(HavocBotPlugin):
 
             for word in words:
                 is_quote_found_for_user = False
+                is_user_found = False
                 matched_users = []
 
                 users = self.havocbot.db.find_users_by_matching_string_for_client(word, client.integration_name)

@@ -52,8 +52,7 @@ class Stasher(Singleton):
                 logger.info("Key '%s' is known" % (key))
                 result = next((
                     x for x in self.data[key]
-                    if unique_root_key in x
-                       and x[unique_root_key] == unique_root_value
+                    if unique_root_key in x and x[unique_root_key] == unique_root_value
                 ), None)
                 if result is not None:
                     logger.error("Match found for record. Not unique")
@@ -76,8 +75,7 @@ class Stasher(Singleton):
                 logger.info("Key '%s' is known" % (key))
                 result = next((
                     x for x in self.data[key]
-                    if unique_root_key in x
-                       and x[unique_root_key] == unique_root_value
+                    if unique_root_key in x and x[unique_root_key] == unique_root_value
                 ), None)
 
                 if result is not None:
@@ -208,7 +206,8 @@ class Stasher(Singleton):
     #     if isinstance(points, (int, long)):
     #         if self.data is not None:
     #             if 'points' in self.data:
-    #                 logger.debug("Users existing points set to %d. Subtracting %d points" % (self.data['points'], points))
+    #                 logger.debug("Users existing points set to %d. Subtracting %d points"
+    #                              % (self.data['points'], points))
     #                 self.data['points'] -= points
     #                 self.write_db()
     #             else:

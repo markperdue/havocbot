@@ -3,7 +3,7 @@
 import logging
 import traceback
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
-from havocbot.user import User, ClientUser, UserDataAlreadyExistsException, UserDataNotFoundException
+from havocbot.user import User, UserDataAlreadyExistsException, UserDataNotFoundException
 
 logger = logging.getLogger(__name__)
 

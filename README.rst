@@ -22,9 +22,9 @@ Features
 
 
 Supported Chat Integrations
----------------
+---------------------------
 
-Out of the box, the following chat integrations are supported::
+Out of the box, the following chat integrations are supported:
 
 - Slack
 - XMPP

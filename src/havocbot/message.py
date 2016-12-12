@@ -8,7 +8,8 @@ class Message(object):
         self.timestamp = timestamp
 
     def __str__(self):
-        return "Message(Text: '%s', Sender: '%s', To: '%s', Event: '%s', Client: '%s', Timestamp: '%s')" % (self.text, self.sender, self.to, self.event, self.client, self.timestamp)
+        return "Message(Text: '%s', Sender: '%s', To: '%s', Event: '%s', Client: '%s', Timestamp: '%s')" \
+               % (self.text, self.sender, self.to, self.event, self.client, self.timestamp)
 
     def reply(self):
         if self.event == 'groupchat':
