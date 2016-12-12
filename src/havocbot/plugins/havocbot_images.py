@@ -27,7 +27,7 @@ class ImagesPlugin(HavocBotPlugin):
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!image\s*(.*)", function=self.start, param_dict=None, requires=None),
+            Trigger(match="!image\s*(.*)", function=self.trigger_default, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -61,7 +61,7 @@ class ImagesPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         if len(message.text.split()) >= 2:
             capture = kwargs.get('capture_groups', None)
             search_string = '+'.join(capture[0].split())

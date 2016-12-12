@@ -27,7 +27,7 @@ class WeatherPlugin(HavocBotPlugin):
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match=".*\d{5}.*weather|weather.*\d{5}", function=self.start, param_dict=None, requires=None),
+            Trigger(match=".*\d{5}.*weather|weather.*\d{5}", function=self.trigger_default, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -62,7 +62,7 @@ class WeatherPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         words = message.text.split()
 
         # Capture args that look like zip codes

@@ -123,7 +123,7 @@ class HavocBotPlugin(object):
         pass
 
     @abstractmethod
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         """ Must deal with the default entry point for an activated plugin.
 
         Args:

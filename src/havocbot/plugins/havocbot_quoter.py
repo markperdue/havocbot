@@ -34,7 +34,7 @@ class QuoterPlugin(HavocBotPlugin):
             Trigger(match="!quote\sget\s(.*)", function=self.trigger_get_quotes_by_user_search, param_dict=None, requires=None),
             Trigger(match="!addquote\s(.*)", function=self.trigger_add_quote, param_dict=None, requires=None),
             Trigger(match="!debugquote", function=self.trigger_debug_quote, param_dict=None, requires=None),
-            Trigger(match="(.*)", function=self.start, param_dict=None, requires=None),
+            Trigger(match="(.*)", function=self.trigger_default, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -63,7 +63,7 @@ class QuoterPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         if message.text.startswith(('!addquote', '!debugquote')):
             return
 

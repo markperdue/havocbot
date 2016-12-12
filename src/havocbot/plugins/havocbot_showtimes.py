@@ -27,7 +27,7 @@ class ShowtimesPlugin(HavocBotPlugin):
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match=".*movies in\s*(\d{5})", function=self.start, param_dict=None, requires=None),
+            Trigger(match=".*movies in\s*(\d{5})", function=self.trigger_default, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -70,7 +70,7 @@ class ShowtimesPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         # Capture the zip code
         capture = kwargs.get('capture_groups', None)
         zip_code = capture[0]

@@ -30,7 +30,7 @@ class ScramblePlugin(HavocBotPlugin):
     def plugin_triggers(self):
         return [
             Trigger(match='!scramble', function=self.trigger_start_scramble, param_dict=None, requires='scramble:start'),
-            Trigger(match="(.*)", function=self.start),
+            Trigger(match="(.*)", function=self.trigger_default),
         ]
 
     def init(self, havocbot):
@@ -78,7 +78,7 @@ class ScramblePlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         if self.in_process is True:
             if self.does_guess_match_scrambled_word(message.text, self.original_word):
                 if message.to:

@@ -25,7 +25,7 @@ class ReloadPlugin(HavocBotPlugin):
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!reload", function=self.start, param_dict=None, requires="bot:admin"),
+            Trigger(match="!reload", function=self.trigger_default, param_dict=None, requires="bot:admin"),
         ]
 
     def init(self, havocbot):
@@ -45,7 +45,7 @@ class ReloadPlugin(HavocBotPlugin):
         # self.havocbot = None  # start() still needs the reference to self.havocbot
         pass
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         self.havocbot.reload_plugins()
         logger.info("Done with trigger reload_plugins()")
         if message.to:

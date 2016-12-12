@@ -72,7 +72,7 @@ class UserPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         pass
 
     def trigger_add_user(self, client, message, **kwargs):

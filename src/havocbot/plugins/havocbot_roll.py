@@ -31,7 +31,7 @@ class RollPlugin(HavocBotPlugin):
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!roll", function=self.start, param_dict=None, requires=None),
+            Trigger(match="!roll", function=self.trigger_default, param_dict=None, requires=None),
             Trigger(match="!highroll", function=self.trigger_high_roll, param_dict=None, requires=None),
             Trigger(match="!rolloff", function=self.trigger_rolloff, param_dict=None, requires=None),
         ]
@@ -78,7 +78,7 @@ class RollPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         if message.to:
             roll_result = self.get_roll(100)
 

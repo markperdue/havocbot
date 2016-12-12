@@ -25,7 +25,7 @@ class ListPlugin(HavocBotPlugin):
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!list", function=self.start, param_dict=None, requires=None),
+            Trigger(match="!list", function=self.trigger_default, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -44,7 +44,7 @@ class ListPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         if message.to:
             text = "Available Commands: '" + "', '".join([(i[0]) for i in self.havocbot.triggers]) + "'"
             client.send_message(text, message.reply(), event=message.event)

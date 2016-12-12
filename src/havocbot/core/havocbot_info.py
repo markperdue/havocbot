@@ -51,7 +51,7 @@ class InfoPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         pass
 
     def get_category_for_printing(self, info_dict):

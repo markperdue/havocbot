@@ -27,7 +27,7 @@ class HelpPlugin(HavocBotPlugin):
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!help", function=self.start, param_dict=None, requires=None),
+            Trigger(match="!help", function=self.trigger_default, param_dict=None, requires=None),
             Trigger(match="!help plugins", function=self.trigger_help_plugins, param_dict=None, requires=None),
             Trigger(match="!help plugin\s", function=self.trigger_help_plugin, param_dict=None, requires=None),
         ]
@@ -48,7 +48,7 @@ class HelpPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         client_message_list = ["HavocBot can help you with the following."]
         for usage_message in self.get_usage_lines_from_plugin_as_list(self.plugin_usages):
             client_message_list.append(usage_message)

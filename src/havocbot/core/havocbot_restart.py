@@ -25,7 +25,7 @@ class RestartPlugin(HavocBotPlugin):
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!restart", function=self.start, param_dict=None, requires="bot:admin"),
+            Trigger(match="!restart", function=self.trigger_default, param_dict=None, requires="bot:admin"),
         ]
 
     def init(self, havocbot):
@@ -44,7 +44,7 @@ class RestartPlugin(HavocBotPlugin):
     def shutdown(self):
         self.havocbot = None
 
-    def start(self, client, message, **kwargs):
+    def trigger_default(self, client, message, **kwargs):
         if message.to:
             text = 'Restarting the bot. Hang tight'
             client.send_message(text, message.reply(), event=message.event)
