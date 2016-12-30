@@ -16,3 +16,18 @@ class Message(object):
             return self.to
         else:
             return self.sender
+
+
+class FormattedThumbnailMessage(object):
+    def __init__(self, text, default_text, thumbnail_url, attributes):
+        self.text = text
+        self.default_text = default_text
+        self.thumbnail_url = thumbnail_url
+        self.attributes = attributes
+
+
+class FormattedMessage(object):
+    def __init__(self, text, default_text, attributes):
+        self.text = text
+        self.default_text = default_text
+        self.attributes = attributes

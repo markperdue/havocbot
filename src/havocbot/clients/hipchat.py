@@ -1,11 +1,13 @@
 from dateutil import tz
 from datetime import datetime
+import json
 import logging
 import requests
 import sleekxmpp
 from sleekxmpp.xmlstream.stanzabase import ElementBase
 from havocbot.client import Client
 from havocbot.message import Message
+from havocbot.room import Room
 from havocbot.user import User, ClientUser
 
 logger = logging.getLogger(__name__)
@@ -32,6 +34,8 @@ class HipChat(Client):
         self.api_token = None
         self.use_ssl = True
         self.port = 5223
+        self.rooms = None
+        self.rooms_last_updated = None
 
     # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
@@ -365,6 +369,85 @@ class HipChat(Client):
         logger.debug("returning with '%s'" % (client_user))
 
         return client_user
+
+    def send_formatted_message(self, formatted_message, room_jid):
+        if formatted_message is not None:
+            room_id = self.get_room_id_from_room_jid(room_jid)
+
+            if room_id is not None and room_id:
+                url = '%s/v2/room/%s/notification?auth_token=%s' % (self.api_root_url, room_id, self.api_token)
+
+                json_payload = {}
+                json_payload['thumbnail'] = formatted_message.thumbnail
+                json_payload['message'] = formatted_message.text
+                json_payload['default_message'] = formatted_message.default_text
+                json_payload['thumbnail'] = formatted_message.thumbnail
+
+                json_data = json.load(json_payload)
+
+                logger.debug("POSTING to '%s' with '%s'" % (url, json_payload))
+                requests.post(url, json=json_data, verify=False)
+        else:
+            logger.info("Unable to get an api room id from a jabber room id")
+
+    def _update_rooms(self):
+        logger.info("Updating room data...")
+
+        room_list = []
+
+        api_data = self._fetch_rooms()
+        if api_data is not None and api_data:
+            for room in api_data:
+                a_room = self._create_room_object(room)
+
+                room_list.append(a_room)
+
+        self.rooms = room_list
+        self.rooms_last_updated = datetime.utcnow().replace(tzinfo=tz.tzutc())
+
+    def _fetch_rooms(self):
+        if self.api_root_url is not None and self.api_root_url and self.api_token is not None and self.api_token:
+            logger.info("Fetching room list...")
+
+            url = '%s/v2/rooms?auth_token=%s&expand=users' % (self.api_root_url, self.api_token)
+            r = requests.get(url)
+
+            if r.status_code == 200:
+                data = r.json()
+                if 'rooms' in data and data['rooms'] is not None and data['rooms']:
+                    return data['rooms']
+            else:
+                return None
+
+    def _create_room_object(self, room):
+        a_room = HipChatRoom(room['room_id'], room['name'])
+        a_room.xmpp_jid = room['xmpp_jid'] if 'xmpp_jid' in room and room['xmpp_jid'] is not None else None
+        a_room.room_id = room['room_id'] if 'room_id' in room and room['room_id'] is not None else None
+        a_room.is_archived = room['is_archived'] if 'is_archived' in room and room['is_archived'] is not None else None
+        a_room.privacy = room['privacy'] if 'privacy' in room and room['privacy'] is not None else None
+        a_room.version = room['version'] if 'version' in room and room['version'] is not None else None
+        a_room.created = room['created'] if 'created' in room and room['created'] is not None else None
+        a_room.topic = room['topic'] if 'topic' in room and room['topic'] is not None else None
+
+        return a_room
+
+
+class HipChatRoom(Room):
+    def __init__(self, _id, name):
+        super(Room, self).__init__(_id, name)
+        self.room_id = None
+        self.is_archived = None
+        self.privacy = None
+        self.version = None
+        self.created = None
+        self.xmpp_jid = None
+        self.topic = None
+        self.participants = None
+        self.owner = None
+        self.last_active = None
+
+    def __str__(self):
+        return "HipChatRoom(ID: '%s', XMPP JID: '%s', Name: '%s')" % (self.room_id, self.xmpp_jid, self.email)
 
 
 class Card(ElementBase):
