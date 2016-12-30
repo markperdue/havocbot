@@ -128,7 +128,10 @@ class QuoterPlugin(HavocBotPlugin):
                 if matched_users:
                     set_users = set(matched_users)
                     for user in set_users:
-                        result = self.stasher.find_quote_by_user_id(user.user_id)
+                        if self.same_channel_only:
+                            result = self.stasher.find_quote_by_user_id_in_channel(user.user_id, message.to)
+                        else:
+                            result = self.stasher.find_quote_by_user_id(user.user_id)
 
                         if result is not None and result:
                             temp_list.append(self._quote_as_string(result, user))
@@ -243,6 +246,18 @@ class StasherTinyDBQuoter(object):
 
         quotes_query = Query()
         matched_quotes = self.db.search(quotes_query['user_id'] == user_id)
+        if matched_quotes is not None and matched_quotes:
+            result = random.choice(matched_quotes)
+
+        logger.debug("Returning with '%s'" % (result))
+        return result
+
+    def find_quote_by_user_id_in_channel(self, user_id, channel):
+        logger.info("Searching for quote from user id '%d' in channel '%s'" % (user_id, channel))
+        result = None
+
+        quotes_query = Query()
+        matched_quotes = self.db.search((quotes_query['user_id'] == user_id) & (quotes_query['channel'] == channel))
         if matched_quotes is not None and matched_quotes:
             result = random.choice(matched_quotes)
 
