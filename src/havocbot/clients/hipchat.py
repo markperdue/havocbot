@@ -57,7 +57,7 @@ class HipChat(Client):
                 self.chat_server = item[1]
             elif item[0] == 'api_root_url':
                 self.api_root_url = item[1]
-            elif item[0] == 'send_notification_token':
+            elif item[0] == 'api_token':
                 self.api_token = item[1]
             elif item[0] == 'use_ssl':
                 if item[1] == 'True':
@@ -100,6 +100,7 @@ class HipChat(Client):
 
         if self.client.connect(address=(self.server, self.port), use_ssl=self.use_ssl):
             logger.info("I am.. %s! (%s)" % (self.bot_name, self.bot_username))
+            self._update_rooms()
             return True
         else:
             return False
@@ -370,59 +371,139 @@ class HipChat(Client):
 
         return client_user
 
-    def send_formatted_message(self, formatted_message, room_jid):
-        if formatted_message is not None:
-            room_id = self.get_room_id_from_room_jid(room_jid)
+    def send_formatted_message(self, formatted_message, room_jid, event=None, style=None):
+        if formatted_message is not None and event is not None and event:
+            if event in ['chat', 'normal']:
+                self.send_message(formatted_message.fallback_text, room_jid, event=event)
+            elif event in ['groupchat']:
+                room_id = self.get_room_id_from_room_jid(room_jid)
 
-            if room_id is not None and room_id:
-                url = '%s/v2/room/%s/notification?auth_token=%s' % (self.api_root_url, room_id, self.api_token)
+                if room_id is not None and room_id:
+                    url = '%s/v2/room/%s/notification?auth_token=%s' % (self.api_root_url, room_id, self.api_token)
 
-                json_payload = {}
-                json_payload['thumbnail'] = formatted_message.thumbnail
-                json_payload['message'] = formatted_message.text
-                json_payload['default_message'] = formatted_message.default_text
-                json_payload['thumbnail'] = formatted_message.thumbnail
+                    json_payload = {}
 
-                json_data = json.load(json_payload)
+                    if style == 'simple':
+                        json_payload = self._return_formatted_message_simple(formatted_message)
+                    elif style == 'icon':
+                        json_payload = self._return_formatted_message_icon(formatted_message)
+                    elif style == 'thumbnail':
+                        json_payload = self._return_formatted_message_thumbnail(formatted_message)
 
-                logger.debug("POSTING to '%s' with '%s'" % (url, json_payload))
-                requests.post(url, json=json_data, verify=False)
-        else:
-            logger.info("Unable to get an api room id from a jabber room id")
+                    self._send_formatted_message_api(room_id, json_payload)
+                else:
+                    logger.info("Unable to get an api room id from a jabber room id")
+
+    def _return_formatted_message_icon(self, formatted_message):
+        payload = {'message': formatted_message.fallback_text, 'card': {}}
+        payload['card']['style'] = 'application'
+        payload['card']['id'] = 'pdyrxt9dvaghm909d0xu'
+        payload['card']['title'] = formatted_message.title
+        payload['card']['description'] = formatted_message.text
+        payload['card']['attributes'] = []
+
+        self._add_message_attributes_to_payload(formatted_message, payload)
+
+        if formatted_message.title_url is not None and 'http' in formatted_message.title_url:
+            payload['card']['url'] = formatted_message.title_url
+
+        payload['card']['icon'] = {}
+        payload['card']['icon']['url'] = formatted_message.thumbnail_url
+
+        return payload
+
+    def _return_formatted_message_simple(self, formatted_message):
+        payload = {'message': formatted_message.fallback_text, 'card': {}}
+        payload['card']['style'] = 'application'
+        payload['card']['id'] = 'pdyrxt9dvaghm909d0xu'
+        payload['card']['title'] = formatted_message.title
+        payload['card']['description'] = formatted_message.text
+        payload['card']['attributes'] = []
+
+        self._add_message_attributes_to_payload(formatted_message, payload)
+
+        return payload
+
+    def _return_formatted_message_thumbnail(self, formatted_message):
+        payload = {'message': formatted_message.fallback_text, 'card': {}}
+        payload['card']['style'] = 'application'
+        payload['card']['id'] = 'pdyrxt9dvaghm909d0xu'
+        payload['card']['title'] = formatted_message.title
+        payload['card']['description'] = formatted_message.text
+        payload['card']['attributes'] = []
+
+        self._add_message_attributes_to_payload(formatted_message, payload)
+
+        if formatted_message.title_url is not None and 'http' in formatted_message.title_url:
+            payload['card']['url'] = formatted_message.title_url
+
+        payload['card']['thumbnail'] = {}
+        payload['card']['thumbnail']['url'] = formatted_message.thumbnail_url
+        payload['card']['thumbnail']['url@2x'] = formatted_message.thumbnail_url
+        payload['card']['thumbnail']['width'] = 1000
+        payload['card']['thumbnail']['height'] = 100
+
+        return payload
+
+    def _add_message_attributes_to_payload(self, formatted_message, payload_dict):
+        if formatted_message.attributes is not None:
+            for attribute in formatted_message.attributes:
+                new_attribute = dict(label=attribute['label'], value={'label': attribute['value']})
+                payload_dict['card']['attributes'].append(new_attribute)
+
+    def _send_formatted_message_api(self, room_id, json_payload):
+        url = '%s/v2/room/%s/notification?auth_token=%s' % (self.api_root_url, room_id, self.api_token)
+
+        logger.debug("POSTING to '%s' with '%s'" % (url, json_payload))
+        r = requests.post(url, json=json_payload, verify=False)
+
+    def get_room_id_from_room_jid(self, room_jid):
+        logger.debug("Looking up '%s'" % (room_jid))
+
+        for room in self.rooms:
+            logger.info(room)
+            if room.xmpp_jid == room_jid:
+                return room._id
+
+        return None
 
     def _update_rooms(self):
-        logger.info("Updating room data...")
+        if self.api_root_url is not None and self.api_root_url and self.api_token is not None and self.api_token:
+            logger.info("Updating room data...")
 
-        room_list = []
+            room_list = []
 
-        api_data = self._fetch_rooms()
-        if api_data is not None and api_data:
-            for room in api_data:
-                a_room = self._create_room_object(room)
+            api_data = self._fetch_rooms()
+            if api_data is not None and api_data:
+                for room in api_data:
+                    a_room = self._create_room_object(room)
 
-                room_list.append(a_room)
+                    room_list.append(a_room)
 
-        self.rooms = room_list
-        self.rooms_last_updated = datetime.utcnow().replace(tzinfo=tz.tzutc())
+            self.rooms = room_list
+            self.rooms_last_updated = datetime.utcnow().replace(tzinfo=tz.tzutc())
+        else:
+            logger.info("%s api root url or api token is not defined" % (self.integration_name))
 
     def _fetch_rooms(self):
         if self.api_root_url is not None and self.api_root_url and self.api_token is not None and self.api_token:
             logger.info("Fetching room list...")
 
-            url = '%s/v2/rooms?auth_token=%s&expand=users' % (self.api_root_url, self.api_token)
+            url = '%s/v2/room?auth_token=%s&expand=items' % (self.api_root_url, self.api_token)
             r = requests.get(url)
 
             if r.status_code == 200:
                 data = r.json()
-                if 'rooms' in data and data['rooms'] is not None and data['rooms']:
-                    return data['rooms']
+                if 'items' in data and data['items'] is not None and data['items']:
+                    return data['items']
             else:
+                logger.info('Nothing here')
                 return None
 
     def _create_room_object(self, room):
-        a_room = HipChatRoom(room['room_id'], room['name'])
+        a_room = HipChatRoom(room['id'], room['name'])
         a_room.xmpp_jid = room['xmpp_jid'] if 'xmpp_jid' in room and room['xmpp_jid'] is not None else None
-        a_room.room_id = room['room_id'] if 'room_id' in room and room['room_id'] is not None else None
+        # a_room.room_id = room['room_id'] if 'room_id' in room and room['room_id'] is not None else None
         a_room.is_archived = room['is_archived'] if 'is_archived' in room and room['is_archived'] is not None else None
         a_room.privacy = room['privacy'] if 'privacy' in room and room['privacy'] is not None else None
         a_room.version = room['version'] if 'version' in room and room['version'] is not None else None
@@ -434,8 +515,8 @@ class HipChat(Client):
 
 class HipChatRoom(Room):
     def __init__(self, _id, name):
-        super(Room, self).__init__(_id, name)
-        self.room_id = None
+        super(HipChatRoom, self).__init__(_id, name)
+        # self.room_id = None
         self.is_archived = None
         self.privacy = None
         self.version = None
@@ -447,7 +528,7 @@ class HipChatRoom(Room):
         self.last_active = None
 
     def __str__(self):
-        return "HipChatRoom(ID: '%s', XMPP JID: '%s', Name: '%s')" % (self.room_id, self.xmpp_jid, self.email)
+        return "HipChatRoom(ID: '%s', XMPP JID: '%s', Name: '%s')" % (self._id, self.xmpp_jid, self.name)
 
 
 class Card(ElementBase):

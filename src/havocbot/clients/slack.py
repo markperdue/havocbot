@@ -1,4 +1,6 @@
+import json
 import logging
+import requests
 from slackclient import SlackClient
 from havocbot.client import Client
 from havocbot.message import Message
@@ -19,6 +21,7 @@ class Slack(Client):
 
         self.client = None
         self.token = None
+        self.api_root_url = None
         self.bot_name = None
         self.bot_username = None
 
@@ -28,7 +31,9 @@ class Slack(Client):
 
         for item in settings:
             # Switch on the key
-            if item[0] == 'api_token':
+            if item[0] == 'api_root_url':
+                self.api_root_url = item[1]
+            elif item[0] == 'api_token':
                 self.token = item[1]
                 requirements_met = True
 
@@ -129,6 +134,90 @@ class Slack(Client):
                 logger.error("Unable to send message. Are you connected?")
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
+
+    def send_formatted_message(self, formatted_message, room_id, event=None, style=None):
+        if formatted_message is not None:
+            json_payload = {}
+
+            if style == 'simple':
+                json_payload = self._return_formatted_message_simple(formatted_message, room_id)
+            elif style == 'icon':
+                json_payload = self._return_formatted_message_icon(formatted_message, room_id)
+            elif style == 'thumbnail':
+                json_payload = self._return_formatted_message_thumbnail(formatted_message, room_id)
+
+            self._send_formatted_message_api(json_payload)
+        else:
+            logger.info("Unable to get an api room id from a jabber room id")
+
+    def _return_formatted_message_icon(self, formatted_message, room_id):
+        payload = {'token': self.token, 'channel': room_id, 'as_user': 'true'}
+
+        attachments_dict = {
+            'text': formatted_message.text,
+            'fallback': formatted_message.fallback_text,
+            'author_name': formatted_message.title,
+            'author_icon': formatted_message.thumbnail_url
+        }
+
+        if formatted_message.title_url is not None and 'http' in formatted_message.title_url:
+            attachments_dict['title_link'] = formatted_message.title_url
+
+        self._add_message_attributes_to_payload(formatted_message, attachments_dict)
+
+        json_str = json.dumps(attachments_dict)
+        payload['attachments'] = "[%s]" % (json_str)
+
+        return payload
+
+    def _return_formatted_message_simple(self, formatted_message, room_id):
+        payload = {'token': self.token, 'channel': room_id, 'as_user': 'true'}
+
+        attachments_dict = {
+            'text': formatted_message.text,
+            'fallback': formatted_message.fallback_text,
+            'title': formatted_message.title
+        }
+
+        self._add_message_attributes_to_payload(formatted_message, attachments_dict)
+
+        json_str = json.dumps(attachments_dict)
+        payload['attachments'] = "[%s]" % (json_str)
+
+        return payload
+
+    def _return_formatted_message_thumbnail(self, formatted_message, room_id):
+        payload = {'token': self.token, 'channel': room_id, 'as_user': 'true'}
+
+        attachments_dict = {
+            'text': formatted_message.text,
+            'fallback': formatted_message.fallback_text,
+            'title': formatted_message.title,
+            'thumb_url': formatted_message.thumbnail_url
+        }
+
+        if formatted_message.title_url is not None and 'http' in formatted_message.title_url:
+            attachments_dict['title_link'] = formatted_message.title_url
+
+        self._add_message_attributes_to_payload(formatted_message, attachments_dict)
+
+        json_str = json.dumps(attachments_dict)
+        payload['attachments'] = "[%s]" % (json_str)
+
+        return payload
+
+    def _add_message_attributes_to_payload(self, formatted_message, payload_dict):
+        if formatted_message.attributes is not None:
+            payload_dict['fields'] = []
+            for attribute in formatted_message.attributes:
+                new_attribute = dict(title=attribute['label'], value=attribute['value'], short='false')
+                payload_dict['fields'].append(new_attribute)
+
+    def _send_formatted_message_api(self, json_payload):
+        url = '%s/api/chat.postMessage' % (self.api_root_url)
+
+        logger.debug("POSTING to '%s' with '%s'" % (url, json_payload))
+        r = requests.post(url, params=json_payload, verify=False)
 
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
         user = User(0)
