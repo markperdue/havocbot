@@ -179,8 +179,7 @@ class HavocBot:
 
                 return mod
         except ImportError:
-            logger.error("Unable to import the %s client integration file"
-                         % (name))
+            logger.error("Unable to import the %s client integration file" % (name))
 
             return None
 
