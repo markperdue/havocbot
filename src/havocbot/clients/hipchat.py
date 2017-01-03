@@ -3,7 +3,7 @@ from datetime import datetime
 import logging
 import requests
 import sleekxmpp
-from sleekxmpp.xmlstream.stanzabase import ElementBase
+# from sleekxmpp.xmlstream.stanzabase import ElementBase
 from havocbot.client import Client
 from havocbot.message import Message
 from havocbot.room import Room
@@ -256,7 +256,7 @@ class HipChat(Client):
 
         if jabber_id is not None and jabber_id:
             vcard = self._get_vcard_by_jabber_id(jabber_id)
-            user = self._create_client_object_object(jabber_id, None, vcard)
+            user = self._create_client_object_object(jabber_id, jabber_id, vcard)
 
         return user
 
@@ -402,95 +402,6 @@ class HipChat(Client):
         return a_room
 
 
-class HipChatRoom(Room):
-    def __init__(self, _id, name):
-        super(HipChatRoom, self).__init__(_id, name)
-        self.is_archived = None
-        self.privacy = None
-        self.version = None
-        self.created = None
-        self.xmpp_jid = None
-        self.topic = None
-        self.participants = None
-        self.owner = None
-        self.last_active = None
-
-    def __str__(self):
-        return "HipChatRoom(ID: '%s', XMPP JID: '%s', Name: '%s')" % (self._id, self.xmpp_jid, self.name)
-
-
-class Card(ElementBase):
-    namespace = 'http://hipchat.com/protocol/muc#room'
-    name = 'card'
-    plugin_attrib = 'card'
-    interfaces = set(('raw',))
-    sub_interfaces = interfaces
-
-
-class NotificationSender(ElementBase):
-    namespace = 'http://hipchat.com/protocol/muc#room'
-    name = 'notification_sender'
-    plugin_attrib = 'notification_sender'
-    interfaces = set(('type', 'id',))
-    # sub_interfaces = interfaces
-
-
-class X(ElementBase):
-    namespace = 'http://hipchat.com/protocol/muc#room'
-    name = 'x'
-    plugin_attrib = 'x'
-    interfaces = set(('type', 'notify', 'color', 'message_format', 'card', 'notification_sender'))
-    sub_interfaces = set(('type', 'notify', 'color', 'message_format', 'card', 'notification_sender'))
-    subitem = (Card, NotificationSender,)
-
-    def setBasics(self, basic_type, notify, color, message_format):
-        logger.info("setting basics to '%s', '%s', '%s', and '%s'" % (basic_type, notify, color, message_format))
-
-        self['type'] = basic_type
-        self['notify'] = notify
-        self['color'] = color
-        self['message_format'] = message_format
-
-    def getCard(self):
-        raw = ''
-
-        result = self.xml.find('{%s}card' % Card.namespace)
-        if result:
-            card = Card(result)
-            raw = card['raw']
-
-        logger.info("returning with '%s'" % (raw))
-        return raw
-
-    def getNotificationSender(self):
-        logger.info("getting notification sender...")
-        results = {}
-
-        result = self.xml.find('{%s}notification_sender' % NotificationSender.namespace)
-        if result:
-            logger.info("GOT A RESULT OF '%s'" % (notification_sender['type']))
-            logger.info("GOT A RESULT OF '%s'" % (notification_sender['id']))
-            notification_sender = NotificationSender(result)
-            results['type'] = notification_sender['type']
-            results['id'] = notification_sender['id']
-
-        logger.info("returning with '%s'" % (results))
-        return results
-
-    def setCard(self, json_string):
-        logger.info("setting card to '%s'" % (json_string))
-
-        card_obj = Card(None, self)
-        card_obj['raw'] = json_string
-
-    def setNotificationSender(self, sender_type, sender_id):
-        logger.info("setting notification_sender to '%s' and '%s'" % (sender_type, sender_id))
-
-        notification_sender = NotificationSender(None, self)
-        notification_sender['type'] = sender_type
-        notification_sender['id'] = sender_id
-
-
 class HipMUCBot(sleekxmpp.ClientXMPP):
     def __init__(self, client, havocbot, jid, password, rooms_list, server_host, nick, chat_server):
         sleekxmpp.ClientXMPP.__init__(self, jid + '/bot', password)
@@ -513,20 +424,6 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
                 room_string = item + '@' + self.chat_server
                 logger.debug("Joining room '%s'" % (room_string))
                 self.plugin['xep_0045'].joinMUC(room_string, self.nick, wait=True)
-
-    def log_msg(self, msg):
-        logger.debug(type(msg['from']))
-        logger.debug(msg['from'].resource)
-        if msg['type'] == 'groupchat':
-            logger.info("Message - Type: '%s', To: '%s', From: '%s', ID: '%s', MUCNick: '%s', MUCRoom '%s', Body '%s'"
-                        % (msg['type'], msg['to'], msg['from'], msg['id'], msg['mucnick'], msg['mucroom'], msg['body']))
-            if msg['subject'] and msg['thread']:
-                logger.info("Message - Thread '%s', Body '%s'" % (msg['thread'], msg['body']))
-        else:
-            logger.info("Message - Type: '%s', To: '%s', From: '%s', ID: '%s', Body '%s'"
-                        % (msg['type'], msg['to'], msg['from'], msg['id'], msg['body']))
-            if msg['subject'] and msg['thread']:
-                logger.info("Message - Thread '%s', Body '%s'" % (msg['thread'], msg['body']))
 
     def message(self, msg):
         if msg['type'] == 'groupchat':
@@ -587,6 +484,23 @@ class HipChatUser(ClientUser):
         return json_data
 
 
+class HipChatRoom(Room):
+    def __init__(self, _id, name):
+        super(HipChatRoom, self).__init__(_id, name)
+        self.is_archived = None
+        self.privacy = None
+        self.version = None
+        self.created = None
+        self.xmpp_jid = None
+        self.topic = None
+        self.participants = None
+        self.owner = None
+        self.last_active = None
+
+    def __str__(self):
+        return "HipChatRoom(ID: '%s', XMPP JID: '%s', Name: '%s')" % (self._id, self.xmpp_jid, self.name)
+
+
 # Returns a newly created user from a json source
 def create_user_object(jabber_id, name, vcard):
     if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare:
@@ -619,24 +533,3 @@ def create_user_object(jabber_id, name, vcard):
 
     logger.debug("client_user is '%s'" % (client_user))
     return client_user
-
-
-# def create_user_object_2(jabber_id, vcard):
-#     logger.info("HOW DID IT GET HERE")
-#     vcard_nickname = None
-#     vcard_email = None
-#
-#     if vcard is not None:
-#         # get_payload() returns the xml for the Iq() as a Element object
-#         payload = vcard.get_payload()
-#         vcard_xml = payload[0]
-#         vcard_full_name = vcard_xml.findtext('.//{vcard-temp}FN')
-#         vcard_nickname = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
-#         vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
-#
-#     client_user = HipChatUser(
-#         jabber_id, vcard_nickname if vcard_nickname is not None and vcard_nickname else None,
-#         vcard_email if vcard_email is not None and vcard_email else None)
-#
-#     logger.debug("client_user is '%s'" % (client_user))
-#     return client_user
