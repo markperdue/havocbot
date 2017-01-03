@@ -183,6 +183,7 @@ class StasherTinyDB(StasherClass):
         user.points = result_data['points'] if 'points' in result_data else None
         user.permissions = result_data['permissions'] if 'permissions' in result_data else []
         user.aliases = result_data['aliases'] if 'aliases' in result_data else []
+        user.image = result_data['image'] if 'image' in result_data else None
         user.is_stashed = True
 
         return user

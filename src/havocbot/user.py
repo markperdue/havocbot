@@ -28,6 +28,7 @@ class User(object):
         self.current_username = None
         self.permissions = []
         self.client_user = None
+        self.image = None
 
     def __repr__(self):
         return ("User(%s, %s, %s, %s, %d, %s, %s)"
