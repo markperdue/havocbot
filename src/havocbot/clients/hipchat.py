@@ -1,6 +1,5 @@
 from dateutil import tz
 from datetime import datetime
-import json
 import logging
 import requests
 import sleekxmpp
@@ -125,22 +124,8 @@ class HipChat(Client):
     def send_message(self, text, channel, event=None, **kwargs):
         if channel and text and event:
             try:
-                used_notification_api = False
-
-                if kwargs is not None:
-                    if 'room_id' in kwargs and kwargs.get('room_id') is not None:
-                        api_room_id = kwargs.get('room_id')
-
-                        if 'json' in kwargs and kwargs.get('json') is not None:
-                            json_dict = kwargs.get('json')
-                            logger.info("Found room_id which is '%s' and json which is '%s'" % (api_room_id, json_dict))
-
-                            self.send_message_api(self.api_root_url, api_room_id, self.api_token, json_dict)
-                            used_notification_api = True
-
-                if not used_notification_api:
-                    logger.info("Sending %s text '%s' to channel '%s'" % (event, text, channel))
-                    self.client.send_message(mto=channel, mbody=text, mtype=event)
+                logger.info("Sending %s text '%s' to channel '%s'" % (event, text, channel))
+                self.client.send_message(mto=channel, mbody=text, mtype=event)
             except AttributeError:
                 logger.error('Unable to send message. Are you connected?')
             except Exception as e:
@@ -157,13 +142,36 @@ class HipChat(Client):
             except Exception as e:
                 logger.error("Unable to send message. %s" % (e))
 
+    def send_formatted_message(self, formatted_message, room_jid, event=None, style=None):
+        if formatted_message is not None and event is not None and event:
+            if event in ['chat', 'normal']:
+                self.send_message(formatted_message.fallback_text, room_jid, event=event)
+            elif event in ['groupchat']:
+                room_id = self._get_room_id_from_room_jid(room_jid)
+
+                if room_id is not None and room_id:
+                    url = '%s/v2/room/%s/notification?auth_token=%s' % (self.api_root_url, room_id, self.api_token)
+
+                    json_payload = {}
+
+                    if style == 'simple':
+                        json_payload = self._return_formatted_message_simple(formatted_message)
+                    elif style == 'icon':
+                        json_payload = self._return_formatted_message_icon(formatted_message)
+                    elif style == 'thumbnail':
+                        json_payload = self._return_formatted_message_thumbnail(formatted_message)
+
+                    self._send_formatted_message_api(room_id, json_payload)
+                else:
+                    logger.info("Unable to get an api room id from a jabber room id")
+
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
         user = User(0)
 
         logger.debug("Channel is '%s', message_sender is '%s', event is '%s'" % (channel, message_sender, event))
 
         # Get client object information
-        client_user = self.get_client_object_from_message_object(message_sender, channel=channel, event=event)
+        client_user = self._get_client_object_from_message_object(message_sender, channel=channel, event=event)
         user.client_user = client_user
 
         user.name = client_user.name
@@ -174,62 +182,17 @@ class HipChat(Client):
     def get_users_in_channel(self, channel, event=None, **kwargs):
         result_list = []
 
-        logger.info('starting get_active_users_in_channel')
         if event is not None and event == 'groupchat':
             roster = self.client.plugin['xep_0045'].getRoster(channel)
             if roster is not None and roster:
-                logger.info("roster is '%s'" % (roster))
                 for roster_item in roster:
-                    logger.info("roster_item is '%s'" % (roster_item))
+                    logger.debug("roster_item is '%s'" % (roster_item))
                     user = self._get_user_from_groupchat(roster_item, channel)
                     if user is not None and user:
                         result_list.append(user)
 
         return result_list
 
-    def send_message_api(self, api_root_url, api_room_id, api_token, json_dict):
-        if api_room_id is not None:
-            url = '%s/v2/room/%s/notification?auth_token=%s' % (api_root_url, api_room_id, api_token)
-
-            logger.debug("POSTING to '%s' with '%s'" % (url, json_dict))
-            requests.post(url, json=json_dict, verify=False)
-        else:
-            logger.info("Unable to get an api room id from a jabber room id")
-
-    def get_vcard_by_jabber_id(self, jabber_id):
-        vcard = None
-
-        if jabber_id is not None:
-            if isinstance(jabber_id, sleekxmpp.jid.JID):
-                bare_jid = jabber_id.bare
-            else:
-                bare_jid = jabber_id
-
-            try:
-                vcard = self.client.plugin['xep_0054'].get_vcard(jid=bare_jid)
-            except sleekxmpp.exceptions.IqError as e:
-                logger.error("IqError - %s" % (e.iq))
-            except sleekxmpp.exceptions.IqTimeout:
-                logger.error('IqTimeOut')
-
-            return vcard
-
-    def _get_user_from_jid(self, jabber_id):
-        user = None
-
-        if jabber_id is not None and jabber_id:
-            vcard = self._get_vcard_by_jabber_id(jabber_id)
-            user = create_user_object_2(jabber_id, vcard)
-            # user = self.get_client_object_from_message_object(message_sender, channel=channel, event=event)
-
-            logger.info('Displaying user')
-            logger.info(user)
-        else:
-            logger.info('else clause top')
-
-        return user
-
-    # Uncommented this. Not sure why it was commented out
     def _get_user_from_groupchat(self, name, channel):
         user = None
 
@@ -242,35 +205,11 @@ class HipChat(Client):
 
             if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
                 vcard = self._get_vcard_by_jabber_id(jabber_id)
-                logger.info('Creating user')
-                logger.info("jabber_id is '%s', name is '%s' and vcard is '%s'" % (jabber_id, name, vcard))
+                logger.debug("jabber_id is '%s', name is '%s' and vcard is '%s'" % (jabber_id, name, vcard))
                 user = create_user_object(jabber_id, name, vcard)
 
-                logger.info('Displaying user')
-                logger.info(user)
-            else:
-                logger.info('else clause top')
-        else:
-            logger.info('else clause')
-
+        logger.info(user)
         return user
-
-    # def _get_user_from_private_chat(self, name):
-    #     user = None
-
-    #     if name is not None:
-    #         if isinstance(name, sleekxmpp.jid.JID):
-    #             jabber_id = name.bare
-    #         else:
-    #             jabber_id = name
-
-    #         vcard = self._get_vcard_by_jabber_id(jabber_id)
-    #         user = create_user_object(jabber_id, name, vcard)
-
-    #         logger.info('_get_user_from_private_chat() - Displaying user')
-    #         logger.info(repr(user))
-
-    #     return user
 
     def _get_vcard_by_jabber_id(self, jabber_id):
         vcard = None
@@ -290,21 +229,7 @@ class HipChat(Client):
 
             return vcard
 
-    def update_user_object_from_message(self, user_object, message_object):
-        logger.debug('update_user_object_from_message() - triggered')
-
-        # Get client object information
-        client_object = self.get_client_object_from_message_object(
-            message_object.sender, channel=message_object.to, event=message_object.event)
-
-        # user_object.add_client(client_object)
-        if client_object is not None:
-            if client_object.username is not None:
-                user_object.current_username = client_object.username
-            if client_object.name is not None:
-                user_object.name = client_object.name
-
-    def get_client_object_from_message_object(self, message_sender, channel=None, event=None, **kwargs):
+    def _get_client_object_from_message_object(self, message_sender, channel=None, event=None, **kwargs):
         user = None
 
         if event is not None and event:
@@ -312,42 +237,30 @@ class HipChat(Client):
                 user = self._get_client_object_from_private_chat(message_sender)
 
             elif event in ['groupchat']:
-                user = self._get_user_from_jid(message_sender)
-                # user = self._get_client_object_from_groupchat(message_sender, channel)
-
-        return user
-
-    def _get_client_object_from_groupchat(self, name, channel):
-        user = None
-
-        # Fetch JID from xep_0045
-        if channel is not None and channel:
-            if '@' not in channel:
-                channel = "%s@%s" % (channel, self.server)
-
-            jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
-
-            if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
-                vcard = self._get_vcard_by_jabber_id(jabber_id)
-                user = self.create_client_object_object(jabber_id, name, vcard)
+                user = self._get_client_object_from_groupchat(message_sender)
 
         return user
 
     def _get_client_object_from_private_chat(self, message_sender):
-        user = None
-
-        if message_sender is not None:
-            if isinstance(message_sender, sleekxmpp.jid.JID):
-                jabber_id = message_sender.bare
-            else:
-                jabber_id = message_sender
-
-            vcard = self._get_vcard_by_jabber_id(jabber_id)
-            user = self.create_client_object_object(jabber_id, message_sender, vcard)
+        user = self._get_user_from_jid(message_sender)
 
         return user
 
-    def create_client_object_object(self, jabber_id, name, vcard):
+    def _get_client_object_from_groupchat(self, message_sender):
+        user = self._get_user_from_jid(message_sender)
+
+        return user
+
+    def _get_user_from_jid(self, jabber_id):
+        user = None
+
+        if jabber_id is not None and jabber_id:
+            vcard = self._get_vcard_by_jabber_id(jabber_id)
+            user = self._create_client_object_object(jabber_id, None, vcard)
+
+        return user
+
+    def _create_client_object_object(self, jabber_id, name, vcard):
         if isinstance(jabber_id, sleekxmpp.jid.JID) and jabber_id.bare is not None and jabber_id.bare:
             jabber_id_bare = jabber_id.bare
         else:
@@ -370,29 +283,6 @@ class HipChat(Client):
         logger.debug("returning with '%s'" % (client_user))
 
         return client_user
-
-    def send_formatted_message(self, formatted_message, room_jid, event=None, style=None):
-        if formatted_message is not None and event is not None and event:
-            if event in ['chat', 'normal']:
-                self.send_message(formatted_message.fallback_text, room_jid, event=event)
-            elif event in ['groupchat']:
-                room_id = self.get_room_id_from_room_jid(room_jid)
-
-                if room_id is not None and room_id:
-                    url = '%s/v2/room/%s/notification?auth_token=%s' % (self.api_root_url, room_id, self.api_token)
-
-                    json_payload = {}
-
-                    if style == 'simple':
-                        json_payload = self._return_formatted_message_simple(formatted_message)
-                    elif style == 'icon':
-                        json_payload = self._return_formatted_message_icon(formatted_message)
-                    elif style == 'thumbnail':
-                        json_payload = self._return_formatted_message_thumbnail(formatted_message)
-
-                    self._send_formatted_message_api(room_id, json_payload)
-                else:
-                    logger.info("Unable to get an api room id from a jabber room id")
 
     def _return_formatted_message_icon(self, formatted_message):
         payload = {'message': formatted_message.fallback_text, 'card': {}}
@@ -457,7 +347,7 @@ class HipChat(Client):
         logger.debug("POSTING to '%s' with '%s'" % (url, json_payload))
         r = requests.post(url, json=json_payload, verify=False)
 
-    def get_room_id_from_room_jid(self, room_jid):
+    def _get_room_id_from_room_jid(self, room_jid):
         logger.debug("Looking up '%s'" % (room_jid))
 
         for room in self.rooms:
@@ -503,7 +393,6 @@ class HipChat(Client):
     def _create_room_object(self, room):
         a_room = HipChatRoom(room['id'], room['name'])
         a_room.xmpp_jid = room['xmpp_jid'] if 'xmpp_jid' in room and room['xmpp_jid'] is not None else None
-        # a_room.room_id = room['room_id'] if 'room_id' in room and room['room_id'] is not None else None
         a_room.is_archived = room['is_archived'] if 'is_archived' in room and room['is_archived'] is not None else None
         a_room.privacy = room['privacy'] if 'privacy' in room and room['privacy'] is not None else None
         a_room.version = room['version'] if 'version' in room and room['version'] is not None else None
@@ -516,7 +405,6 @@ class HipChat(Client):
 class HipChatRoom(Room):
     def __init__(self, _id, name):
         super(HipChatRoom, self).__init__(_id, name)
-        # self.room_id = None
         self.is_archived = None
         self.privacy = None
         self.version = None
@@ -733,28 +621,22 @@ def create_user_object(jabber_id, name, vcard):
     return client_user
 
 
-def create_user_object_2(jabber_id, vcard):
-    vcard_nickname = None
-    vcard_email = None
-
-    if vcard is not None:
-        # get_payload() returns the xml for the Iq() as a Element object
-        payload = vcard.get_payload()
-        vcard_xml = payload[0]
-        vcard_full_name = vcard_xml.findtext('.//{vcard-temp}FN')
-        vcard_nickname = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
-        vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
-
-    client_user = HipChatUser(
-        jabber_id, vcard_nickname if vcard_nickname is not None and vcard_nickname else None,
-        vcard_email if vcard_email is not None and vcard_email else None)
-
-    # # Create a User object
-    # user_object = User(0)
-    # user_object.points = 0
-    # json_data = client_user.to_json()
-    # user_object.usernames = {json_data['client']: [json_data['username']]}
-    # user_object.current_username = json_data['username']
-
-    logger.debug("client_user is '%s'" % (client_user))
-    return client_user
+# def create_user_object_2(jabber_id, vcard):
+#     logger.info("HOW DID IT GET HERE")
+#     vcard_nickname = None
+#     vcard_email = None
+#
+#     if vcard is not None:
+#         # get_payload() returns the xml for the Iq() as a Element object
+#         payload = vcard.get_payload()
+#         vcard_xml = payload[0]
+#         vcard_full_name = vcard_xml.findtext('.//{vcard-temp}FN')
+#         vcard_nickname = vcard_xml.findtext('.//{vcard-temp}NICKNAME')
+#         vcard_email = vcard_xml.findtext('.//{vcard-temp}USERID')
+#
+#     client_user = HipChatUser(
+#         jabber_id, vcard_nickname if vcard_nickname is not None and vcard_nickname else None,
+#         vcard_email if vcard_email is not None and vcard_email else None)
+#
+#     logger.debug("client_user is '%s'" % (client_user))
+#     return client_user
