@@ -2,6 +2,8 @@
 
 import logging
 import traceback
+from havocbot.exceptions import FormattedMessageNotSentError
+from havocbot.message import FormattedMessage
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 from havocbot.user import User, UserDataAlreadyExistsException, UserDataNotFoundException
 
@@ -300,18 +302,32 @@ class UserPlugin(HavocBotPlugin):
             logger.debug(user)
             message_list.extend(user.get_user_info_as_list())
         else:
-            user_object = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
-            user_object.current_username = message.sender
-            logger.debug(user_object)
-            message_list.extend(user_object.get_user_info_as_list())
+            user = client.get_user_from_message(message.sender, channel=message.to, event=message.event)
+            user.current_username = message.sender
+            logger.debug(user)
+            message_list.extend(user.get_user_info_as_list())
 
         if message_list is not None and message_list:
-
-            client.send_messages_from_list(
-                message_list,
-                message.reply(),
-                event=message.event
+            f_message = FormattedMessage(
+                text="%s" % (', '.join(user.get_other_usernames_as_list())),
+                fallback_text="%s" % (', '.join(user.get_other_usernames_as_list())),
+                title="User %s (%s)" % (user.name, user.get_aliases_as_string()),
+                thumbnail_url=user.image,
+                attributes=[
+                    {"label": "Username", "value": str(user.current_username)},
+                    {"label": "UID", "value": str(user.user_id)},
+                    {"label": "Points", "value": str(user.points)}
+                ]
             )
+
+            try:
+                client.send_formatted_message(f_message, message.reply(), event=message.event, style='thumbnail')
+            except FormattedMessageNotSentError:
+                client.send_messages_from_list(
+                    message_list,
+                    message.reply(),
+                    event=message.event
+                )
         else:
             text = 'No matches found'
             client.send_message(text, message.reply(), event=message.event)

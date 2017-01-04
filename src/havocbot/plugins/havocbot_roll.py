@@ -5,7 +5,9 @@ import random
 from random import choice
 import threading
 import time
+from havocbot.exceptions import FormattedMessageNotSentError
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
+from havocbot.message import FormattedMessage
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +105,20 @@ class RollPlugin(HavocBotPlugin):
         else:
             text = "%s rolled %s" % (message.sender, roll_formatted)
 
-        client.send_message(text, message.reply(), event=message.event)
+        formatted_message = FormattedMessage(
+            text=text,
+            fallback_text=text,
+            title="Dice Roller",
+            thumbnail_url="http://i.imgur.com/eyYARo7.png"
+        )
+
+        try:
+            # client.send_formatted_message(formatted_message, message.reply(), event=message.event, style='simple')
+            # client.send_formatted_message(formatted_message, message.reply(), event=message.event, style='thumbnail')
+            client.send_formatted_message(formatted_message, message.reply(), event=message.event, style='icon')
+        except FormattedMessageNotSentError as e:
+            logger.error("Unable to send formatted message with payload '%s'" % (e))
+            client.send_message(text, message.reply(), event=message.event)
 
     def trigger_rolloff(self, client, message, **kwargs):
         user_object = self.havocbot.db.find_user_by_username_for_client(message.sender, client.integration_name)

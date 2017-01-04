@@ -3,8 +3,8 @@ from datetime import datetime
 import logging
 import requests
 import sleekxmpp
-# from sleekxmpp.xmlstream.stanzabase import ElementBase
 from havocbot.client import Client
+from havocbot.exceptions import FormattedMessageNotSentError
 from havocbot.message import Message
 from havocbot.room import Room
 from havocbot.user import User, ClientUser
@@ -161,7 +161,10 @@ class HipChat(Client):
                     elif style == 'thumbnail':
                         json_payload = self._return_formatted_message_thumbnail(formatted_message)
 
-                    self._send_formatted_message_api(room_id, json_payload)
+                    try:
+                        self._send_formatted_message_api(room_id, json_payload)
+                    except:
+                        raise
                 else:
                     logger.info("Unable to get an api room id from a jabber room id")
 
@@ -347,11 +350,13 @@ class HipChat(Client):
         logger.debug("POSTING to '%s' with '%s'" % (url, json_payload))
         r = requests.post(url, json=json_payload, verify=False)
 
+        if r.status_code not in [200, 201, 202, 204]:
+            raise FormattedMessageNotSentError(room_id, json_payload)
+
     def _get_room_id_from_room_jid(self, room_jid):
         logger.debug("Looking up '%s'" % (room_jid))
 
         for room in self.rooms:
-            logger.info(room)
             if room.xmpp_jid == room_jid:
                 return room._id
 

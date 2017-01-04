@@ -4,3 +4,7 @@ class InvalidUserException(Exception):
 
 class StasherEntryAlreadyExistsError(Exception):
     pass
+
+
+class FormattedMessageNotSentError(Exception):
+    pass
