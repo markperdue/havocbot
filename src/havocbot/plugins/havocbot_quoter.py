@@ -4,6 +4,8 @@ from dateutil import tz, parser
 import logging
 import random
 from tinydb import TinyDB, Query
+from havocbot.exceptions import FormattedMessageNotSentError
+from havocbot.message import FormattedMessage
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 from havocbot.user import UserDataAlreadyExistsException, UserDataNotFoundException
 
@@ -80,12 +82,37 @@ class QuoterPlugin(HavocBotPlugin):
         logger.debug("Adding message by user %s to recent messages" % (message.sender))
         self.recent_messages.append(message)
 
+    def _get_quote_formatted_message(self, user, quote):
+        time = format_datetime_for_display(parser.parse(quote['timestamp'])) if 'timestamp' in quote else 'Unknown'
+
+        return FormattedMessage(
+            text="\"%s\"" % (quote['quote']),
+            fallback_text=self._quote_as_string(quote),
+            title="%s - %s" % (user.name, time),
+            thumbnail_url=user.image
+        )
+
     def trigger_get_quote_by_id(self, client, message, **kwargs):
         capture = kwargs.get('capture_groups', None)
         captured_json_id = int(capture[0])
 
-        text = self._get_quote_by_id_with_user_resolved(captured_json_id)
-        client.send_message(text, message.reply(), event=message.event)
+        a_tuple = self._get_quote_by_id_with_user_resolved(captured_json_id)
+        user = a_tuple[0]
+        quote = a_tuple[1]
+
+        if user is not None and quote is not None:
+            formatted_message = self._get_quote_formatted_message(user, quote)
+
+            try:
+                client.send_formatted_message(formatted_message, message.reply(), event=message.event, style='thumbnail')
+            except FormattedMessageNotSentError as e:
+                logger.error("Unable to send formatted message with payload '%s'" % (e))
+
+                text = self._quote_as_string(quote, user)
+                client.send_message(text, message.reply(), event=message.event)
+        else:
+                text = "No quote found with ID %d" % (int(captured_json_id))
+                client.send_message(text, message.reply(), event=message.event)
 
     def trigger_add_quote(self, client, message, **kwargs):
         capture = kwargs.get('capture_groups', None)
@@ -112,7 +139,6 @@ class QuoterPlugin(HavocBotPlugin):
             temp_list = []
 
             for word in words:
-                is_quote_found_for_user = False
                 is_user_found = False
                 matched_users = []
 
@@ -128,19 +154,26 @@ class QuoterPlugin(HavocBotPlugin):
                 if matched_users:
                     set_users = set(matched_users)
                     for user in set_users:
-                        if self.same_channel_only:
-                            result = self.stasher.find_quote_by_user_id_in_channel(user.user_id, message.to)
+                        if self.same_channel_only is True:
+                            quote = self.stasher.find_quote_by_user_id_in_channel(user.user_id, message.to)
                         else:
-                            result = self.stasher.find_quote_by_user_id(user.user_id)
+                            quote = self.stasher.find_quote_by_user_id(user.user_id)
 
-                        if result is not None and result:
-                            temp_list.append(self._quote_as_string(result, user))
-                            is_quote_found_for_user = True
+                        if quote is not None and quote:
+                            formatted_message = self._get_quote_formatted_message(user, quote)
 
-                if not is_quote_found_for_user:
-                    temp_list.append("No quotes found from user %s" % (word))
+                            try:
+                                client.send_formatted_message(formatted_message, message.reply(), event=message.event,
+                                                              style='thumbnail')
+                            except FormattedMessageNotSentError as e:
+                                logger.error("Unable to send formatted message with payload '%s'" % (e))
 
-            client.send_messages_from_list(temp_list, message.reply(), event=message.event)
+                                text = self._quote_as_string(quote, user)
+                                client.send_message(text, message.reply(), event=message.event)
+
+                        else:
+                            text = "No quotes found from user %s" % (word)
+                            client.send_message(text, message.reply(), event=message.event)
         else:
             text = 'Too many parameters. What are you trying to do?'
             client.send_message(text, message.reply(), event=message.event)
@@ -187,7 +220,24 @@ class QuoterPlugin(HavocBotPlugin):
 
         return result
 
+    # def _get_quote_by_id_with_user_resolved(self, json_id):
+    #     display_quote = None
+    #
+    #     result = self._get_quote_by_id(int(json_id))
+    #     if result is not None and result:
+    #         user = None
+    #         if 'user_id' in result and result['user_id'] is not None and result['user_id'] > 0:
+    #             user = self.havocbot.db.find_user_by_id(result['user_id'])
+    #
+    #         display_quote = self._quote_as_string(result, user)
+    #     else:
+    #         display_quote = "No quote found with ID %d" % (int(json_id))
+    #
+    #     return display_quote
+
     def _get_quote_by_id_with_user_resolved(self, json_id):
+        user = None
+        result = None
         display_quote = None
 
         result = self._get_quote_by_id(int(json_id))
@@ -196,11 +246,7 @@ class QuoterPlugin(HavocBotPlugin):
             if 'user_id' in result and result['user_id'] is not None and result['user_id'] > 0:
                 user = self.havocbot.db.find_user_by_id(result['user_id'])
 
-            display_quote = self._quote_as_string(result, user)
-        else:
-            display_quote = "No quote found with ID %d" % (int(json_id))
-
-        return display_quote
+        return (user, result)
 
     def _get_quote_by_id(self, json_id):
         return self.stasher.find_quote_by_id(int(json_id))
