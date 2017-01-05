@@ -123,6 +123,7 @@ class HipChat(Client):
 
     def send_message(self, text, channel, event=None, **kwargs):
         if channel and text and event:
+
             try:
                 logger.info("Sending %s text '%s' to channel '%s'" % (event, text, channel))
                 self.client.send_message(mto=channel, mbody=text, mtype=event)
@@ -135,6 +136,7 @@ class HipChat(Client):
         if channel and text_list and event:
             joined_message = '\n'.join(text_list)
             logger.info("Sending %s text list '%s' to channel '%s'" % (event, joined_message, channel))
+
             try:
                 self.client.send_message(mto=channel, mbody=joined_message, mtype=event)
             except AttributeError:
@@ -144,8 +146,9 @@ class HipChat(Client):
 
     def send_formatted_message(self, formatted_message, room_jid, event=None, style=None):
         if formatted_message is not None and event is not None and event:
+
             if event in ['chat', 'normal']:
-                self.send_message(formatted_message.fallback_text, room_jid, event=event)
+                raise FormattedMessageNotSentError(None, None)  # private messages do not support cards
             elif event in ['groupchat']:
                 room_id = self._get_room_id_from_room_jid(room_jid)
 
@@ -167,6 +170,7 @@ class HipChat(Client):
                         raise
                 else:
                     logger.info("Unable to get an api room id from a jabber room id")
+                    raise FormattedMessageNotSentError(None, None)
 
     def get_user_from_message(self, message_sender, channel=None, event=None, **kwargs):
         user = User(0)
@@ -341,8 +345,12 @@ class HipChat(Client):
     def _add_message_attributes_to_payload(self, formatted_message, payload_dict):
         if formatted_message.attributes is not None:
             for attribute in formatted_message.attributes:
-                new_attribute = dict(label=attribute['label'], value={'label': attribute['value']})
-                payload_dict['card']['attributes'].append(new_attribute)
+                an_attrib = dict(label=attribute['label'], value={'label': attribute['value']})
+
+                if 'url' in attribute and attribute['url'] is not None:
+                    an_attrib['value']['url'] = attribute['url']
+
+                payload_dict['card']['attributes'].append(an_attrib)
 
     def _send_formatted_message_api(self, room_id, json_payload):
         url = '%s/v2/room/%s/notification?auth_token=%s' % (self.api_root_url, room_id, self.api_token)

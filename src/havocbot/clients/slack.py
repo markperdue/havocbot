@@ -211,6 +211,10 @@ class Slack(Client):
             payload_dict['fields'] = []
             for attribute in formatted_message.attributes:
                 new_attribute = dict(title=attribute['label'], value=attribute['value'], short='false')
+
+                if 'url' in attribute and attribute['url'] is not None:
+                    new_attribute['value'] = "<%s|%s>" % (attribute['url'], attribute['value'])
+
                 payload_dict['fields'].append(new_attribute)
 
     def _send_formatted_message_api(self, json_payload):
