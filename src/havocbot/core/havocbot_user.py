@@ -109,27 +109,12 @@ class UserPlugin(HavocBotPlugin):
         capture = kwargs.get('capture_groups', None)
         captured_usernames = capture[0]
         words = captured_usernames.split()
-        # use_stasher = kwargs.get('stasher', None)
-        # use_client = kwargs.get('client', None)
-        # use_id = kwargs.get('id', None)
 
         matched_users = []
-        matched_users_other_client = []
-        message_list = []
 
         if len(words) <= 3:
             for word in words:
                 is_user_found = False
-
-                # user = havocbot.user.find_user_by_id_or_name(word, None, client)
-                # if user is not None and user:
-                #     matched_users.append(user)
-                #     is_user_found = True
-
-                # # TEST TO GET CLIENTUSER ONLY
-                # client_user = client.get_user_from_message(message.sender, message.to, message.event)
-                # logger.info('Client user is...')
-                # logger.info(client_user)
 
                 users = self.havocbot.db.find_users_by_matching_string_for_client(word, client.integration_name)
                 if users is not None and users:
@@ -146,20 +131,23 @@ class UserPlugin(HavocBotPlugin):
         if matched_users:
             set_users = set(matched_users)
             if len(set_users) > 1:
-                message_list.append(
-                    "Found %d matching users" % (len(set_users))
-                )
+                text = "Found %d matching users" % (len(set_users))
+                client.send_message(text, message.reply(), event=message.event)
+                # message_list.append(text)
             for user_object in set_users:
                 logger.debug("Matched User - '%s'" % (user_object))
-                if user_object is not None:
-                    message_list.extend(user_object.get_user_info_as_list())
-                # message_list.extend(user_object.get_usernames_as_list())
-                # message_list.extend(
-                #     user_object.get_plugin_data_strings_as_list()
-                # )
 
-        if message_list:
-            client.send_messages_from_list(message_list, message.reply(), event=message.event)
+                if user_object is not None:
+                    fm = self._get_formatted_message(user_object)
+
+                    try:
+                        client.send_formatted_message(fm, message.reply(), event=message.event, style='thumbnail')
+                    except FormattedMessageNotSentError:
+                        client.send_messages_from_list(
+                            user_object.get_user_info_as_list(),
+                            message.reply(),
+                            event=message.event
+                        )
 
     def trigger_get_user_by_id(self, client, message, **kwargs):
         # Get the results of the capture
@@ -170,8 +158,16 @@ class UserPlugin(HavocBotPlugin):
         logger.info("Result here is '%s'" % (result))
 
         if result is not None and result:
-            message_list = result.get_user_info_as_list()
-            client.send_messages_from_list(message_list, message.reply(), event=message.event)
+            f_message = self._get_formatted_message(result)
+
+            try:
+                client.send_formatted_message(f_message, message.reply(), event=message.event, style='thumbnail')
+            except FormattedMessageNotSentError:
+                client.send_messages_from_list(
+                    result.get_user_info_as_list(),
+                    message.reply(),
+                    event=message.event
+                )
         else:
             text = "User ID %d was not found" % (captured_user_id)
             client.send_message(text, message.reply(), event=message.event)
@@ -308,17 +304,7 @@ class UserPlugin(HavocBotPlugin):
             message_list.extend(user.get_user_info_as_list())
 
         if message_list is not None and message_list:
-            f_message = FormattedMessage(
-                text="%s" % (', '.join(user.get_other_usernames_as_list())),
-                fallback_text="%s" % (', '.join(user.get_other_usernames_as_list())),
-                title="User %s (%s)" % (user.name, user.get_aliases_as_string()),
-                thumbnail_url=user.image,
-                attributes=[
-                    {"label": "Username", "value": str(user.current_username)},
-                    {"label": "UID", "value": str(user.user_id)},
-                    {"label": "Points", "value": str(user.points)}
-                ]
-            )
+            f_message = self._get_formatted_message(user)
 
             try:
                 client.send_formatted_message(f_message, message.reply(), event=message.event, style='thumbnail')
@@ -359,6 +345,23 @@ class UserPlugin(HavocBotPlugin):
         else:
             text = 'No users found'
             client.send_message(text, message.reply(), event=message.event)
+
+    def _get_formatted_message(self, user):
+        message = FormattedMessage(
+            text="%s" % (', '.join(user.get_other_usernames_as_list())),
+            fallback_text="%s" % (', '.join(user.get_other_usernames_as_list())),
+            title="User %s (%s)" % (user.name, user.get_aliases_as_string()),
+            thumbnail_url=user.image,
+            attributes=[
+                {"label": "UID", "value": str(user.user_id)},
+                {"label": "Points", "value": str(user.points)}
+            ]
+        )
+
+        if user.current_username is not None and user.current_username:
+            message.attributes.insert(0, {"label": "Username", "value": str(user.current_username)})
+
+        return message
 
     # def trigger_get_user(self, client, message, **kwargs):
     #     # Get the results of the capture
