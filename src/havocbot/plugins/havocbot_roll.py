@@ -6,8 +6,8 @@ from random import choice
 import threading
 import time
 from havocbot.exceptions import FormattedMessageNotSentError
-from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 from havocbot.message import FormattedMessage
+from havocbot.plugin import HavocBotPlugin, Trigger, Usage
 
 logger = logging.getLogger(__name__)
 
@@ -113,8 +113,6 @@ class RollPlugin(HavocBotPlugin):
         )
 
         try:
-            # client.send_formatted_message(formatted_message, message.reply(), event=message.event, style='simple')
-            # client.send_formatted_message(formatted_message, message.reply(), event=message.event, style='thumbnail')
             client.send_formatted_message(formatted_message, message.reply(), event=message.event, style='icon')
         except FormattedMessageNotSentError as e:
             logger.error("Unable to send formatted message with payload '%s'" % (e))
@@ -154,14 +152,12 @@ class RollPlugin(HavocBotPlugin):
         bg_thread.start()
 
     def rolloff_enable(self):
-        logger.debug("triggered")
         self.rolloff_in_process = True
         self.rolloff_start_time = time.time()
         self.rolloff_rollers_current = []
         self.rolloff_rollers_initial = []
 
     def rolloff_disable(self):
-        logger.debug("triggered")
         self.rolloff_in_process = False
         self.rolloff_start_time = None
         self.rolloff_rollers_current = []
