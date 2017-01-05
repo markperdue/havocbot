@@ -295,6 +295,7 @@ class HipChat(Client):
         payload = {'message': formatted_message.fallback_text, 'card': {}}
         payload['card']['style'] = 'application'
         payload['card']['id'] = 'pdyrxt9dvaghm909d0xu'
+        payload['card']['format'] = 'medium'
         payload['card']['title'] = formatted_message.title
         payload['card']['description'] = formatted_message.text
         payload['card']['attributes'] = []
@@ -304,8 +305,9 @@ class HipChat(Client):
         if formatted_message.title_url is not None and 'http' in formatted_message.title_url:
             payload['card']['url'] = formatted_message.title_url
 
-        payload['card']['icon'] = {}
-        payload['card']['icon']['url'] = formatted_message.thumbnail_url
+        if formatted_message.thumbnail_url is not None and 'http' in formatted_message.thumbnail_url:
+            payload['card']['icon'] = {}
+            payload['card']['icon']['url'] = formatted_message.thumbnail_url
 
         return payload
 
@@ -313,6 +315,7 @@ class HipChat(Client):
         payload = {'message': formatted_message.fallback_text, 'card': {}}
         payload['card']['style'] = 'application'
         payload['card']['id'] = 'pdyrxt9dvaghm909d0xu'
+        payload['card']['format'] = 'medium'
         payload['card']['title'] = formatted_message.title
         payload['card']['description'] = formatted_message.text
         payload['card']['attributes'] = []
@@ -325,6 +328,7 @@ class HipChat(Client):
         payload = {'message': formatted_message.fallback_text, 'card': {}}
         payload['card']['style'] = 'application'
         payload['card']['id'] = 'pdyrxt9dvaghm909d0xu'
+        # payload['card']['format'] = 'medium'
         payload['card']['title'] = formatted_message.title
         payload['card']['description'] = formatted_message.text
         payload['card']['attributes'] = []
@@ -334,11 +338,12 @@ class HipChat(Client):
         if formatted_message.title_url is not None and 'http' in formatted_message.title_url:
             payload['card']['url'] = formatted_message.title_url
 
-        payload['card']['thumbnail'] = {}
-        payload['card']['thumbnail']['url'] = formatted_message.thumbnail_url
-        payload['card']['thumbnail']['url@2x'] = formatted_message.thumbnail_url
-        payload['card']['thumbnail']['width'] = 1000
-        payload['card']['thumbnail']['height'] = 100
+        if formatted_message.thumbnail_url is not None and 'http' in formatted_message.thumbnail_url:
+            payload['card']['thumbnail'] = {}
+            payload['card']['thumbnail']['url'] = formatted_message.thumbnail_url
+            payload['card']['thumbnail']['url@2x'] = formatted_message.thumbnail_url
+            payload['card']['thumbnail']['width'] = 1000
+            payload['card']['thumbnail']['height'] = 100
 
         return payload
 

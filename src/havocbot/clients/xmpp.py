@@ -254,19 +254,19 @@ class XMPP(Client):
 
             return vcard
 
-    def update_user_object_from_message(self, user_object, message_object):
-        logger.debug('update_user_object_from_message() - triggered')
-
-        # Get client object information
-        client_object = self.get_client_object_from_message_object(
-            message_object.sender, channel=message_object.to, event=message_object.event)
-
-        # user_object.add_client(client_object)
-        if client_object is not None:
-            if client_object.username is not None:
-                user_object.current_username = client_object.username
-            if client_object.name is not None:
-                user_object.name = client_object.name
+    # def update_user_object_from_message(self, user_object, message_object):
+    #     logger.debug('update_user_object_from_message() - triggered')
+    #
+    #     # Get client object information
+    #     client_object = self.get_client_object_from_message_object(
+    #         message_object.sender, channel=message_object.to, event=message_object.event)
+    #
+    #     # user_object.add_client(client_object)
+    #     if client_object is not None:
+    #         if client_object.username is not None:
+    #             user_object.current_username = client_object.username
+    #         if client_object.name is not None:
+    #             user_object.name = client_object.name
 
     def get_client_object_from_message_object(self, message_sender, channel=None, event=None, **kwargs):
         user = None
