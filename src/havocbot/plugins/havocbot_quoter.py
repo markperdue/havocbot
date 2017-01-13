@@ -154,7 +154,7 @@ class QuoterPlugin(HavocBotPlugin):
                 if matched_users:
                     set_users = set(matched_users)
                     for user in set_users:
-                        if self.same_channel_only is True:
+                        if self.same_channel_only == 'True':
                             quote = self.stasher.find_quote_by_user_id_in_channel(user.user_id, message.to)
                         else:
                             quote = self.stasher.find_quote_by_user_id(user.user_id)
