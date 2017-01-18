@@ -187,21 +187,18 @@ class RollPlugin(HavocBotPlugin):
     def run_rolloff_round(self, client, message, round_participants):
         round_winners_dict = {'users': [], 'roll': 0}
 
-        for user in round_participants:
+        for user_object in round_participants:
             # Sleep to build up some drama
             time.sleep(2)
 
             roll_result = self.get_roll(100)
-            roll_value_formatted = "{:,}".format(roll_result)  # Format large numbers for Americans
-
-            text = "%s rolled %s" % (user.name, roll_value_formatted)
-            client.send_message(text, message.reply(), event=message.event)
+            self.display_roll(client, message, user_object, roll_result)
 
             if roll_result > round_winners_dict['roll']:
-                round_winners_dict['users'] = [user]
+                round_winners_dict['users'] = [user_object]
                 round_winners_dict['roll'] = roll_result
             elif roll_result == round_winners_dict['roll']:
-                round_winners_dict['users'].append(user)
+                round_winners_dict['users'].append(user_object)
                 logger.debug("tied_users are '%s'" % (round_winners_dict['users']))
 
         if len(round_winners_dict['users']) == 1:
