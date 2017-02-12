@@ -8,6 +8,7 @@ import time
 from havocbot import pluginmanager
 from havocbot import httpserver
 from havocbot.stasherfactory import StasherFactory
+from havocbot.user import UserDoesNotExist
 
 # Python2/3 compat
 try:
@@ -354,9 +355,12 @@ class HavocBot:
                         logger.debug("This trigger requires permission '%s'" % (tuple_item.requires))
 
                         # Check if user has this permission
-                        user = self.db.find_user_by_username_for_client(message_object.sender, message_object.client)
-
-                        if user is not None and user:
+                        try:
+                            user = self.db.find_user_by_username_for_client(message_object.sender, message_object.client)
+                        except UserDoesNotExist:
+                            text = 'That can only be run by users registered with me'
+                            client.send_message(text, message_object.reply(), event=message_object.event)
+                        else:
                             if user.has_permission(tuple_item.requires):
                                 logger.debug("permission '%s' found for user %s" % (tuple_item.requires, user.user_id))
 
@@ -368,9 +372,6 @@ class HavocBot:
                                 logger.debug("permission '%s' not found for user %s" % (tuple_item.requires, user.user_id))
                                 text = 'You do not have permission to do that. Permission required: %s' % (tuple_item.requires)
                                 client.send_message(text, message_object.reply(), event=message_object.event)
-                        else:
-                            text = 'That can only be run by users registered with me'
-                            client.send_message(text, message_object.reply(), event=message_object.event)
 
                     else:
                         logger.debug("This trigger does not require permission")

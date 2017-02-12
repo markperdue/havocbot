@@ -10,36 +10,35 @@ class HelpPlugin(HavocBotPlugin):
 
     @property
     def plugin_description(self):
-        return "basics of the bot"
+        return 'basics of the bot'
 
     @property
     def plugin_short_name(self):
-        return "help"
+        return 'help'
 
     @property
     def plugin_usages(self):
         return [
-            Usage(command="!help", example=None, description="display basic help information"),
-            Usage(command="!help plugins", example=None, description="list the enabled plugins"),
-            Usage(command="!help plugin <plugin>", example=None, description="display detailed information about a specific plugin"),
+            Usage(command='!help', example=None, description='display basic help information'),
+            Usage(command='!help plugins', example=None, description='list the enabled plugins'),
+            Usage(command='!help plugin <plugin>', example='!help plugin user',
+                  description='display detailed information about a specific plugin'),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!help", function=self.trigger_default, param_dict=None, requires=None),
-            Trigger(match="!help plugins", function=self.trigger_help_plugins, param_dict=None, requires=None),
-            Trigger(match="!help plugin\s", function=self.trigger_help_plugin, param_dict=None, requires=None),
+            Trigger(match='!help', function=self.trigger_default, param_dict=None, requires=None),
+            Trigger(match='!help plugins', function=self.trigger_help_plugins, param_dict=None, requires=None),
+            Trigger(match='!help plugin\s', function=self.trigger_help_plugin, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
         self.havocbot = havocbot
 
-    # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
         requirements_met = True
 
-        # Return true if this plugin has the information required to work
         if requirements_met:
             return True
         else:
@@ -49,7 +48,7 @@ class HelpPlugin(HavocBotPlugin):
         self.havocbot = None
 
     def trigger_default(self, client, message, **kwargs):
-        client_message_list = ["HavocBot can help you with the following."]
+        client_message_list = ['HavocBot can help you with the following.']
         for usage_message in self.get_usage_lines_from_plugin_as_list(self.plugin_usages):
             client_message_list.append(usage_message)
 
@@ -61,7 +60,7 @@ class HelpPlugin(HavocBotPlugin):
 
         tuples_list = self.get_help_list_sorted()
 
-        client_message_list.append("Loaded Plugins - " + ", ".join([("%s (%s)" % (i[1], i[0])) for i in tuples_list]))
+        client_message_list.append('Loaded Plugins - ' + ', '.join([('%s (%s)' % (i[1], i[0])) for i in tuples_list]))
         client_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
 
         if message.to:
@@ -80,10 +79,11 @@ class HelpPlugin(HavocBotPlugin):
             if temp_list is not None and temp_list:
                 client_message_list = self.get_plugin_help_matching_list(temp_list)
             else:
-                client_message_list.append("No matching plugins were found. Plugin names are listed at !help plugins")
+                client_message_list.append('No matching plugins were found. Plugin names are listed at !help plugins')
         else:
             # Print the plugin short name with the regular name in parenthesis as a joined string
-            client_message_list.append("Loaded Plugins - " + ", ".join([("%s (%s)" % (i[1], i[0])) for i in tuples_list]))
+            plugin_string = ', '.join([('%s (%s)' % (i[1], i[0])) for i in tuples_list])
+            client_message_list.append('Loaded Plugins - %s' % plugin_string)
             client_message_list.append("Details about a specific plugin are available with '!help plugin <plugin>'")
 
         if message.to:
@@ -95,12 +95,12 @@ class HelpPlugin(HavocBotPlugin):
         for (plugin_name, plugin_short_name, dictionary) in tuples_list:
             if dictionary is not None:
                 if 'description' in dictionary:
-                    new_list.append("%s (%s) - %s" % (plugin_short_name, plugin_name, dictionary['description']))
+                    new_list.append('%s (%s) - %s' % (plugin_short_name, plugin_name, dictionary['description']))
                 if 'usage' in dictionary:
                     for item in self.get_usage_lines_from_plugin_as_list(dictionary['usage']):
                         new_list.append(item)
             else:
-                new_list.append("%s %s" % (plugin_short_name, plugin_name))
+                new_list.append('%s %s' % (plugin_short_name, plugin_name))
 
         return new_list
 
@@ -114,10 +114,10 @@ class HelpPlugin(HavocBotPlugin):
                         message = "    Usage: %s - %s - (example '%s')" % (usage, description, example)
                         usage_list.append(message)
                     else:
-                        message = "    Usage: %s - %s" % (usage, description)
+                        message = '    Usage: %s - %s' % (usage, description)
                         usage_list.append(message)
                 else:
-                    message = "    Usage: %s" % (usage)
+                    message = '    Usage: %s' % usage
                     usage_list.append(message)
 
         return usage_list
@@ -138,8 +138,15 @@ class HelpPlugin(HavocBotPlugin):
 
         return tuples_list
 
-    # Returns a tuple that contains two items. First item is the name of the plugin as a string. Second item is a dictionary containing usage tuples, description, example, and the short name
     def get_help_item_tuple(self, plugin):
+        """
+        Returns a tuple that contains two items
+
+        Returns:
+            a tuple that contains two items
+            First item is the name of the plugin as a string.
+            Second item is a dictionary containing usage tuples, description, example, and the short name
+        """
         help_tuple_item = ()
 
         if plugin is not None:

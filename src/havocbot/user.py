@@ -309,3 +309,7 @@ class UserDataAlreadyExistsException(Exception):
 
 class UserDataNotFoundException(Exception):
     pass
+
+
+class UserDoesNotExist(Exception):
+    pass

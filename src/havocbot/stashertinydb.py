@@ -1,6 +1,7 @@
 import logging
 from tinydb import TinyDB, Query
-from havocbot.user import User, StasherClass, UserDataAlreadyExistsException, UserDataNotFoundException
+from havocbot.user import (
+    User, StasherClass, UserDataAlreadyExistsException, UserDataNotFoundException, UserDoesNotExist)
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,10 @@ class StasherTinyDB(StasherClass):
 
             return transform
 
-        self.db.update(increment_by_value('points', points), eids=[user_id])
+        try:
+            self.db.update(increment_by_value('points', points), eids=[user_id])
+        except KeyError:
+            raise UserDoesNotExist
 
     def del_points_to_user_id(self, user_id, points):
         logger.info("Deleting %d points from user id %s" % (points, user_id))
@@ -67,34 +71,32 @@ class StasherTinyDB(StasherClass):
 
             return transform
 
-        self.db.update(decrement_by_value('points', points), eids=[user_id])
+        try:
+            self.db.update(decrement_by_value('points', points), eids=[user_id])
+        except KeyError:
+            raise UserDoesNotExist
 
     def find_user_by_id(self, search_user_id):
         logger.info("Searching for '%s'" % (search_user_id))
-        user = None
 
         result = self.db.get(eid=search_user_id)
 
         if result is not None:
-            user = self.build_user(result)
-
-        logger.debug("Returning with '%s'" % (user))
-        return user
+            return self.build_user(result)
+        else:
+            raise UserDoesNotExist
 
     def find_user_by_username_for_client(self, search_username, client_name):
         logger.info("Searching for '%s' in client '%s'" % (search_username, client_name))
-
-        user = None
 
         user_query = Query()
         result_list = self.db.search(user_query.usernames[client_name].any([search_username]))
 
         if result_list is not None and result_list:
             if len(result_list) == 1:
-                user = self.build_user(result_list[0])
+                return self.build_user(result_list[0])
 
-        logger.debug("Returning with '%s'" % (user))
-        return user
+        raise UserDoesNotExist
 
     def find_users_by_username(self, search_username):
         # user_list = None
@@ -175,6 +177,19 @@ class StasherTinyDB(StasherClass):
     def find_all_users(self):
         pass
 
+    def set_image_for_user_id(self, user_id, url):
+        logger.info("Setting %s url to user id %s" % (url, user_id))
+
+        if url is not None and 'http' not in url:
+            raise ValueError
+
+        a_user = self.db.get(eid=user_id)
+
+        if a_user is None:
+            raise UserDoesNotExist
+
+        self.db.update({'image': url}, eids=[user_id])
+
     def build_user(self, result_data):
         user = User(result_data.eid)
 
@@ -190,6 +205,11 @@ class StasherTinyDB(StasherClass):
 
     def _add_string_to_list_by_key_for_user_id(self, user_id, list_key, string_item):
         logger.info("Adding '%s' item '%s' to user id %d" % (list_key, string_item, user_id))
+
+        a_user = self.db.get(eid=user_id)
+
+        if a_user is None:
+            raise UserDoesNotExist
 
         list_items = []
 
@@ -209,6 +229,11 @@ class StasherTinyDB(StasherClass):
 
     def _del_string_to_list_by_key_for_user_id(self, user_id, list_key, string_item):
         logger.info("Deleting '%s' item '%s' from user id %d" % (list_key, string_item, user_id))
+
+        a_user = self.db.get(eid=user_id)
+
+        if a_user is None:
+            raise UserDoesNotExist
 
         list_items = []
 
