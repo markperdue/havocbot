@@ -57,7 +57,8 @@ class StatefulPlugin:
             else:
                 logger.error("%s plugin failed validation and was not loaded - %s" % (self.name, result_tuple[1]))
         except ImportError as e:
-            logger.error("%s plugin failed to import. Install any missing third party dependencies and try again - %s" % (self.name, e))
+            logger.error("%s plugin failed to import. Install any third party dependencies and try again - %s" % (
+                self.name, e))
 
     # Determines if the object at a path is a havocbot plugin
     @staticmethod
@@ -82,13 +83,15 @@ def did_process_dependencies_for_plugin(plugin_name, dependencies_string, havocb
 
         if dependency_tuple_list is not None and dependency_tuple_list:
             dependencies_formatted = ', '.join("%s (%s)" % (t[0], t[1]) for t in dependency_tuple_list)
-            logger.info("%s plugin requires third party dependencies prior to startup - %s" % (plugin_name, dependencies_formatted))
+            logger.info("%s plugin requires third party dependencies prior to startup - %s" % (
+                plugin_name, dependencies_formatted))
 
             # Get setting from havocbot
             plugins_can_install_modules = havocbot.get_havocbot_setting_by_name('plugins_can_install_modules')
 
             if plugins_can_install_modules.lower() == 'true':
-                logger.info("global setting 'plugins_can_install_modules' is set to True. Installing plugin dependencies")
+                logger.info("global setting 'plugins_can_install_modules' is set to True. "
+                            "Installing plugin dependencies")
                 result = install_dependencies(plugin_name, dependency_tuple_list, havocbot)
             else:
                 result = True
@@ -112,7 +115,8 @@ def install_dependencies(plugin_name, dependency_tuple_list, havocbot):
 
             logger.info("install_dependencies - return_code is '%s'" % return_code)
             if return_code == 0:
-                logger.debug("%s plugin dependencies installed successfully or requirements already satisfied" % plugin_name)
+                logger.debug("%s plugin dependencies installed successfully or requirements already satisfied" %
+                             plugin_name)
                 return True
             else:
                 # logger.error(output.splitlines()[-1].decode('ascii'))  # decode for python3 compatibility
@@ -156,7 +160,8 @@ def load_plugins_of_type(havocbot, plugin_type):
     plugins = []
 
     if plugin_type == "core":
-        # Must load through pkg_resources since the bot may have been setup through pip and full filepaths for resources may not exist
+        # Must load through pkg_resources since the bot may have been setup through pip and
+        # full filepaths for resources may not exist
         # http://peak.telecommunity.com/DevCenter/PkgResources#resource-extraction
         import pkg_resources
         core_package = 'havocbot.core'
