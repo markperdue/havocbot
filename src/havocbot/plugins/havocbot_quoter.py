@@ -7,7 +7,7 @@ from tinydb import TinyDB, Query
 from havocbot.exceptions import FormattedMessageNotSentError
 from havocbot.message import FormattedMessage
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
-from havocbot.user import UserDataAlreadyExistsException, UserDataNotFoundException
+from havocbot.user import UserDataAlreadyExistsException, UserDataNotFoundException, UserDoesNotExist
 
 logger = logging.getLogger(__name__)
 
@@ -16,27 +16,28 @@ class QuoterPlugin(HavocBotPlugin):
 
     @property
     def plugin_description(self):
-        return "quote management"
+        return 'quote management'
 
     @property
     def plugin_short_name(self):
-        return "quoter"
+        return 'quoter'
 
     @property
     def plugin_usages(self):
         return [
-            Usage(command="!quote get <name>", example="!quote get mark", description="get a quote said by a user"),
-            Usage(command="!addquote <name>", example="!addquote markaperdue", description="add the last message said by the user to storage"),
+            Usage(command='!quote get <name>', example='!quote get mark', description='get a quote said by a user'),
+            Usage(command='!addquote <name>', example='!addquote markaperdue',
+                  description='add the last message said by the user to storage'),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!quote\sget-id\s([0-9]+)", function=self.trigger_get_quote_by_id, param_dict=None, requires=None),
-            Trigger(match="!quote\sget\s(.*)", function=self.trigger_get_quotes_by_user_search, param_dict=None, requires=None),
-            Trigger(match="!addquote\s(.*)", function=self.trigger_add_quote, param_dict=None, requires=None),
-            Trigger(match="!debugquote", function=self.trigger_debug_quote, param_dict=None, requires=None),
-            Trigger(match="(.*)", function=self.trigger_default, param_dict=None, requires=None),
+            Trigger(match='!quote\sget-id\s([0-9]+)', function=self.trigger_get_quote_by_id, requires=None),
+            Trigger(match='!quote\sget\s(.*)', function=self.trigger_get_quotes_by_user_search, requires=None),
+            Trigger(match='!addquote\s(.*)', function=self.trigger_add_quote, requires=None),
+            Trigger(match='!debugquote', function=self.trigger_debug_quote, requires=None),
+            Trigger(match='(.*)', function=self.trigger_default, requires=None),
         ]
 
     def init(self, havocbot):
@@ -46,17 +47,14 @@ class QuoterPlugin(HavocBotPlugin):
         self.same_channel_only = False
         self.stasher = StasherTinyDBQuoter()
 
-    # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
         requirements_met = True
 
         if settings is not None and settings:
             for item in settings:
-                # Switch on the key
                 if item[0] == 'same_channel_only':
                     self.same_channel_only = item[1]
 
-        # Return true if this plugin has the information required to work
         if requirements_met:
             return True
         else:
@@ -70,8 +68,10 @@ class QuoterPlugin(HavocBotPlugin):
             return
 
         # Count occurrences of messages by a user in a client integration
-        previous_messages = [x for x in self.recent_messages if x.sender == message.sender and x.client == message.client and x.to == message.to]
-        logger.debug("%d tracked messages for %s in channel %s" % (len(previous_messages), message.sender, message.to))
+        previous_messages = [x for x in self.recent_messages
+                             if x.sender == message.sender and x.client == message.client and x.to == message.to]
+
+        logger.debug('%d tracked messages for %s in channel %s' % (len(previous_messages), message.sender, message.to))
 
         if len(previous_messages) >= self.max_messages_per_user_per_channel:
             try:
@@ -79,16 +79,16 @@ class QuoterPlugin(HavocBotPlugin):
             except ValueError:
                 pass
 
-        logger.debug("Adding message by user %s to recent messages" % (message.sender))
+        logger.debug('Adding message by user %s to recent messages' % message.sender)
         self.recent_messages.append(message)
 
     def _get_quote_formatted_message(self, user, quote):
         time = format_datetime_for_display(parser.parse(quote['timestamp'])) if 'timestamp' in quote else 'Unknown'
 
         return FormattedMessage(
-            text="\"%s\"" % (quote['quote']),
+            text='"%s"' % (quote['quote']),
             fallback_text=self._quote_as_string(quote),
-            title="%s - %s" % (user.name, time),
+            title='%s - %s' % (user.name, time),
             thumbnail_url=user.image
         )
 
@@ -96,23 +96,28 @@ class QuoterPlugin(HavocBotPlugin):
         capture = kwargs.get('capture_groups', None)
         captured_json_id = int(capture[0])
 
-        a_tuple = self._get_quote_by_id_with_user_resolved(captured_json_id)
-        user = a_tuple[0]
-        quote = a_tuple[1]
-
-        if user is not None and quote is not None:
-            formatted_message = self._get_quote_formatted_message(user, quote)
-
-            try:
-                client.send_formatted_message(formatted_message, message.reply(), event=message.event, style='thumbnail')
-            except FormattedMessageNotSentError as e:
-                logger.error("Unable to send formatted message with payload '%s'" % (e))
-
-                text = self._quote_as_string(quote, user)
-                client.send_message(text, message.reply(), event=message.event)
+        try:
+            a_tuple = self._get_quote_by_id_with_user_resolved(captured_json_id)
+        except UserDoesNotExist:
+            text = 'That user does not exist'
+            client.send_message(text, message.reply(), event=message.event)
+        except UserDataNotFoundException:
+            text = 'No quote found with ID %d' % (int(captured_json_id))
+            client.send_message(text, message.reply(), event=message.event)
         else:
-                text = "No quote found with ID %d" % (int(captured_json_id))
-                client.send_message(text, message.reply(), event=message.event)
+            user = a_tuple[0]
+            quote = a_tuple[1]
+
+            if user is not None and quote is not None:
+                f_message = self._get_quote_formatted_message(user, quote)
+
+                try:
+                    client.send_formatted_message(f_message, message.reply(), event=message.event, style='thumbnail')
+                except FormattedMessageNotSentError as e:
+                    logger.error("Unable to send formatted message with payload '%s'" % e)
+
+                    text = self._quote_as_string(quote, user)
+                    client.send_message(text, message.reply(), event=message.event)
 
     def trigger_add_quote(self, client, message, **kwargs):
         capture = kwargs.get('capture_groups', None)
@@ -124,10 +129,10 @@ class QuoterPlugin(HavocBotPlugin):
                 try:
                     self._add_most_recent_quote_from_user(user, client, self.recent_messages)
                 except UserDataNotFoundException:
-                    text = "No previously tracked messages found from that user"
+                    text = 'No previously tracked messages found from that user'
                     client.send_message(text, message.reply(), event=message.event)
                 except UserDataAlreadyExistsException:
-                    text = "That message has already been added"
+                    text = 'That message has already been added'
                     client.send_message(text, message.reply(), event=message.event)
 
     def trigger_get_quotes_by_user_search(self, client, message, **kwargs):
@@ -136,7 +141,6 @@ class QuoterPlugin(HavocBotPlugin):
         words = captured_names.split()
 
         if len(words) <= 5:
-            temp_list = []
 
             for word in words:
                 is_user_found = False
@@ -148,7 +152,7 @@ class QuoterPlugin(HavocBotPlugin):
                     is_user_found = True
 
                 if not is_user_found:
-                    text = "User %s was not found" % (word)
+                    text = 'User %s was not found' % word
                     client.send_message(text, message.reply(), event=message.event)
 
                 if matched_users:
@@ -172,7 +176,7 @@ class QuoterPlugin(HavocBotPlugin):
                                 client.send_message(text, message.reply(), event=message.event)
 
                         else:
-                            text = "No quotes found from user %s" % (word)
+                            text = 'No quotes found from user %s' % (word)
                             client.send_message(text, message.reply(), event=message.event)
         else:
             text = 'Too many parameters. What are you trying to do?'
@@ -201,7 +205,7 @@ class QuoterPlugin(HavocBotPlugin):
         raise UserDataNotFoundException
 
     def _add_quote(self, message):
-        logger.info("Adding %s to quote db" % (message))
+        logger.info('Adding %s to quote db' % message)
 
     def _quote_as_string(self, quote_dict, user_object=None):
         result = None
@@ -231,22 +235,25 @@ class QuoterPlugin(HavocBotPlugin):
     #
     #         display_quote = self._quote_as_string(result, user)
     #     else:
-    #         display_quote = "No quote found with ID %d" % (int(json_id))
+    #         display_quote = 'No quote found with ID %d' % (int(json_id))
     #
     #     return display_quote
 
     def _get_quote_by_id_with_user_resolved(self, json_id):
-        user = None
-        result = None
-        display_quote = None
+        try:
+            result = self._get_quote_by_id(int(json_id))
+        except Exception:
+            raise
+        else:
+            if result is not None and result:
+                if 'user_id' in result and result['user_id'] is not None and result['user_id'] > 0:
 
-        result = self._get_quote_by_id(int(json_id))
-        if result is not None and result:
-            user = None
-            if 'user_id' in result and result['user_id'] is not None and result['user_id'] > 0:
-                user = self.havocbot.db.find_user_by_id(result['user_id'])
-
-        return (user, result)
+                    try:
+                        user = self.havocbot.db.find_user_by_id(result['user_id'])
+                    except UserDoesNotExist:
+                        raise
+                    else:
+                        return user, result
 
     def _get_quote_by_id(self, json_id):
         return self.stasher.find_quote_by_id(int(json_id))
@@ -271,7 +278,7 @@ class QuoterPlugin(HavocBotPlugin):
 
 def format_datetime_for_display(date_object):
     # Convert to local timezone from UTC timezone
-    return date_object.astimezone(tz.tzlocal()).strftime("%A %B %d %Y %I:%M%p")
+    return date_object.astimezone(tz.tzlocal()).strftime('%A %B %d %Y %I:%M%p')
 
 
 class StasherTinyDBQuoter(object):
@@ -279,15 +286,15 @@ class StasherTinyDBQuoter(object):
         self.db = TinyDB('stasher/havocbot_quoter.json', default_table='quotes', sort_keys=True, indent=2)
 
     def find_quote_by_id(self, json_id):
-        logger.info("Searching for json object with id '%d'" % (json_id))
+        logger.info("Searching for json object with id '%d'" % json_id)
 
         result = self.db.get(eid=json_id)
 
-        logger.debug("Returning with '%s'" % (result))
+        logger.debug("Returning with '%s'" % result)
         return result
 
     def find_quote_by_user_id(self, user_id):
-        logger.info("Searching for quote from user id '%d'" % (user_id))
+        logger.info("Searching for quote from user id '%d'" % user_id)
         result = None
 
         quotes_query = Query()
@@ -295,7 +302,7 @@ class StasherTinyDBQuoter(object):
         if matched_quotes is not None and matched_quotes:
             result = random.choice(matched_quotes)
 
-        logger.debug("Returning with '%s'" % (result))
+        logger.debug("Returning with '%s'" % result)
         return result
 
     def find_quote_by_user_id_in_channel(self, user_id, channel):
@@ -307,7 +314,7 @@ class StasherTinyDBQuoter(object):
         if matched_quotes is not None and matched_quotes:
             result = random.choice(matched_quotes)
 
-        logger.debug("Returning with '%s'" % (result))
+        logger.debug("Returning with '%s'" % result)
         return result
 
 

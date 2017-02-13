@@ -12,22 +12,22 @@ class ImagesPlugin(HavocBotPlugin):
 
     @property
     def plugin_description(self):
-        return "get an image from google images"
+        return 'get an image from google images'
 
     @property
     def plugin_short_name(self):
-        return "images"
+        return 'images'
 
     @property
     def plugin_usages(self):
         return [
-            Usage(command="!image", example="!image golden gate bridge", description="get an image from google images"),
+            Usage(command='!image', example='!image golden gate bridge', description='get an image from google images'),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match="!image\s*(.*)", function=self.trigger_default, param_dict=None, requires=None),
+            Trigger(match='!image\s*(.*)', function=self.trigger_default, param_dict=None, requires=None),
         ]
 
     def init(self, havocbot):
@@ -35,24 +35,23 @@ class ImagesPlugin(HavocBotPlugin):
         self.api_key_google = None
         self.api_key_google_cx = None
 
-    # Takes in a list of kv tuples in the format [('key', 'value'),...]
     def configure(self, settings):
         requirements_met = False
 
         if settings is not None and settings:
             for item in settings:
-                # Switch on the key
                 if item[0] == 'api_key_google':
                     self.api_key_google = item[1]
                 elif item[0] == 'api_key_google_cx':
                     self.api_key_google_cx = item[1]
 
-        if (self.api_key_google is not None and len(self.api_key_google) > 0) and (self.api_key_google_cx is not None and len(self.api_key_google_cx) > 0):
+        if (self.api_key_google is not None and len(self.api_key_google) > 0) and \
+                (self.api_key_google_cx is not None and len(self.api_key_google_cx) > 0):
             requirements_met = True
         else:
-            logger.error('There was an issue with the plugin configuration. Verify that the 2 following properties are set: api_key_google, api_key_google_cx')
+            logger.error('There was an issue with the plugin configuration. '
+                         'Verify that the 2 following properties are set: api_key_google, api_key_google_cx')
 
-        # Return true if this plugin has the information required to work
         if requirements_met:
             return True
         else:
@@ -70,20 +69,23 @@ class ImagesPlugin(HavocBotPlugin):
             else:
                 response = 'Provide a better query'
         else:
-            logger.info("nope")
             response = 'Need to provide a search query'
 
         if message.to:
             client.send_message(response, message.reply(), event=message.event)
 
     def get_image(self, search_terms):
-        search_terms = search_terms.replace(" ", "+")
+        search_terms = search_terms.replace(' ', '+')
 
-        url = "https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&q=%s&searchType=image&imgSize=xlarge&alt=json&num=10&start=1" % (self.api_key_google, self.api_key_google_cx, search_terms)
-        url2 = "https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&q=%s&searchType=image&imgSize=xlarge&alt=json&num=10&start=10" % (self.api_key_google, self.api_key_google_cx, search_terms)
+        base_api = 'https://www.googleapis.com/customsearch/v1'
 
-        r = requests.get("%s" % (url))
-        r2 = requests.get("%s" % (url2))
+        url = '%s?key=%s&cx=%s&q=%s&searchType=image&imgSize=xlarge&alt=json&num=10&start=1' % (
+            base_api, self.api_key_google, self.api_key_google_cx, search_terms)
+        url2 = '%s?key=%s&cx=%s&q=%s&searchType=image&imgSize=xlarge&alt=json&num=10&start=10' % (
+            base_api, self.api_key_google, self.api_key_google_cx, search_terms)
+
+        r = requests.get('%s' % (url))
+        r2 = requests.get('%s' % (url2))
 
         image_urls = []
 
@@ -101,7 +103,7 @@ class ImagesPlugin(HavocBotPlugin):
             shuffle(image_urls)
             return image_urls[0]
         else:
-            return "Nothing found"
+            return 'Nothing found'
 
 
 # Make this plugin available to HavocBot

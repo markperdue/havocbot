@@ -18,7 +18,8 @@ def timedelta_total_seconds(timedelta):
 
 
 class WeatherObject():
-    def __init__(self, zip_code, temperature, city=None, state=None, source="MockData", last_updated=timedelta_total_seconds(datetime.utcnow() - datetime.utcfromtimestamp(0))):
+    def __init__(self, zip_code, temperature, city=None, state=None, source="MockData",
+                 last_updated=timedelta_total_seconds(datetime.utcnow() - datetime.utcfromtimestamp(0))):
         self.zip_code = zip_code
         self.temperature = temperature
         self.city = city
@@ -28,19 +29,22 @@ class WeatherObject():
 
     # Two temperatures are considered equal if they have the same zip code. Bad
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and self.zip_code == other.zip_code)
+        return isinstance(other, self.__class__) and self.zip_code == other.zip_code
 
     def __str__(self):
-        return "WeatherObject(Zip Code: %s, City: %s, State: %s, Temperature: %s, Last Updated: %s])" % (self.zip_code, self.city, self.state, self.temperature, self.last_updated)
+        return "WeatherObject(Zip Code: %s, City: %s, State: %s, Temperature: %s, Last Updated: %s])" % (
+            self.zip_code, self.city, self.state, self.temperature, self.last_updated)
 
     def print_weather(self):
         print(self.return_weather())
 
     def return_weather(self):
         if self.last_updated:
-            return "The temperature is %sF (%sC) in %s [last updated: %s by %s)" % (self.temperature, self.temperature_in_celsius(), self.city, self.time_as_local(), self.source)
+            return "The temperature is %sF (%sC) in %s [last updated: %s by %s)" % (
+                self.temperature, self.temperature_in_celsius(), self.city, self.time_as_local(), self.source)
         else:
-            return "The temperature is %sF (%sC) in %s [%s]" % (self.temperature, self.temperature_in_celsius(), self.city, self.source)
+            return "The temperature is %sF (%sC) in %s [%s]" % (
+                self.temperature, self.temperature_in_celsius(), self.city, self.source)
 
     def temperature_in_celsius(self):
         return round((float(self.temperature) - 32) * 5/9, 2)
@@ -81,9 +85,10 @@ def create_weather_from_openweathermap_for_zip_code(zip_code, api_key_openweathe
         date_time = datetime.strptime(date_raw, '%Y-%m-%dT%H:%M:%S')
         epoch_seconds = timedelta_total_seconds(date_time - datetime.utcfromtimestamp(0))
 
-        return WeatherObject(zip_code=zip_code, temperature=temperature, city=city, source=source, last_updated=float(epoch_seconds))
+        return WeatherObject(zip_code=zip_code, temperature=temperature, city=city,
+                             source=source, last_updated=float(epoch_seconds))
     else:
-        logger.error("Invalid weather data for zip code %s" % (zip_code))
+        logger.error("Invalid weather data for zip code %s" % zip_code)
 
         return None
 
@@ -93,17 +98,21 @@ def create_weather_from_weatherunderground_for_zip_code(zip_code, api_key_weathe
     data = get_weather_underground_data_for_zip_code(zip_code, api_key_weatherunderground)
 
     if data is not None and is_valid_wu_weather(data):
-        return WeatherObject(zip_code=zip_code, temperature=data['current_observation']['temp_f'], city=data['current_observation']['display_location']['city'], state=data['current_observation']['display_location']['state'], source=source, last_updated=float(data['current_observation']['observation_epoch']))
+        return WeatherObject(zip_code=zip_code, temperature=data['current_observation']['temp_f'],
+                             city=data['current_observation']['display_location']['city'],
+                             state=data['current_observation']['display_location']['state'],
+                             source=source, last_updated=float(data['current_observation']['observation_epoch']))
     else:
-        logger.error("Invalid weather data for zip code %s" % (zip_code))
+        logger.error("Invalid weather data for zip code %s" % zip_code)
 
         return None
 
 
 def get_openweathermap_xml_for_zip_code(zip_code, api_key_openweathermap):
-    logger.info("Fetching OpenWeatherMap data for zip code %s..." % (zip_code))
+    logger.info("Fetching OpenWeatherMap data for zip code %s..." % zip_code)
 
-    r = requests.get('http://api.openweathermap.org/data/2.5/weather?zip=%s,us&mode=xml&units=imperial&appid=%s' % (zip_code, api_key_openweathermap))
+    r = requests.get('http://api.openweathermap.org/data/2.5/weather?zip=%s,us&mode=xml&units=imperial&appid=%s' % (
+        zip_code, api_key_openweathermap))
 
     if r.status_code == 200:
         try:
@@ -117,7 +126,7 @@ def get_openweathermap_xml_for_zip_code(zip_code, api_key_openweathermap):
 
 
 def get_weather_underground_data_for_zip_code(zip_code, api_key_weatherunderground):
-    logger.info("Fetching WeatherUnderground data for zip code %s..." % (zip_code))
+    logger.info("Fetching WeatherUnderground data for zip code %s..." % zip_code)
 
     r = requests.get('http://api.wunderground.com/api/%s/conditions/q/%s.json' % (api_key_weatherunderground, zip_code))
 
@@ -176,7 +185,8 @@ def is_valid_zip_code(zip_code):
 def print_warmest_weather_from_list(weather_objects):
     warmest_weather = return_warmest_weather_object_from_list(weather_objects)
     if warmest_weather:
-        print("\n%s, %s (%s) has the warmest weather of %sF" % (warmest_weather.city, warmest_weather.state, warmest_weather.zip_code, warmest_weather.temperature))
+        print("\n%s, %s (%s) has the warmest weather of %sF" % (
+            warmest_weather.city, warmest_weather.state, warmest_weather.zip_code, warmest_weather.temperature))
     else:
         print("No locations found")
 
@@ -203,14 +213,17 @@ def return_most_recent_weather_object_from_list(weather_objects):
 
     for item in weather_objects:
         if most_recent_weather_object:
-            logger.debug("Comparing timestamp %s (%s) against %s (%s)" % (item.last_updated, item.source, most_recent_weather_object.last_updated, most_recent_weather_object.source))
+            logger.debug("Comparing %s (%s) against %s (%s)" % (item.last_updated, item.source,
+                                                                most_recent_weather_object.last_updated,
+                                                                most_recent_weather_object.source))
 
         if most_recent_weather_object is None or item.last_updated > most_recent_weather_object.last_updated:
             most_recent_weather_object = item
 
     # Mostly just informational
     if most_recent_weather_object:
-        logger.info("%s has the most recent updated temperature for %s" % (most_recent_weather_object.source, most_recent_weather_object.zip_code))
+        logger.info("%s has the most recent updated temperature for %s" % (
+            most_recent_weather_object.source, most_recent_weather_object.zip_code))
 
         return most_recent_weather_object
     else:
@@ -284,12 +297,12 @@ def add_most_recent_weather_in_list_to_master_list(new_list, master_list):
         logger.debug("No recent weather objects found")
 
 
-def return_temperatures_list(zip_code_list, api_key_weatherunderground, api_key_openweathermap, max_zip_codes_per_query):
+def return_temperatures_list(zip_code_list, api_key_wu, api_key_owm, max_zip_codes_per_query):
     temperatures = []
 
     # Fetch weather data for the zip codes in the global list
     if len(zip_code_list) > max_zip_codes_per_query:
-        logger.info("Too many zip codes requested. Fetching only the first %d elements" % (max_zip_codes_per_query))
+        logger.info("Too many zip codes requested. Fetching only the first %d elements" % max_zip_codes_per_query)
 
     for item in zip_code_list[:max_zip_codes_per_query]:
         # Strip off spaces if the user provided them during input
@@ -300,20 +313,20 @@ def return_temperatures_list(zip_code_list, api_key_weatherunderground, api_key_
             sources = []
 
             # Get data from WeatherUnderground
-            if api_key_weatherunderground is not None and len(api_key_weatherunderground) > 0:
-                weather = create_weather_from_weatherunderground_for_zip_code(zip_code_temp, api_key_weatherunderground)
+            if api_key_wu is not None and len(api_key_wu) > 0:
+                weather = create_weather_from_weatherunderground_for_zip_code(zip_code_temp, api_key_wu)
                 if weather:
                     sources.append(weather)
 
             # Get data from OpenWeatherMap
-            if api_key_openweathermap is not None and len(api_key_openweathermap) > 0:
-                weather_alt = create_weather_from_openweathermap_for_zip_code(zip_code_temp, api_key_openweathermap)
+            if api_key_owm is not None and len(api_key_owm) > 0:
+                weather_alt = create_weather_from_openweathermap_for_zip_code(zip_code_temp, api_key_owm)
                 if weather_alt:
                     sources.append(weather_alt)
 
             add_most_recent_weather_in_list_to_master_list(sources, temperatures)
         else:
-            logger.info("'%s' is not a valid zip code" % (zip_code_temp))
+            logger.info("'%s' is not a valid zip code" % zip_code_temp)
 
     return temperatures
 

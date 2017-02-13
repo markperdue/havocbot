@@ -164,8 +164,11 @@ class StasherTinyDB(StasherClass):
         if results_name is not None and results_name:
             results.extend(results_name)
 
-        result_username = self.find_user_by_username_for_client(search_string, client_name)
-        if result_username is not None and result_username:
+        try:
+            result_username = self.find_user_by_username_for_client(search_string, client_name)
+        except UserDoesNotExist:
+            pass
+        else:
             results.append(result_username)
 
         results_alias = self.find_users_by_alias_for_client(search_string, client_name)
@@ -256,9 +259,12 @@ class StasherTinyDB(StasherClass):
                 logger.info("Iterating over key '%s' with value '%s'" % (key, value))
                 for username in value:
                     logger.info("Iterating over username '%s'" % (username))
-                    result = self.find_user_by_username_for_client(username, key)
-                    logger.info("result for username '%s' is '%s'" % (username, result))
-                    if result is not None:
+
+                    try:
+                        self.find_user_by_username_for_client(username, key)
+                    except UserDoesNotExist:
+                        return False
+                    else:
                         return True
 
         return False
