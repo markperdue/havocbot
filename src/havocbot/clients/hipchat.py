@@ -2,6 +2,7 @@ from dateutil import tz
 from datetime import datetime
 import logging
 import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import sleekxmpp
 from havocbot.client import Client
 from havocbot.exceptions import FormattedMessageNotSentError
@@ -65,6 +66,10 @@ class HipChat(Client):
                     self.use_ssl = False
             elif item[0] == 'port':
                 self.port = int(item[1])
+            elif item[0] == 'disable_warnings':
+                if item[1] == 'True':
+                    logger.debug('urllib3 warnings are now disabled')
+                    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
         # Return true if this integrations has the information required to connect
         if self.server is not None and self.chat_server is not None and self.room_names is not None:
