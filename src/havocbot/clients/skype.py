@@ -86,7 +86,7 @@ class Skype(Client):
         # Ignore messages originating from havocbot
         if msg.FromHandle is not None and msg.FromHandle != self.user_id and status == 'RECEIVED':
             message_object = Message(msg.Body, msg.FromHandle, msg.ChatName, msg.Type, 'skype', msg.Timestamp)
-            logger.info("Received - %s" % (message_object))
+            logger.info("Received - %s" % message_object)
 
             try:
                 self.handle_message(message_object=message_object)
@@ -137,10 +137,10 @@ class Skype(Client):
                         except Exception as e:
                             logger.error(e)
                     else:
-                        logger.debug("Message did not match trigger '%s'" % (trigger))
+                        logger.debug("Message did not match trigger '%s'" % trigger)
                         pass
             else:
-                logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
+                logger.debug("Ignoring non message event of type '%s'" % message_object.event)
 
     def get_chat_object_by_channel(self, channel):
         if self.client.Chats is not None:
@@ -160,7 +160,7 @@ class Skype(Client):
             except AttributeError:
                 logger.error("Unable to send message. Are you connected?")
             except Exception as e:
-                logger.error("Unable to send message. %s" % (e))
+                logger.error("Unable to send message. %s" % e)
 
     def send_messages_from_list(self, text_list, channel, event=None, **kwargs):
         if channel and text_list:
@@ -171,9 +171,9 @@ class Skype(Client):
                 if chat is not None:
                     chat.SendMessage(joined_message)
             except AttributeError as e:
-                logger.error("Unable to send message. Are you connected? %s" % (e))
+                logger.error("Unable to send message. Are you connected? %s" % e)
             except Exception as e:
-                logger.error("Unable to send message. %s" % (e))
+                logger.error("Unable to send message. %s" % e)
 
     def find_user_by_id(self, user_id, **kwargs):
         user = None
@@ -181,7 +181,7 @@ class Skype(Client):
         api_result = self.client.User(user_id)
         user = create_user_object_from_skype_user_object(api_result)
 
-        logger.debug("find_user_by_id - user is '%s'" % (user))
+        logger.debug("find_user_by_id - user is '%s'" % user)
         if user is not None and user:
             return user
         else:
@@ -203,7 +203,7 @@ class Skype(Client):
                 chat_result_list = self._get_matching_users_from_chat_for_name(chat, name)
                 results.extend(chat_result_list)
 
-        logger.debug("find_users_by_name - returning with '%s'" % (results))
+        logger.debug("find_users_by_name - returning with '%s'" % results)
         return results
 
     def _get_matching_users_from_chat_for_name(self, skype_chat_object, name):
@@ -280,5 +280,5 @@ def create_user_object(handle, name, aliases):
     user.client = client
     user.name = name
 
-    logger.debug("create_user_object - user is '%s'" % (user))
+    logger.debug("create_user_object - user is '%s'" % user)
     return user

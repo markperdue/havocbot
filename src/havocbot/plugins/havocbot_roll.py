@@ -147,13 +147,13 @@ class RollPlugin(HavocBotPlugin):
             'Oh doggy!'
         ]
         text = '%s ' % (choice(start_phrases))
-        text += 'A %s rolloff has been called. ' % ('regular')
+        text += 'A %s rolloff has been called. ' % 'regular'
 
         if self.should_award_points:
             text += "Wager 1 point and join the rolloff in the next %s seconds by typing '!rolloff'" % (
                 self.rolloff_join_interval)
         else:
-            text += "Join the rolloff in the next %s seconds by typing '!rolloff'" % (self.rolloff_join_interval)
+            text += "Join the rolloff in the next %s seconds by typing '!rolloff'" % self.rolloff_join_interval
 
         client.send_message(text, message.reply(), event=message.event)
 
@@ -182,10 +182,10 @@ class RollPlugin(HavocBotPlugin):
                 logger.info("Checking on adding user '%s' to list '%s'" % (user, self.rolloff_rollers_initial))
 
                 if any(x.user_id == user.user_id for x in self.rolloff_rollers_initial):
-                    text = 'You are already in this round %s' % (user.name)
+                    text = 'You are already in this round %s' % user.name
                     client.send_message(text, message.reply(), event=message.event)
                 else:
-                    text = "Added user '%s'" % (user.name)
+                    text = "Added user '%s'" % user.name
                     logger.debug(text)
                     self.rolloff_rollers_initial.append(user)
             else:

@@ -72,12 +72,12 @@ class Slack(Client):
                 for event in self.client.rtm_read():
                     if 'type' in event:
                         if event['type'] == 'message':
-                            logger.debug("raw message received - '%s'" % (event))
+                            logger.debug("raw message received - '%s'" % event)
 
                             # Ignore messages originating from havocbot
                             if 'user' in event and event['user'] != self.bot_username:
                                 message_object = create_message_object_from_json(event)
-                                logger.info("Received - %s" % (message_object))
+                                logger.info("Received - %s" % message_object)
 
                                 try:
                                     self.handle_message(message_object=message_object)
@@ -85,21 +85,21 @@ class Slack(Client):
                                     logger.error("Unable to handle the message")
                                     logger.error(e)
                         elif event['type'] == 'user_typing':
-                            logger.debug("user_typing received - '%s'" % (event))
+                            logger.debug("user_typing received - '%s'" % event)
                         elif event['type'] == 'hello':
-                            logger.debug("hello received - '%s'" % (event))
+                            logger.debug("hello received - '%s'" % event)
                         elif event['type'] == 'presence_change':
-                            logger.debug("presence_change received - '%s'" % (event))
+                            logger.debug("presence_change received - '%s'" % event)
                         elif event['type'] == 'status_change':
-                            logger.debug("status_change received - '%s'" % (event))
+                            logger.debug("status_change received - '%s'" % event)
                         elif event['type'] == 'reconnect_url':
-                            logger.debug("reconnect_url received - '%s'" % (event))
+                            logger.debug("reconnect_url received - '%s'" % event)
                         else:
-                            logger.debug("UNKNOWN EVENT received - '%s'" % (event))
+                            logger.debug("UNKNOWN EVENT received - '%s'" % event)
                     elif 'reply_to' in event:
-                        logger.debug("reply_to received - '%s'" % (event))
+                        logger.debug("reply_to received - '%s'" % event)
                     else:
-                        logger.debug("UNKNOWN THING received - '%s'" % (event))
+                        logger.debug("UNKNOWN THING received - '%s'" % event)
             except AttributeError as e:
                 logger.error("We have a problem! Is there a client?")
                 logger.error(e)
@@ -112,7 +112,7 @@ class Slack(Client):
                 if message_object.event == 'message':
                     self.havocbot.handle_message(self, message_object)
                 else:
-                    logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
+                    logger.debug("Ignoring non message event of type '%s'" % message_object.event)
 
     def send_message(self, text, channel, event=None, **kwargs):
         if channel and text:
@@ -122,7 +122,7 @@ class Slack(Client):
             except AttributeError:
                 logger.error("Unable to send message. Are you connected?")
             except Exception as e:
-                logger.error("Unable to send message. %s" % (e))
+                logger.error("Unable to send message. %s" % e)
 
     def send_messages_from_list(self, text_list, to, event=None, **kwargs):
         if to and text_list:
@@ -133,7 +133,7 @@ class Slack(Client):
             except AttributeError:
                 logger.error("Unable to send message. Are you connected?")
             except Exception as e:
-                logger.error("Unable to send message. %s" % (e))
+                logger.error("Unable to send message. %s" % e)
 
     def send_formatted_message(self, formatted_message, room_id, event=None, style=None):
         if formatted_message is not None:
@@ -166,7 +166,7 @@ class Slack(Client):
         self._add_message_attributes_to_payload(formatted_message, attachments_dict)
 
         json_str = json.dumps(attachments_dict)
-        payload['attachments'] = "[%s]" % (json_str)
+        payload['attachments'] = "[%s]" % json_str
 
         return payload
 
@@ -182,7 +182,7 @@ class Slack(Client):
         self._add_message_attributes_to_payload(formatted_message, attachments_dict)
 
         json_str = json.dumps(attachments_dict)
-        payload['attachments'] = "[%s]" % (json_str)
+        payload['attachments'] = "[%s]" % json_str
 
         return payload
 
@@ -202,7 +202,7 @@ class Slack(Client):
         self._add_message_attributes_to_payload(formatted_message, attachments_dict)
 
         json_str = json.dumps(attachments_dict)
-        payload['attachments'] = "[%s]" % (json_str)
+        payload['attachments'] = "[%s]" % json_str
 
         return payload
 
@@ -218,7 +218,7 @@ class Slack(Client):
                 payload_dict['fields'].append(new_attribute)
 
     def _send_formatted_message_api(self, json_payload):
-        url = '%s/api/chat.postMessage' % (self.api_root_url)
+        url = '%s/api/chat.postMessage' % self.api_root_url
 
         logger.debug("POSTING to '%s' with '%s'" % (url, json_payload))
         r = requests.post(url, params=json_payload, verify=False)

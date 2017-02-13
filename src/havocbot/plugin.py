@@ -137,38 +137,38 @@ class HavocBotPlugin(object):
     def is_valid(self):
         error_string = 'plugin_description must be a non empty string'
         if self.plugin_description is None:
-            return (False, error_string)
+            return False, error_string
         if not isinstance(self.plugin_description, str):
-            return (False, error_string)
+            return False, error_string
         if len(self.plugin_description) == 0:
-            return (False, error_string)
+            return False, error_string
 
         error_string = 'plugin_short_name must be a non empty string'
         if self.plugin_short_name is None:
-            return (False, error_string)
+            return False, error_string
         if not isinstance(self.plugin_short_name, str):
-            return (False, error_string)
+            return False, error_string
         if len(self.plugin_short_name) == 0:
-            return (False, error_string)
+            return False, error_string
 
         error_string = 'plugin_usages must be a non empty list containing tuples'
         if self.plugin_usages is None:
-            return (False, error_string)
+            return False, error_string
         if not isinstance(self.plugin_usages, list):
-            return (False, error_string)
+            return False, error_string
         if len(self.plugin_usages) == 0:
-            return (False, error_string)
+            return False, error_string
         if not all(isinstance(elem, tuple) for elem in self.plugin_usages):
-            return (False, error_string)
+            return False, error_string
 
         error_string = 'plugin_triggers must be a non empty list containing tuples'
         if self.plugin_triggers is None:
-            return (False, error_string)
+            return False, error_string
         if not isinstance(self.plugin_triggers, list):
-            return (False, error_string)
+            return False, error_string
         if len(self.plugin_triggers) == 0:
-            return (False, error_string)
+            return False, error_string
         if not all(isinstance(elem, tuple) for elem in self.plugin_triggers):
-            return (False, error_string)
+            return False, error_string
 
-        return (True, None)
+        return True, None

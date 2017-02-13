@@ -170,13 +170,13 @@ class QuoterPlugin(HavocBotPlugin):
                                 client.send_formatted_message(formatted_message, message.reply(), event=message.event,
                                                               style='thumbnail')
                             except FormattedMessageNotSentError as e:
-                                logger.error("Unable to send formatted message with payload '%s'" % (e))
+                                logger.error("Unable to send formatted message with payload '%s'" % e)
 
                                 text = self._quote_as_string(quote, user)
                                 client.send_message(text, message.reply(), event=message.event)
 
                         else:
-                            text = 'No quotes found from user %s' % (word)
+                            text = 'No quotes found from user %s' % word
                             client.send_message(text, message.reply(), event=message.event)
         else:
             text = 'Too many parameters. What are you trying to do?'

@@ -16,7 +16,7 @@ class StasherTinyDB(StasherClass):
             logger.error("This user already exists in the db")
             raise UserDataAlreadyExistsException
 
-        logger.info("Adding new user '%s' to database" % (user.name))
+        logger.info("Adding new user '%s' to database" % user.name)
 
         logger.debug("add_user - adding '%s'" % (user.to_dict_for_db()))
         self.db.insert(user.to_dict_for_db())
@@ -77,7 +77,7 @@ class StasherTinyDB(StasherClass):
             raise UserDoesNotExist
 
     def find_user_by_id(self, search_user_id):
-        logger.info("Searching for '%s'" % (search_user_id))
+        logger.info("Searching for '%s'" % search_user_id)
 
         result = self.db.get(eid=search_user_id)
 
@@ -258,7 +258,7 @@ class StasherTinyDB(StasherClass):
             for (key, value) in user.usernames.items():
                 logger.info("Iterating over key '%s' with value '%s'" % (key, value))
                 for username in value:
-                    logger.info("Iterating over username '%s'" % (username))
+                    logger.info("Iterating over username '%s'" % username)
 
                     try:
                         self.find_user_by_username_for_client(username, key)

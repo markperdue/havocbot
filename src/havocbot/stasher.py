@@ -49,14 +49,14 @@ class Stasher(Singleton):
     def add_json_to_key(self, json_data, key, unique_root_key, unique_root_value):
         if self.data is not None:
             if key in self.data:
-                logger.info("Key '%s' is known" % (key))
+                logger.info("Key '%s' is known" % key)
                 result = next((
                     x for x in self.data[key]
                     if unique_root_key in x and x[unique_root_key] == unique_root_value
                 ), None)
                 if result is not None:
                     logger.error("Match found for record. Not unique")
-                    logger.error("%s" % (result))
+                    logger.error("%s" % result)
                     raise exceptions.StasherEntryAlreadyExistsError(result)
                 else:
                     logger.info("No match found for record. Unique entry")
@@ -64,7 +64,7 @@ class Stasher(Singleton):
                     logger.info(self.data[key])
                     self.write_db()
             else:
-                logger.info("Adding new key %s" % (key))
+                logger.info("Adding new key %s" % key)
                 self.data[key] = []
                 self.data[key].append(json_data)
                 self.write_db()
@@ -72,7 +72,7 @@ class Stasher(Singleton):
     def update_json_for_key(self, json_data, key, unique_root_key, unique_root_value):
         if self.data is not None:
             if key in self.data:
-                logger.info("Key '%s' is known" % (key))
+                logger.info("Key '%s' is known" % key)
                 result = next((
                     x for x in self.data[key]
                     if unique_root_key in x and x[unique_root_key] == unique_root_value
@@ -81,7 +81,7 @@ class Stasher(Singleton):
                 if result is not None:
                     result = json_data
             else:
-                logger.info("Adding new key %s" % (key))
+                logger.info("Adding new key %s" % key)
                 self.data[key] = []
                 self.data[key].append(json_data)
 
@@ -91,9 +91,9 @@ class Stasher(Singleton):
         logger.info('Writing data')
 
     def add_user(self, user_object):
-        logger.info("Add user triggered with user_object '%s'" % (user_object))
+        logger.info("Add user triggered with user_object '%s'" % user_object)
         user_json = json.loads(jsonpickle.encode(user_object, unpicklable=False))
-        logger.info("pickled user is '%s'" % (user_json))
+        logger.info("pickled user is '%s'" % user_json)
 
         try:
             self.add_json_to_key(user_json, 'users', 'user_id', user_object.user_id)
@@ -101,9 +101,9 @@ class Stasher(Singleton):
             raise
 
     def update_user(self, user_object):
-        logger.info("Update user triggered with user_object '%s'" % (user_object))
+        logger.info("Update user triggered with user_object '%s'" % user_object)
         user_json = json.loads(jsonpickle.encode(user_object, unpicklable=False))
-        logger.info("pickled user is '%s'" % (user_json))
+        logger.info("pickled user is '%s'" % user_json)
 
         try:
             self.update_json_for_key(user_json, 'users', 'user_id', user_object.user_id)
@@ -148,7 +148,7 @@ class Stasher(Singleton):
     def get_plugin_data(self, plugin_name):
         data = {}
 
-        plugin_file = "stasher/%s.json" % (plugin_name)
+        plugin_file = "stasher/%s.json" % plugin_name
 
         with open(plugin_file) as data_file:
             try:
@@ -160,9 +160,9 @@ class Stasher(Singleton):
         return data
 
     def write_plugin_data(self, plugin_name):
-        plugin_file = "stasher/%s.json" % (plugin_name)
+        plugin_file = "stasher/%s.json" % plugin_name
 
-        logger.info("Writing plugin data to '%s'" % (plugin_file))
+        logger.info("Writing plugin data to '%s'" % plugin_file)
         logger.info(self.plugin_data)
 
         with open(plugin_file, 'wt') as outfile:
@@ -207,7 +207,7 @@ class StasherDB(StasherClass):
                     stashed_user.points += points
                     # self.write_db()
                 else:
-                    logger.debug("Adding initial points of %d" % (points))
+                    logger.debug("Adding initial points of %d" % points)
                     stashed_user.points = points
                     # self.write_db()
         else:
@@ -226,7 +226,7 @@ class StasherDB(StasherClass):
                     stashed_user.points -= points
                     # self.write_db()
                 else:
-                    logger.debug("Adding initial points of %d" % (points))
+                    logger.debug("Adding initial points of %d" % points)
                     stashed_user.points = -points
                     # self.write_db()
         else:
@@ -247,10 +247,10 @@ class StasherDB(StasherClass):
                 logger.debug(match)
                 a_user = self.build_user(match)
                 if a_user.is_valid():
-                    logger.debug("Found user object - %s" % (a_user))
+                    logger.debug("Found user object - %s" % a_user)
                     result = a_user
 
-        logger.debug("find_user_by_id returning with '%s'" % (result))
+        logger.debug("find_user_by_id returning with '%s'" % result)
         return result
 
     def find_user_by_username_for_client(self, search_username, client_name):
@@ -271,7 +271,7 @@ class StasherDB(StasherClass):
                                         result = self.build_user(x)
                                         result.current_username = search_username
                                         logger.debug(
-                                            "find_user_by_username_for_client - returning with '%s'" % (result))
+                                            "find_user_by_username_for_client - returning with '%s'" % result)
 
                                         return result
 

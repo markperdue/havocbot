@@ -119,7 +119,7 @@ class HipChat(Client):
                 if message_object.event in ('groupchat', 'chat', 'normal'):
                     self.havocbot.handle_message(self, message_object)
                 else:
-                    logger.debug("Ignoring non message event of type '%s'" % (message_object.event))
+                    logger.debug("Ignoring non message event of type '%s'" % message_object.event)
 
     def send_message(self, text, channel, event=None, **kwargs):
         if channel and text and event:
@@ -130,7 +130,7 @@ class HipChat(Client):
             except AttributeError:
                 logger.error('Unable to send message. Are you connected?')
             except Exception as e:
-                logger.error("Unable to send message. %s" % (e))
+                logger.error("Unable to send message. %s" % e)
 
     def send_messages_from_list(self, text_list, channel, event=None, **kwargs):
         if channel and text_list and event:
@@ -142,7 +142,7 @@ class HipChat(Client):
             except AttributeError:
                 logger.error('Unable to send message. Are you connected?')
             except Exception as e:
-                logger.error("Unable to send message. %s" % (e))
+                logger.error("Unable to send message. %s" % e)
 
     def send_formatted_message(self, formatted_message, room_jid, event=None, style=None):
         if formatted_message is not None and event is not None and event:
@@ -193,7 +193,7 @@ class HipChat(Client):
             roster = self.client.plugin['xep_0045'].getRoster(channel)
             if roster is not None and roster:
                 for roster_item in roster:
-                    logger.debug("roster_item is '%s'" % (roster_item))
+                    logger.debug("roster_item is '%s'" % roster_item)
                     user = self._get_user_from_groupchat(roster_item, channel)
                     if user is not None and user:
                         result_list.append(user)
@@ -230,7 +230,7 @@ class HipChat(Client):
             try:
                 vcard = self.client.plugin['xep_0054'].get_vcard(jid=bare_jid)
             except sleekxmpp.exceptions.IqError as e:
-                logger.error("IqError - %s" % (e.iq))
+                logger.error("IqError - %s" % e.iq)
             except sleekxmpp.exceptions.IqTimeout:
                 logger.error('IqTimeOut')
 
@@ -287,7 +287,7 @@ class HipChat(Client):
         client_user = HipChatUser(
             jabber_id_bare, vcard_nickname if vcard_nickname is not None and vcard_nickname else name,
             vcard_email if vcard_email is not None and vcard_email else None)
-        logger.debug("returning with '%s'" % (client_user))
+        logger.debug("returning with '%s'" % client_user)
 
         return client_user
 
@@ -367,7 +367,7 @@ class HipChat(Client):
             raise FormattedMessageNotSentError(room_id, json_payload)
 
     def _get_room_id_from_room_jid(self, room_jid):
-        logger.debug("Looking up '%s'" % (room_jid))
+        logger.debug("Looking up '%s'" % room_jid)
 
         for room in self.rooms:
             if room.xmpp_jid == room_jid:
@@ -391,7 +391,7 @@ class HipChat(Client):
             self.rooms = room_list
             self.rooms_last_updated = datetime.utcnow().replace(tzinfo=tz.tzutc())
         else:
-            logger.info("%s api root url or api token is not defined" % (self.integration_name))
+            logger.info("%s api root url or api token is not defined" % self.integration_name)
 
     def _fetch_rooms(self):
         if self.api_root_url is not None and self.api_root_url and self.api_token is not None and self.api_token:
@@ -440,7 +440,7 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
         for item in self.rooms:
             if len(item) > 0:
                 room_string = item + '@' + self.chat_server
-                logger.debug("Joining room '%s'" % (room_string))
+                logger.debug("Joining room '%s'" % room_string)
                 self.plugin['xep_0045'].joinMUC(room_string, self.nick, wait=True)
 
     def message(self, msg):
@@ -549,5 +549,5 @@ def create_user_object(jabber_id, name, vcard):
     user_object.usernames = {json_data['client']: [json_data['username']]}
     user_object.current_username = json_data['username']
 
-    logger.debug("client_user is '%s'" % (client_user))
+    logger.debug("client_user is '%s'" % client_user)
     return client_user

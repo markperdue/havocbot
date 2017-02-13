@@ -185,7 +185,7 @@ def forgetAllSingletons():
 
 class MetaSingleton(type):
     def __new__(metaclass, strName, tupBases, dct):
-        if ('__new__') in dct:
+        if '__new__' in dct:
             raise SingletonException('Can not override __new__ in a Singleton')
         return super(MetaSingleton, metaclass).__new__(metaclass, strName, tupBases, dct)
 

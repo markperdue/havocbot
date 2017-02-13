@@ -84,8 +84,8 @@ class ImagesPlugin(HavocBotPlugin):
         url2 = '%s?key=%s&cx=%s&q=%s&searchType=image&imgSize=xlarge&alt=json&num=10&start=10' % (
             base_api, self.api_key_google, self.api_key_google_cx, search_terms)
 
-        r = requests.get('%s' % (url))
-        r2 = requests.get('%s' % (url2))
+        r = requests.get('%s' % url)
+        r2 = requests.get('%s' % url2)
 
         image_urls = []
 

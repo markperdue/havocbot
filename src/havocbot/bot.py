@@ -1,6 +1,7 @@
 import copy
 import inspect
 import logging
+import logging.handlers
 import re
 import sys
 import threading
@@ -174,13 +175,13 @@ class HavocBot:
     def import_module(self, name, module=None):
         try:
             if module is None:
-                module = "havocbot.clients.%s" % (name)
+                module = "havocbot.clients.%s" % name
                 __import__(module)
                 mod = sys.modules[module]
 
                 return mod
         except ImportError:
-            logger.error("Unable to import the %s client integration file" % (name))
+            logger.error("Unable to import the %s client integration file" % name)
 
             return None
 
@@ -205,9 +206,9 @@ class HavocBot:
         if parser.has_section(plugin):
             # Create a bundle of plugin settings
             tuple_list = parser.items(plugin)
-            logger.debug("Settings found for plugin - '%s'" % (tuple_list))
+            logger.debug("Settings found for plugin - '%s'" % tuple_list)
         else:
-            logger.debug("No settings found for plugin '%s'" % (plugin))
+            logger.debug("No settings found for plugin '%s'" % plugin)
 
         return tuple_list
 
@@ -234,23 +235,23 @@ class HavocBot:
             for client in self.clients:
                 # Spawn a thread for each unconnected client
                 logger.debug("Spawning new daemon thread for client %s"
-                             % (client.integration_name))
+                             % client.integration_name)
                 t = ClientThread(self)
                 t.daemon = True
                 self.processing_threads.append(t)
                 t.start()
 
-                logger.info("Connecting to %s" % (client.integration_name))
+                logger.info("Connecting to %s" % client.integration_name)
 
                 # Have the client connect to the client's services
                 if client.connect():
                     logger.info("%s client is connected"
-                                % (client.integration_name))
+                                % client.integration_name)
 
                     self.queue.put(client)
                 else:
                     logger.error("Unable to connect to the client %s"
-                                 % (client.integration_name))
+                                 % client.integration_name)
 
             # Main thread of the bot
             self.process()
@@ -326,7 +327,7 @@ class HavocBot:
                 time.sleep(1)
                 pass
         except (KeyboardInterrupt, SystemExit) as e:
-            logger.info("Interrupt received - %s" % (e))
+            logger.info("Interrupt received - %s" % e)
             # Cleanup before finally exiting
             self.should_shutdown = True
             self.exit()
@@ -352,7 +353,7 @@ class HavocBot:
                 # Pass the message to the function associated with the trigger
                 try:
                     if hasattr(tuple_item, 'requires') and tuple_item.requires:
-                        logger.debug("This trigger requires permission '%s'" % (tuple_item.requires))
+                        logger.debug("This trigger requires permission '%s'" % tuple_item.requires)
 
                         # Check if user has this permission
                         try:
@@ -370,7 +371,7 @@ class HavocBot:
                                     triggered_function(client, message_object, capture_groups=match.groups())
                             else:
                                 logger.debug("permission '%s' not found for user %s" % (tuple_item.requires, user.user_id))
-                                text = 'You do not have permission to do that. Permission required: %s' % (tuple_item.requires)
+                                text = 'You do not have permission to do that. Permission required: %s' % tuple_item.requires
                                 client.send_message(text, message_object.reply(), event=message_object.event)
 
                     else:
@@ -471,7 +472,7 @@ class HavocBot:
     def disconnect(self):
         self.should_shutdown = True
         for client in self.clients:
-            logger.info("Disconnecting client %s" % (client.integration_name))
+            logger.info("Disconnecting client %s" % client.integration_name)
             client.disconnect()
 
     def reset_logging(self):
@@ -544,7 +545,7 @@ class HavocBot:
             return method.__self__.__class__.__name__
 
     def process_callback(self, message_object):
-        logger.info("Received callback - '%s'" % (message_object))
+        logger.info("Received callback - '%s'" % message_object)
         if self.clients is not None and self.clients:
             for client in self.clients:
                 if client.integration_name == message_object.client:

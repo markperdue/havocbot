@@ -58,7 +58,7 @@ class ListenServer(object):
         request_handler.havocbot = self.havocbot  # Set property on handler
 
         self.server = BaseHTTPServer.HTTPServer(('localhost', self.port), ListenServerHandler)
-        logger.info('Starting HTTP server on port %d' % (self.port))
+        logger.info('Starting HTTP server on port %d' % self.port)
         self.server.serve_forever()
 
 
@@ -72,7 +72,7 @@ class ListenServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         try:
             parsed_json = json.loads(post_body)
         except (TypeError, ValueError) as e:
-            logger.info('Invalid json - %s' % (e))
+            logger.info('Invalid json - %s' % e)
             self.send_json_response(400, '{"status": "error", "message": "content not valid json"}')
             return
 

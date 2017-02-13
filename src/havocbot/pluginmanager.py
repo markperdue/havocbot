@@ -39,13 +39,13 @@ class StatefulPlugin:
             # Check if plugin is valid. Returns a tuple of format (True/False, None/'error message string')
             result_tuple = self.handler.is_valid()
             if result_tuple[0] is True:
-                logger.debug("%s plugin passed validation" % (self.name))
+                logger.debug("%s plugin passed validation" % self.name)
 
                 # Call the init method in the plugin
                 self.handler.init(havocbot)
 
                 if self.handler.configure(plugin_settings):
-                    logger.debug("%s was configured successfully. Registering plugin triggers" % (self.name))
+                    logger.debug("%s was configured successfully. Registering plugin triggers" % self.name)
 
                     # Register the triggers for the plugin
                     havocbot.register_triggers(self.handler.plugin_triggers)
@@ -53,7 +53,7 @@ class StatefulPlugin:
                     # Confirm that the plugin has now been validated
                     self.is_validated = True
                 else:
-                    logger.error("%s was unable to be configured. Check your settings and try again" % (self.name))
+                    logger.error("%s was unable to be configured. Check your settings and try again" % self.name)
             else:
                 logger.error("%s plugin failed validation and was not loaded - %s" % (self.name, result_tuple[1]))
         except ImportError as e:
@@ -110,16 +110,16 @@ def install_dependencies(plugin_name, dependency_tuple_list, havocbot):
             # Fix for pip leaking root handlers. See https://github.com/pypa/pip/issues/3043
             havocbot.reset_logging()
 
-            logger.info("install_dependencies - return_code is '%s'" % (return_code))
+            logger.info("install_dependencies - return_code is '%s'" % return_code)
             if return_code == 0:
-                logger.debug("%s plugin dependencies installed successfully or requirements already satisfied" % (plugin_name))
+                logger.debug("%s plugin dependencies installed successfully or requirements already satisfied" % plugin_name)
                 return True
             else:
                 # logger.error(output.splitlines()[-1].decode('ascii'))  # decode for python3 compatibility
-                logger.error("%s plugin dependencies were unable to be installed" % (plugin_name))
+                logger.error("%s plugin dependencies were unable to be installed" % plugin_name)
         # Catch pip not being installed
         except OSError as e:
-            logger.error("Is pip installed? Unable to install plugin dependencies - %s" % (e))
+            logger.error("Is pip installed? Unable to install plugin dependencies - %s" % e)
             return False
 
         return False
@@ -128,7 +128,7 @@ def install_dependencies(plugin_name, dependency_tuple_list, havocbot):
 # Load a plugin by name
 def load_plugin(havocbot, name, path):
     if StatefulPlugin.is_havocbot_file(path):
-        logger.debug("%s is a havocbot file and passed first round of validation" % (name))
+        logger.debug("%s is a havocbot file and passed first round of validation" % name)
 
         return StatefulPlugin(havocbot, name, path)
 
@@ -173,7 +173,7 @@ def load_plugins_of_type(havocbot, plugin_type):
 
                 plugin = load_plugin(havocbot, name, resource_filename)
                 if plugin and isinstance(plugin.handler, HavocBotPlugin) and plugin.is_validated is True:
-                    logger.info("%s core plugin loaded" % (name))
+                    logger.info("%s core plugin loaded" % name)
                     plugins.append(plugin)
     elif plugin_type == "custom":
         for listing in havocbot.plugin_dirs:
@@ -187,10 +187,10 @@ def load_plugins_of_type(havocbot, plugin_type):
 
                     plugin = load_plugin(havocbot, body, fpath)
                     if plugin and isinstance(plugin.handler, HavocBotPlugin) and plugin.is_validated is True:
-                        logger.info("%s custom plugin loaded" % (body))
+                        logger.info("%s custom plugin loaded" % body)
                         plugins.append(plugin)
             else:
-                logger.error("Plugin directory '%s' was listed in the settings file but does not exist" % (listing))
+                logger.error("Plugin directory '%s' was listed in the settings file but does not exist" % listing)
 
     return plugins
 

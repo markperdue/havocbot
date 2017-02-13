@@ -17,7 +17,7 @@ def timedelta_total_seconds(timedelta):
         (timedelta.seconds + timedelta.days * 24 * 3600) * 10 ** 6) / 10 ** 6
 
 
-class WeatherObject():
+class WeatherObject:
     def __init__(self, zip_code, temperature, city=None, state=None, source="MockData",
                  last_updated=timedelta_total_seconds(datetime.utcnow() - datetime.utcfromtimestamp(0))):
         self.zip_code = zip_code

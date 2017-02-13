@@ -48,7 +48,7 @@ class User(object):
         if self.permissions:
             sb += ", Permissions: %s" % (self.get_permissions_as_string())
         if self.client_user:
-            sb += ", Client: %s" % (self.client_user)
+            sb += ", Client: %s" % self.client_user
 
         # Close out the User() string
         sb += ")"
@@ -71,10 +71,10 @@ class User(object):
         #                self.points, self.is_stashed))
 
     def __eq__(self, other):
-        return (isinstance(other, User) and self.user_id == other.user_id)
+        return isinstance(other, User) and self.user_id == other.user_id
 
     def __hash__(self):
-        return hash((self.user_id))
+        return hash(self.user_id)
 
     def get_user_info_as_list(self):
         results = [self.get_user_header()]
@@ -97,7 +97,7 @@ class User(object):
         if self.is_stashed:
             return "User %s (%d) has %d points" % (self.name, self.user_id, self.points)
         else:
-            return "User %s" % (self.name)
+            return "User %s" % self.name
 
     def get_user_aliases(self):
         if self.aliases is not None and self.aliases:
@@ -105,7 +105,7 @@ class User(object):
 
     def get_user_client_info_current(self):
         if self.current_username is not None and self.current_username:
-            return "    Username: %s" % (self.current_username)
+            return "    Username: %s" % self.current_username
 
     def get_user_client_info_other(self):
         other_usernames_list = self.get_other_usernames_as_list()
