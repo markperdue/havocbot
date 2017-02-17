@@ -6,6 +6,7 @@ import random
 import threading
 import time
 from havocbot.plugin import HavocBotPlugin, Trigger, Usage
+from havocbot.user import UserDoesNotExist
 
 logger = logging.getLogger(__name__)
 
@@ -80,12 +81,18 @@ class ScramblePlugin(HavocBotPlugin):
     def trigger_default(self, client, message, **kwargs):
         if self.in_process is True:
             if self.does_guess_match_scrambled_word(message.text, self.original_word):
-                if message.to:
+                user = None
+                text = None
+
+                try:
+                    user = self.havocbot.db.find_user_by_username_for_client(message.sender, client.integration_name)
+                except UserDoesNotExist:
                     text = "%s got it correct. The answer was '%s'" % (message.sender, self.original_word)
+                else:
+                    text = "%s got it correct. The answer was '%s'" % (user.name, self.original_word)
+                finally:
                     client.send_message(text, message.reply(), event=message.event)
                     self.reset_scramble()
-        else:
-            return
 
     def trigger_start_scramble(self, client, message, **kwargs):
         # Check to see if a scramble has already been started
