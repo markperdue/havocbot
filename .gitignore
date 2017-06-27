@@ -2,5 +2,5 @@
 build/*
 dist/*
 src/havocbot.egg-info/
-.idea/*
+src/havocbot/.idea/*
 examples/logs/
