@@ -219,7 +219,7 @@ class HipChat(Client):
 
             jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
 
-            if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
+            if jabber_id is not None and jabber_id:
                 vcard = self._get_vcard_by_jabber_id(jabber_id)
                 logger.debug("jabber_id is '%s', name is '%s' and vcard is '%s'" % (jabber_id, name, vcard))
                 user = create_user_object(jabber_id, name, vcard)
