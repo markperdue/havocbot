@@ -143,8 +143,12 @@ class HipChat(Client):
 
     def send_messages_from_list(self, text_list, channel, event=None, **kwargs):
         if channel and text_list and event:
-            joined_message = '\n'.join(text_list)
-            logger.info("Sending %s text list '%s' to channel '%s'" % (event, joined_message, channel))
+            filtered_list = [x for x in text_list if x is not None]  # Remove None items
+            if filtered_list is not None and filtered_list:
+                joined_message = '\n'.join(filtered_list)
+                logger.info("Sending %s text list '%s' to channel '%s'" % (event, joined_message, channel))
+            else:
+                joined_message = 'No data'
 
             try:
                 self.client.send_message(mto=channel, mbody=joined_message, mtype=event)
