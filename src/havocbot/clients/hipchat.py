@@ -126,6 +126,14 @@ class HipChat(Client):
                 else:
                     logger.debug("Ignoring non message event of type '%s'" % message_object.event)
 
+    def handle_presence(self, **kwargs):
+        if kwargs is not None:
+            if 'presence_object' in kwargs and kwargs.get('presence_object') is not None:
+                presence_object = kwargs.get('presence_object')
+
+                logger.info(presence_object)
+                logger.info('Hello, %s %s' % (presence_object['muc']['role'], presence_object['muc']['nick']))
+
     def send_message(self, text, channel, event=None, **kwargs):
         if channel and text and event:
 
@@ -438,6 +446,10 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
 
         self.add_event_handler('session_start', self.start)
         self.add_event_handler('message', self.message)  # Also catches groupchat_message
+        for item in self.rooms:
+            # http://sleekxmpp.com/event_index.html
+            # self.add_event_handler('muc::%s@%s::got_online' % (item, self.chat_server), self.presence)
+            self.add_event_handler('muc::%s@%s::presence' % (item, self.chat_server), self.presence)
 
     def start(self, event):
         self.get_roster()
@@ -485,6 +497,14 @@ class HipMUCBot(sleekxmpp.ClientXMPP):
                     self.parent.handle_message(message_object=message_object)
                 except Exception as e:
                     logger.error(e)
+
+    def presence(self, presence):
+        if presence['muc']['nick'] != self.nick:
+            try:
+                self.parent.handle_presence(presence_object=presence)
+            except Exception as e:
+                logger.error(e)
+                raise
 
 
 class HipChatUser(ClientUser):
