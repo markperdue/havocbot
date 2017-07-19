@@ -102,7 +102,11 @@ class HipChat(Client):
         self.client.register_plugin('xep_0054')  # vCard
         self.client.register_plugin('xep_0199', {'keepalive': True, 'interval': 60})  # keep alive ping every 60 seconds
 
-        if self.client.connect(address=(self.server, self.port), use_ssl=self.use_ssl):
+        # TLS1.2 Fix?
+        import ssl
+        self.client.ssl_version = ssl.PROTOCOL_TLSv1_2
+        if self.client.connect(address=(self.server, self.port), use_tls=True):
+        #if self.client.connect(address=(self.server, self.port), use_ssl=True, use_tls=True):
             logger.info("I am.. %s! (%s)" % (self.bot_name, self.bot_username))
             self._update_rooms()
             return True
@@ -147,8 +151,12 @@ class HipChat(Client):
 
     def send_messages_from_list(self, text_list, channel, event=None, **kwargs):
         if channel and text_list and event:
-            joined_message = '\n'.join(text_list)
-            logger.info("Sending %s text list '%s' to channel '%s'" % (event, joined_message, channel))
+            filtered_list = [x for x in text_list if x is not None]  # Remove None items
+            if filtered_list is not None and filtered_list:
+                joined_message = '\n'.join(filtered_list)
+                logger.info("Sending %s text list '%s' to channel '%s'" % (event, joined_message, channel))
+            else:
+                joined_message = 'No data'
 
             try:
                 self.client.send_message(mto=channel, mbody=joined_message, mtype=event)
@@ -223,7 +231,7 @@ class HipChat(Client):
 
             jabber_id = self.client.plugin['xep_0045'].getJidProperty(channel, name, 'jid')
 
-            if jabber_id is not None and jabber_id.bare is not None and jabber_id.bare:
+            if jabber_id is not None and jabber_id:
                 vcard = self._get_vcard_by_jabber_id(jabber_id)
                 logger.debug("jabber_id is '%s', name is '%s' and vcard is '%s'" % (jabber_id, name, vcard))
                 user = create_user_object(jabber_id, name, vcard)
@@ -382,9 +390,10 @@ class HipChat(Client):
     def _get_room_id_from_room_jid(self, room_jid):
         logger.debug("Looking up '%s'" % room_jid)
 
-        for room in self.rooms:
-            if room.xmpp_jid == room_jid:
-                return room._id
+        if self.rooms:
+            for room in self.rooms:
+                if room.xmpp_jid == room_jid:
+                    return room._id
 
         return None
 
@@ -410,7 +419,7 @@ class HipChat(Client):
         if self.api_root_url is not None and self.api_root_url and self.api_token is not None and self.api_token:
             logger.info("Fetching room list...")
 
-            url = '%s/v2/room?auth_token=%s&expand=items' % (self.api_root_url, self.api_token)
+            url = '%s/v2/room?auth_token=%s&expand=items&max-results=500' % (self.api_root_url, self.api_token)
             r = requests.get(url)
 
             if r.status_code == 200:
