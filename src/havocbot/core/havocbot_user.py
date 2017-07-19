@@ -22,51 +22,46 @@ class UserPlugin(HavocBotPlugin):
     @property
     def plugin_usages(self):
         return [
-            Usage(command='!add-user <name> <username>', example='!add-user Mark mark@chat.hipchat.com',
+            Usage(command='!user add <name> <username>', example='!user add Mark mark@chat.hipchat.com',
                   description='add the user to the database'),
-            Usage(command='!get-user <name>', example='!get-user mark', description='get information on a user'),
-            Usage(command='!get-userid <user-id>', example='!get-userid 1',
-                  description='get information on a user by id'),
-            Usage(command='!add-alias <user-id> <alias>', example='!add-alias 1 the_enforcer',
-                  description='adds an alias to a user'),
-            Usage(command='!del-alias <user-id> <alias>', example='!del-alias 1 the_enforcer',
-                  description='deletes an alias to a user'),
-            Usage(command='!get-aliases <user-id>', example='!get-aliases 1', description='get all aliases of a user'),
-            Usage(command='!add-permission <user-id> <permission>', example='!add-permission 1 bot:user',
-                  description='adds a permission to a user'),
-            Usage(command='!del-permission <user-id> <permission>', example='!del-permission 1 bot:user',
-                  description='deletes a permission to a user'),
-            Usage(command='!get-permission <user-id>', example='!get-permission 1',
-                  description='get permissions of a user'),
-            Usage(command='!add-points <user-id> <points>', example='!add-points 1 3',
-                  description='adds points to a user'),
-            Usage(command='!del-points <user-id> <points>', example='!del-points 1 50',
-                  description='deletes points from a user'),
-            Usage(command='!get-points <user-id>', example='!get-points 1', description='get points of a user'),
-            Usage(command='!set-image <user-id> <image url>', example='!set-image 1 http://i.imgur.com/fYP9yGH.gifv',
-                  description="set a user's image"),
+            Usage(command='!user get <name>', example='!user get mark', description='get information'),
+            Usage(command='!user get-id <user-id>', example='!user get-id 1',
+                  description='get information by id'),
+            Usage(command='!user aliases get <user-id>', example='!user alias get 1 ',
+                  description='get all aliases'),
+            Usage(command='!user aliases add|remove <user-id> <alias>', example='!user alias add 1 the_enforcer',
+                  description='add or remove aliases'),
+            Usage(command='!user permissions get <user-id>', example='!user permissions get 1',
+                  description='get permissions'),
+            Usage(command='!user permissions add|remove <user-id> <permission>', example='!user permissions add 1 bot:user',
+                  description='add or remove permissions'),
+            Usage(command='!user points get <user-id>', example='!user points get 1', description='get points'),
+            Usage(command='!user points add|remove <user-id> <points>', example='!user points add 1 3',
+                  description='add or remove points'),
+            Usage(command='!user image set <user-id> <image url>', example='!user image set 1 http://i.imgur.com/fYP9yGH.gifv',
+                  description="set an image"),
+            Usage(command='!user me', example=None, description='get information on you'),
             Usage(command='!users', example=None, description='get user info on all users in the channel'),
-            Usage(command='!me', example=None, description='get information on you'),
         ]
 
     @property
     def plugin_triggers(self):
         return [
-            Trigger(match='!add-user\s(.*)\s(.*)', function=self.trigger_add_user, requires='bot:admin'),
-            Trigger(match='!get-user\s(.*)', function=self.trigger_get_user, requires=None),
-            Trigger(match='!get-userid\s([0-9]+)', function=self.trigger_get_user_by_id, requires=None),
-            Trigger(match='!add-alias\s([0-9]+)\s(.+)', function=self.trigger_add_alias, requires='bot:admin'),
-            Trigger(match='!del-alias\s([0-9]+)\s(.+)', function=self.trigger_del_alias, requires='bot:admin'),
-            Trigger(match='!get-alias\s([0-9]+)', function=self.trigger_get_alias, requires=None),
-            Trigger(match='!add-permission\s([0-9]+)\s(.+)', function=self.trigger_add_perm, requires='bot:admin'),
-            Trigger(match='!del-permission\s([0-9]+)\s(.+)', function=self.trigger_del_perm, requires='bot:admin'),
-            Trigger(match='!get-permission\s([0-9]+)', function=self.trigger_get_permission, requires='bot:admin'),
-            Trigger(match='!add-points\s([0-9]+)\s([0-9]+)', function=self.trigger_add_points, requires='bot:points'),
-            Trigger(match='!del-points\s([0-9]+)\s([0-9]+)', function=self.trigger_del_points, requires='bot:points'),
-            Trigger(match='!get-points\s([0-9]+)', function=self.trigger_get_points, requires='bot:points'),
-            Trigger(match='!set-image\s([0-9]+)\s(.*)', function=self.trigger_set_image, requires='bot:admin'),
+            Trigger(match='!user add (.*) (.*)', function=self.trigger_add_user, requires='bot:admin'),
+            Trigger(match='!user get (.*)', function=self.trigger_get_user, requires=None),
+            Trigger(match='!user get-id ([0-9]+)', function=self.trigger_get_user_by_id, requires=None),
+            Trigger(match='!user aliases add ([0-9]+) (.+)', function=self.trigger_add_alias, requires='bot:admin'),
+            Trigger(match='!user aliases (rem|remove|del|delete) ([0-9]+) (.+)', function=self.trigger_del_alias, requires='bot:admin'),
+            Trigger(match='!user aliases get ([0-9]+)', function=self.trigger_get_alias, requires=None),
+            Trigger(match='!user permissions add ([0-9]+) (.+)', function=self.trigger_add_perm, requires='bot:admin'),
+            Trigger(match='!user permissions (rem|remove|del|delete) ([0-9]+) (.+)', function=self.trigger_del_perm, requires='bot:admin'),
+            Trigger(match='!user permissions get ([0-9]+)', function=self.trigger_get_permission, requires='bot:admin'),
+            Trigger(match='!user points add ([0-9]+) ([0-9]+)', function=self.trigger_add_points, requires='bot:points'),
+            Trigger(match='!user points (rem|remove|del|delete) ([0-9]+) ([0-9]+)', function=self.trigger_del_points, requires='bot:points'),
+            Trigger(match='!user points get ([0-9]+)', function=self.trigger_get_points, requires='bot:points'),
+            Trigger(match='!user image set ([0-9]+) (.*)', function=self.trigger_set_image, requires='bot:admin'),
+            Trigger(match='!user me', function=self.trigger_get_sender, requires=None),
             Trigger(match='!users', function=self.trigger_get_users, requires=None),
-            Trigger(match='!me', function=self.trigger_get_sender, requires=None),
         ]
 
     def init(self, havocbot):
@@ -195,8 +190,8 @@ class UserPlugin(HavocBotPlugin):
 
     def trigger_del_alias(self, client, message, **kwargs):
         capture = kwargs.get('capture_groups', None)
-        captured_user_id = int(capture[0])
-        captured_alias = capture[1]
+        captured_user_id = int(capture[1])
+        captured_alias = capture[2]
         text = None
 
         try:
@@ -243,8 +238,8 @@ class UserPlugin(HavocBotPlugin):
 
     def trigger_del_perm(self, client, message, **kwargs):
         capture = kwargs.get('capture_groups', None)
-        captured_user_id = int(capture[0])
-        captured_permission = capture[1]
+        captured_user_id = int(capture[1])
+        captured_permission = capture[2]
         text = None
 
         try:
@@ -294,8 +289,8 @@ class UserPlugin(HavocBotPlugin):
 
     def trigger_del_points(self, client, message, **kwargs):
         capture = kwargs.get('capture_groups', None)
-        captured_user_id = int(capture[0])
-        captured_points = int(capture[1])
+        captured_user_id = int(capture[1])
+        captured_points = int(capture[2])
         text = None
 
         try:
